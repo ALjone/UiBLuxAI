@@ -9,6 +9,7 @@ from gym import spaces
 from luxai_s2.state import ObservationStateDict
 
 class ImageAndPosToUnitIDWrapper(gym.ObservationWrapper):
+
     """Wrapper, based on the one in the Lux AI Kit, that also returns a mapping from pos -> unit id, so that actions can actually be done"""
     def __init__(self, env: gym.Env) -> None:
         super().__init__(env)
@@ -113,3 +114,33 @@ class ImageAndPosToUnitIDWrapper(gym.ObservationWrapper):
             new_obs[agent]["factory_to_id"] = shared_obs["factories"][agent].values()
 
         return new_obs, obs
+
+class SinglePlayerEnv(gym.Wrapper):
+    def __init__(self, env: gym.Env) -> None:
+        """
+        Adds a custom reward and turns the LuxAI_S2 environment into a single-agent environment for easy training
+        """
+        super().__init__(env)
+
+    def step(self, action):
+        agent = self.agents[0]
+        opp_agent = self.agents[1]
+
+        opp_factories = self.env.state.factories[opp_agent]
+
+        #TODO: Bygg intern "Factory placer" til starten av spillet...
+
+        for k in opp_factories:
+            factory = opp_factories[k]
+            factory.cargo.water = 1000 # set enemy factories to have 1000 water to keep them alive the whole around and treat the game as single-agent
+
+        action = {agent: action[0], opp_agent: action[1]}
+        obs, reward, done, info = super().step(action)
+
+        #NOTE: See here for tips on custom reward function https://github.com/Lux-AI-Challenge/Lux-Design-S2/blob/main/examples/sb3.py
+
+        return obs, reward, done, info
+
+    def reset(self, **kwargs):
+        obs = self.env.reset(**kwargs)
+        return obs#(o[self.agents[0]] for o in obs)

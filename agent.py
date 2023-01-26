@@ -14,8 +14,6 @@ class Agent():
         self.env_cfg: EnvConfig = env_cfg
         self.device = device
 
-
-
         self.unit_actions_per_cell = UNIT_ACTION_IDXS
         self.factory_actions_per_cell = FACTORY_ACTION_IDXS
 
@@ -56,8 +54,6 @@ class Agent():
 
         unit_output = self.action_model(image)
         factory_output = self.factory_model(image)
-        #print("Unit output", unit_output.shape)
-        #print("Factory output", factory_output.shape)
         
         #NOTE How actions are formatted
         # a[0] (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
