@@ -9,9 +9,9 @@ def animate(imgs, _return=False):
 
     imageio.mimsave(video_name, imgs, fps=100)
 
-def interact(env, agents, steps):
+def interact(env, agents, steps, seed):
     # reset our env
-    obs = env.reset(seed=41)
+    obs = env.reset(seed)
     np.random.seed(0)
     imgs = []
     step = 0
