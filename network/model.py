@@ -2,6 +2,8 @@ import torch
 from torch import nn
 from torchvision.ops import SqueezeExcitation
 import numpy as np
+from torch.distributions.categorical import Categorical
+
 
 class actor(nn.Module):
     def __init__(self, intput_channels, output_channels, n_blocks = 10, squeeze_channels = 64) -> None:
@@ -26,6 +28,13 @@ class actor(nn.Module):
             x = layer(x) 
         return x.squeeze().permute(1, 2, 0)
 
+    def get_action_and_value(self, x, action = None):
+        logits = self.forward(x)
+        probs = Categorical(logits=logits)
+        if action is None:
+            action = probs.sample()
+        return action.shape, probs.log_prob(action).shape, probs.entropy().shape
+
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
@@ -37,3 +46,5 @@ if __name__ == "__main__":
     print(torch.sum(tens))
 
     print(torch.sum(net(tens)))
+
+    print(net.get_action_and_value(tens))
