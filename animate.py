@@ -9,18 +9,20 @@ def animate(imgs, _return=False):
 
     imageio.mimsave(video_name, imgs, fps=100)
 
-def interact(env, agents, steps):
+
+def interact(env, agents, steps, seed):
     # reset our env
-    obs = env.reset(seed=41)
+    obs = env.reset(seed)
     np.random.seed(0)
     imgs = []
     step = 0
-    # Note that as the environment has two phases, we also keep track a value called 
+    # Note that as the environment has two phases, we also keep track a value called
     # `real_env_steps` in the environment state. The first phase ends once `real_env_steps` is 0 and used below
 
     # iterate until phase 1 ends
     while env.state.real_env_steps < 0:
-        if step >= steps: break
+        if step >= steps:
+            break
         actions = {}
         for player in env.agents:
             o = obs[player]
@@ -31,7 +33,8 @@ def interact(env, agents, steps):
         imgs += [env.render("rgb_array", width=640, height=640)]
     done = False
     while not done:
-        if step >= steps: break
+        if step >= steps:
+            break
         actions = {}
         for player in env.agents:
             o = obs[player]
