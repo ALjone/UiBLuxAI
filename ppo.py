@@ -8,27 +8,23 @@ from network.ActorCritic import ActorCritic
 class RolloutBuffer:
     def __init__(self):
         self.unit_actions = []
-        self.factory_actions = []
         self.states = []
         self.unit_logprobs = []
-        self.factory_logprobs = []
         self.rewards = []
         self.state_values = []
         self.is_terminals = []
     
     def clear(self):
         del self.unit_actions[:]
-        del self.factory_actions[:]
         del self.states[:]
         del self.unit_logprobs[:]
-        del self.factory_logprobs[:]
         del self.rewards[:]
         del self.state_values[:]
         del self.is_terminals[:]
 
 
 class PPO:
-    def __init__(self, unit_action_dim, factory_action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, device = torch.device("cuda")):
+    def __init__(self, unit_action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, device = torch.device("cuda")):
         self.device = device
         self.gamma = gamma
         self.eps_clip = eps_clip
@@ -36,13 +32,13 @@ class PPO:
         
         self.buffer = RolloutBuffer()
 
-        self.policy = ActorCritic(unit_action_dim, factory_action_dim).to(device)
+        self.policy = ActorCritic(unit_action_dim).to(device)
         self.optimizer = torch.optim.Adam([
                         {'params': self.policy.actor.parameters(), 'lr': lr_actor},
                         {'params': self.policy.critic.parameters(), 'lr': lr_critic}
                     ])
 
-        self.policy_old = ActorCritic(unit_action_dim, factory_action_dim).to(device)
+        self.policy_old = ActorCritic(unit_action_dim).to(device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
@@ -51,16 +47,14 @@ class PPO:
 
         with torch.no_grad():
             state = state.float().to(self.device)
-            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(state)
+            action_unit, action_logprobs_unit, state_values = self.policy_old.act(state)
         
         self.buffer.states.append(state)
         self.buffer.unit_actions.append(action_unit)
-        self.buffer.factory_actions.append(action_factory)
         self.buffer.unit_logprobs.append(action_logprobs_unit)
-        self.buffer.factory_logprobs.append(action_logprobs_factories)
         self.buffer.state_values.append(state_values)
 
-        return action_unit.squeeze(), action_factory.squeeze()
+        return action_unit.squeeze()
 
     def update(self):
         # Monte Carlo estimate of returns
@@ -79,41 +73,34 @@ class PPO:
         # convert list to tensor
         old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
         old_actions_unit = torch.squeeze(torch.stack(self.buffer.unit_actions, dim=0)).detach().to(self.device)
-        old_actions_factory = torch.squeeze(torch.stack(self.buffer.factory_actions, dim=0)).detach().to(self.device)
         old_logprobs_unit = torch.squeeze(torch.stack(self.buffer.unit_logprobs, dim=0)).detach().to(self.device)
-        old_logprobs_factory = torch.squeeze(torch.stack(self.buffer.factory_logprobs, dim=0)).detach().to(self.device)
         old_state_values = torch.squeeze(torch.stack(self.buffer.state_values, dim=0)).detach().to(self.device)
 
         # calculate advantages
         advantages = (rewards.detach() - old_state_values.detach())
 
-        #TODO: Check if it makes sense to loop over probs and entropy when training
-
         # Optimize policy for K epochs
         for _ in range(self.K_epochs):
 
             # Evaluating old actions and values
-            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_states, old_actions_unit, old_actions_factory)
+            action_logprobs,  state_values, dist_entropy = self.policy.evaluate(old_states, old_actions_unit)
 
-            loss = 0
 
-            for logprobs, dist_entropy, old_logprobs in [(action_logprobs_unit, unit_dist_entropy, old_logprobs_unit),
-                                                          (action_probs_factories, factory_dist_entropy, old_logprobs_factory)]:
-                # match state_values tensor dimensions with rewards tensor
-                state_values = torch.squeeze(state_values)
-                
-                # Finding the ratio (pi_theta / pi_theta__old)
 
-                #TODO: This should not be mean
-                ratios = torch.exp(logprobs - old_logprobs.detach())
+            # match state_values tensor dimensions with rewards tensor
+            state_values = torch.squeeze(state_values)
+            
+            # Finding the ratio (pi_theta / pi_theta__old)
 
-                # Finding Surrogate Loss  
-                surr1 = advantages*ratios#ratios @ advantages
-                surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
+            ratios = torch.exp(action_logprobs - old_logprobs_unit.detach())
 
-                # final loss of clipped objective PPO
-                loss += -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
-                
+            # Finding Surrogate Loss  
+            surr1 = advantages*ratios#ratios @ advantages
+            surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
+
+            # final loss of clipped objective PPO
+            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+            
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()

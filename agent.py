@@ -3,7 +3,7 @@ from lux.utils import my_turn_to_place_factory
 import numpy as np
 import torch
 from network.actor import actor
-from utils.utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from utils.utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, unit_output_to_actions
 from ppo import PPO
 
 class Agent():
@@ -58,9 +58,13 @@ class Agent():
         units = obs["unit_to_id"]
         factories = obs["factory_to_id"]
 
-        unit_output, factory_output = self.PPO.select_action(image)
-        
+        unit_output = self.PPO.select_action(image)
+
+        unit_actions = unit_output_to_actions(unit_output.detach().cpu(), units)
+
+        if len(["unit_to_id"].keys()) == 0:
+            unit_actions.update({factories[factories.keys()[0]] : 0})
         #NOTE How actions are formatted
         # a[0] (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
         # a[1] = direction (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
-        return outputs_to_actions(unit_output.detach().cpu(), factory_output.detach().cpu(), units, factories)
+        return unit_actions #outputs_to_actions(unit_output.detach().cpu(), factory_output.detach().cpu(), units, factories)
