@@ -166,4 +166,4 @@ class SinglePlayerEnv(gym.Wrapper):
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
-        return obs#(o[self.agents[0]] for o in obs)
+        return obs

@@ -8,6 +8,8 @@ from torch.distributions.categorical import Categorical
 class actor(nn.Module):
     def __init__(self, intput_channels, output_channels, n_blocks = 10, squeeze_channels = 64) -> None:
         super(actor, self).__init__()
+
+        #TODO: Add split for factory and unit
         
         self.blocks = torch.nn.ParameterList()
         self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
@@ -37,14 +39,3 @@ class actor(nn.Module):
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
-
-if __name__ == "__main__":
-    net = actor(23, 10)
-    print("Number of parameters in network", net.count_parameters())
-    tens = torch.ones((1, 23, 48, 48))
-
-    print(torch.sum(tens))
-
-    print(torch.sum(net(tens)))
-
-    print(net.get_action_and_value(tens))
