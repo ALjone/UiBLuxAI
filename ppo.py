@@ -60,7 +60,7 @@ class PPO:
         self.buffer.factory_logprobs.append(action_logprobs_factories)
         self.buffer.state_values.append(state_values)
 
-        return action_logprobs_unit, action_logprobs_factories
+        return action_unit, action_factory
 
     def update(self):
         # Monte Carlo estimate of returns
@@ -85,7 +85,7 @@ class PPO:
         old_state_values = torch.squeeze(torch.stack(self.buffer.state_values, dim=0)).detach().to(self.device)
 
         # calculate advantages
-        advantages = rewards.detach() - old_state_values.detach()
+        advantages = (rewards.detach() - old_state_values.detach())
 
         #TODO: Check if it makes sense to loop over probs and entropy when training
 
@@ -94,27 +94,30 @@ class PPO:
 
             # Evaluating old actions and values
             action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_states, old_actions_unit, old_actions_factory)
+
+            loss = 0
+
             for logprobs, dist_entropy, old_logprobs in [(action_logprobs_unit, unit_dist_entropy, old_logprobs_unit),
                                                           (action_probs_factories, factory_dist_entropy, old_logprobs_factory)]:
                 # match state_values tensor dimensions with rewards tensor
                 state_values = torch.squeeze(state_values)
                 
                 # Finding the ratio (pi_theta / pi_theta__old)
+
+                #TODO: This should not be mean
                 ratios = torch.exp(logprobs - old_logprobs.detach())
 
                 # Finding Surrogate Loss  
-                print(ratios.shape)
-                print(advantages.shape)
-                surr1 = ratios * advantages
+                surr1 = advantages*ratios#ratios @ advantages
                 surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
                 # final loss of clipped objective PPO
-                loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+                loss += -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
                 
-                # take gradient step
-                self.optimizer.zero_grad()
-                loss.mean().backward()
-                self.optimizer.step()
+            # take gradient step
+            self.optimizer.zero_grad()
+            loss.mean().backward()
+            self.optimizer.step()
             
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())

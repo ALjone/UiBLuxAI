@@ -17,20 +17,32 @@ class ActorCritic(nn.Module):
         return self.act(state)
     
     def act(self, state):
+        #TODO: Should these be mean?
         action_probs_unit, action_probs_factories = self.actor(state)
         unit_dist, factory_dist = Categorical(action_probs_unit), Categorical(action_probs_factories)
 
-        action_unit, action_factory = unit_dist.sample(), factory_dist.sample()
-        action_logprob_unit, action_logprob_factory = unit_dist.log_prob(action_unit), factory_dist.log_prob(action_factory)
+        action_unit = unit_dist.sample()
+        action_logprob_unit = unit_dist.log_prob(action_unit)
+
+        action_factory = factory_dist.sample()
+        action_logprob_factory = factory_dist.log_prob(action_factory)
+
         state_val = self.critic(state)
 
-        return action_unit.detach(), action_factory.detach(), action_logprob_unit.detach(), action_logprob_factory.detach(), state_val.detach()
+        return action_unit.detach(), action_factory.detach(), torch.mean(action_logprob_unit.detach()), torch.mean(action_logprob_factory.detach()), state_val.detach()
     
     def evaluate(self, state, unit_action, factory_action):
+        #TODO: Should these be mean?
         action_probs_unit, action_probs_factories = self.actor(state)
-        unit_dist, factory_dist = Categorical(action_probs_unit), Categorical(action_probs_factories)
-        action_logprobs_unit, action_logprobs_factories = unit_dist.log_prob(unit_action), factory_dist.log_prob(factory_action)
-        unit_dist_entropy, factory_dist_entropy = unit_dist.entropy(), factory_dist.entropy()
+
+        unit_dist = Categorical(action_probs_unit)
+        action_logprobs_unit = unit_dist.log_prob(unit_action)
+        unit_dist_entropy = unit_dist.entropy().mean((1, 2))
+
+        factory_dist = Categorical(action_probs_factories)
+        action_logprobs_factories = factory_dist.log_prob(factory_action)
+        factory_dist_entropy = factory_dist.entropy().mean((1, 2))
+
         state_values = self.critic(state)
         
-        return action_logprobs_unit, action_logprobs_factories, state_values, unit_dist_entropy, factory_dist_entropy
+        return torch.mean(action_logprobs_unit), torch.mean(action_logprobs_factories), state_values, unit_dist_entropy, factory_dist_entropy

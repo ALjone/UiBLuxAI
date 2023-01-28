@@ -59,6 +59,8 @@ class Agent():
         factories = obs["factory_to_id"]
 
         unit_output, factory_output = self.PPO.select_action(image)
+        #print(unit_output.shape)
+        #print(unit_output[np.random.randint(0, 47, 2)])
         
         #NOTE How actions are formatted
         # a[0] (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
