@@ -46,7 +46,7 @@ class actor(nn.Module):
             x_factory = layer(x_factory)
         x_robot = x_robot.permute(0, 2, 3, 1)
         x_factory = x_factory.permute(0, 2, 3, 1)
-        return F.softmax(x_robot, dim=3), F.softmax(x_factory, dim=3)
+        return F.softmax(x_robot, dim=3).squeeze(), F.softmax(x_factory, dim=3).squeeze()
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

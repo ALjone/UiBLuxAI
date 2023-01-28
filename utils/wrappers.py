@@ -205,7 +205,7 @@ class SinglePlayerEnv(gym.Wrapper):
             + unit_move_to_ice_reward
             + unit_deliver_ice_reward
             + unit_overmining_penalty
-            + (self.state.stats["player_0"]["units_built"]["LIGHT"]/(len(self.env.state.factories[agent])*15)) if len(self.agents) > 0 else 0
+            #+ (self.state.stats["player_0"]["units_built"]["LIGHT"]/(len(self.env.state.factories[agent])*15)) if len(self.agents) > 0 else 0
         )
         reward = reward
 

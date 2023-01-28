@@ -30,10 +30,10 @@ sys.stdout = TestableIO(sys.stdout)
 sys.stderr = TestableIO(sys.stderr)
 
 
-max_training_timesteps = 100000
+max_training_timesteps = 10000000
 
 
-print_freq = 300 * 1        # print avg reward in the interval (in num timesteps)
+print_freq = 100        # print avg reward in the interval (in episodes)
 log_freq = 1000 * 2           # log avg reward in the interval (in num timesteps)
 save_model_freq = int(1e5)          # save model frequency (in num timesteps)
 
@@ -56,6 +56,8 @@ env = SinglePlayerEnv(env)
 ppo_agent = Agent("player_0", env.state.env_cfg)
 
 writer = SummaryWriter()
+
+train_time = time.time()
 
 # training loop
 while time_step <= max_training_timesteps:
@@ -89,39 +91,6 @@ while time_step <= max_training_timesteps:
             ppo_agent.PPO.update()
 
 
-        # log in logging file
-        if time_step % log_freq == 0:
-
-            # log average reward till last episode
-            log_avg_reward = log_running_reward / log_running_episodes
-            log_avg_reward = round(log_avg_reward, 4)
-
-            log_running_reward = 0
-            log_running_episodes = 0
-
-        # printing average reward
-        if time_step % print_freq == 0:
-
-            # print average reward till last episode
-            print_avg_reward = print_running_reward / print_running_episodes
-            print_avg_reward = round(print_avg_reward, 7)
-
-            print("Episode : {} \t\t Timestep : {} \t\t Average Reward : {}".format(i_episode, time_step, print_avg_reward))
-
-            writer.add_scalar("Average reward", print_avg_reward)
-
-            print_running_reward = 0
-            print_running_episodes = 0
-
-        # save model weights
-        if time_step % save_model_freq == 0:
-            print("--------------------------------------------------------------------------------------------")
-            print("saving model at : " + checkpoint_path)
-            ppo_agent.save(checkpoint_path)
-            print("model saved")
-            print("Elapsed Time  : ", datetime.now().replace(microsecond=0) - start_time)
-            print("--------------------------------------------------------------------------------------------")
-
         # break; if the episode is over
         if done:
             break
@@ -133,3 +102,18 @@ while time_step <= max_training_timesteps:
     log_running_episodes += 1
 
     i_episode += 1
+
+    # printing average reward
+    if i_episode % print_freq == 0:
+
+        # print average reward till last episode
+        print_avg_reward = print_running_reward / print_running_episodes
+        print_avg_reward = round(print_avg_reward, 7)
+
+        print("Episode : {} \t\t Timestep : {} \t\t Average Reward : {} \t\t Time used last 100 eps: {} \t\t Time used total: {}".format(i_episode, time_step, print_avg_reward, round(time.time()-start_time, 1), round(time.time()-train_time, 1)))
+
+        writer.add_scalar("Average reward", print_avg_reward, i_episode)
+
+        print_running_reward = 0
+        print_running_episodes = 0
+        train_time = time.time()
