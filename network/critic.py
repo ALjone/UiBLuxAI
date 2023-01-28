@@ -6,7 +6,7 @@ from torch.distributions.categorical import Categorical
 
 
 class critic(nn.Module):
-    def __init__(self, intput_channels, output_channels, n_blocks = 10, squeeze_channels = 64) -> None:
+    def __init__(self, intput_channels, n_blocks = 10, squeeze_channels = 64) -> None:
         super(critic, self).__init__()
 
         #TODO: Add split for factory and unit

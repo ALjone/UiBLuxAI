@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from network.actor import actor
 from utils.utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
-
+from ppo import PPO
 
 class Agent():
     def __init__(self, player: str, env_cfg: EnvConfig, device = torch.device("cuda")) -> None:
@@ -18,6 +18,8 @@ class Agent():
         self.factory_actions_per_cell = FACTORY_ACTION_IDXS
 
         self.model = actor(23, self.factory_actions_per_cell, self.factory_actions_per_cell)
+
+        self.PPO = PPO(7, 3, 3e-4, 3e-4, 0.99, 5, 0.1, device)
 
         self.model.to(self.device)
 

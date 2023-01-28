@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
 from torch.distributions import Categorical
-from ActorCritic import ActorCritic
+from network.ActorCritic import ActorCritic
 
 ################################## PPO Policy ##################################
 class RolloutBuffer:
@@ -23,9 +23,8 @@ class RolloutBuffer:
         del self.is_terminals[:]
 
 
-
 class PPO:
-    def __init__(self, state_dim, action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, device = torch.device("cuda")):
+    def __init__(self, unit_action_dim, factory_action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, device = torch.device("cuda")):
         self.device = device
         self.gamma = gamma
         self.eps_clip = eps_clip
@@ -33,13 +32,13 @@ class PPO:
         
         self.buffer = RolloutBuffer()
 
-        self.policy = ActorCritic(state_dim, action_dim).to(device)
+        self.policy = ActorCritic(unit_action_dim, factory_action_dim).to(device)
         self.optimizer = torch.optim.Adam([
                         {'params': self.policy.actor.parameters(), 'lr': lr_actor},
                         {'params': self.policy.critic.parameters(), 'lr': lr_critic}
                     ])
 
-        self.policy_old = ActorCritic(state_dim, action_dim).to(device)
+        self.policy_old = ActorCritic(unit_action_dim, factory_action_dim).to(device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
@@ -48,14 +47,16 @@ class PPO:
 
         with torch.no_grad():
             state = torch.FloatTensor(state).to(self.device)
-            action, action_logprob, state_val = self.policy_old.act(state)
+            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy_old.act(state)
         
         self.buffer.states.append(state)
-        self.buffer.actions.append(action)
-        self.buffer.logprobs.append(action_logprob)
-        self.buffer.state_values.append(state_val)
+        self.buffer.actions.append(action_logprobs_unit)
+        self.buffer.actions.append(action_probs_factories)
+        self.buffer.logprobs.append(unit_dist_entropy)
+        self.buffer.logprobs.append(factory_dist_entropy)
+        self.buffer.state_values.append(state_values)
 
-        return action.item()
+        return action_logprobs_unit.item(), action_probs_factories.item()
 
     def update(self):
         # Monte Carlo estimate of returns
@@ -80,29 +81,31 @@ class PPO:
         # calculate advantages
         advantages = rewards.detach() - old_state_values.detach()
 
+        #TODO: Check if it makes sense to loop over probs and entropy when training
+
         # Optimize policy for K epochs
         for _ in range(self.K_epochs):
 
             # Evaluating old actions and values
-            logprobs, state_values, dist_entropy = self.policy.evaluate(old_states, old_actions)
+            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_states, old_actions)
+            for logprobs, dist_entropy in [(action_logprobs_unit, unit_dist_entropy), (action_probs_factories, factory_dist_entropy)]:
+                # match state_values tensor dimensions with rewards tensor
+                state_values = torch.squeeze(state_values)
+                
+                # Finding the ratio (pi_theta / pi_theta__old)
+                ratios = torch.exp(logprobs - old_logprobs.detach())
 
-            # match state_values tensor dimensions with rewards tensor
-            state_values = torch.squeeze(state_values)
-            
-            # Finding the ratio (pi_theta / pi_theta__old)
-            ratios = torch.exp(logprobs - old_logprobs.detach())
+                # Finding Surrogate Loss  
+                surr1 = ratios * advantages
+                surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
-            # Finding Surrogate Loss  
-            surr1 = ratios * advantages
-            surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
-
-            # final loss of clipped objective PPO
-            loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
-            
-            # take gradient step
-            self.optimizer.zero_grad()
-            loss.mean().backward()
-            self.optimizer.step()
+                # final loss of clipped objective PPO
+                loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+                
+                # take gradient step
+                self.optimizer.zero_grad()
+                loss.mean().backward()
+                self.optimizer.step()
             
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
