@@ -1,3 +1,4 @@
+from typing import List, Tuple
 import torch
 from torch import nn
 from torchvision.ops import SqueezeExcitation
@@ -27,7 +28,7 @@ class actor(nn.Module):
         self.blocks_robots.append(nn.Conv2d(intput_channels, output_robot, 1))
         self.blocks_robots.append(nn.Conv2d(intput_channels, output_factory, 1))
 
-    def forward(self, x):
+    def forward(self, x:torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
         if type(x) == np.ndarray:
             x = torch.from_numpy(x)
         if len(x.shape) == 3:
@@ -36,8 +37,14 @@ class actor(nn.Module):
 
 
         for layer in self.blocks:
-            x = layer(x) 
-        return x.squeeze().permute(1, 2, 0)
+            x = layer(x)
+        x_robot = x
+        x_facory = x 
+        for layer in self.blocks_robots:
+            x_robot = layer(x_robot)
+        for layer in self.blocks_robots:
+            x_facory = layer(x_facory)
+        return x_robot.squeeze().permute(1, 2, 0), x_facory.squeeze().permute(1, 2, 0)
 
     def get_action_and_value(self, x, action = None):
         logits = self.forward(x)
