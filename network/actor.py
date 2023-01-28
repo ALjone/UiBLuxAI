@@ -6,17 +6,26 @@ from torch.distributions.categorical import Categorical
 
 
 class actor(nn.Module):
-    def __init__(self, intput_channels, output_channels, n_blocks = 10, squeeze_channels = 64) -> None:
+    def __init__(self, intput_channels, output_robot:int = 7,output_factory:int = 3, n_blocks:int = 10,n_blocks_robots:int = 1,n_blocks_factory:int = 1,
+                  squeeze_channels:int = 64) -> None:
         super(actor, self).__init__()
 
         #TODO: Add split for factory and unit
         
         self.blocks = torch.nn.ParameterList()
+        self.blocks_factory = torch.nn.ParameterList()
+        self.blocks_robots = torch.nn.ParameterList()
         self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
         for _ in range(n_blocks-2):
             self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
         self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
-        self.blocks.append(nn.Conv2d(intput_channels, output_channels, 1))
+        for _ in range(n_blocks_robots):
+            self.blocks_robots.append(SqueezeExcitation(intput_channels, squeeze_channels))
+        for _ in range(n_blocks_factory):
+            self.n_blocks_factory.append(SqueezeExcitation(intput_channels, squeeze_channels))
+            
+        self.blocks_robots.append(nn.Conv2d(intput_channels, output_robot, 1))
+        self.blocks_robots.append(nn.Conv2d(intput_channels, output_factory, 1))
 
     def forward(self, x):
         if type(x) == np.ndarray:
