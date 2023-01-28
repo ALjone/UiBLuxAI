@@ -2,7 +2,7 @@ from lux.kit import obs_to_game_state, EnvConfig
 from lux.utils import my_turn_to_place_factory
 import numpy as np
 import torch
-from network.model import actor
+from network.actor import actor
 from utils.utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 
 
@@ -17,11 +17,9 @@ class Agent():
         self.unit_actions_per_cell = UNIT_ACTION_IDXS
         self.factory_actions_per_cell = FACTORY_ACTION_IDXS
 
-        self.action_model = actor(23, self.unit_actions_per_cell)
-        self.factory_model = actor(23, self.factory_actions_per_cell)
+        self.model = actor(23, self.factory_actions_per_cell, self.factory_actions_per_cell)
 
-        self.action_model.to(self.device)
-        self.factory_model.to(self.device)
+        self.model.to(self.device)
 
     def early_setup(self, step: int, obs, remainingOverageTime: int = 60):
         if step == 0:
@@ -52,8 +50,7 @@ class Agent():
         units = obs["unit_to_id"]
         factories = obs["factory_to_id"]
 
-        unit_output = self.action_model(image)
-        factory_output = self.factory_model(image)
+        unit_output, factory_output = self.model(image)
         
         #NOTE How actions are formatted
         # a[0] (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
