@@ -142,7 +142,6 @@ class SinglePlayerEnv(gym.Wrapper):
         Adds a custom reward and turns the LuxAI_S2 environment into a single-agent environment for easy training
         """
         super().__init__(env)
-        self.prev_step_metrics = None
 
 
     def get_reward(self, action, obs):
@@ -166,7 +165,6 @@ class SinglePlayerEnv(gym.Wrapper):
         unit_deliver_ice_reward = 0
         unit_move_to_ice_reward = 0
         unit_overmining_penalty = 0
-        penalize_power_waste = 0
 
         ice_map = shared_obs["board"]["ice"]
         ice_tile_locations = np.argwhere(ice_map == 1)
@@ -207,7 +205,7 @@ class SinglePlayerEnv(gym.Wrapper):
             + unit_move_to_ice_reward
             + unit_deliver_ice_reward
             + unit_overmining_penalty
-            #+ (self.state.stats["player_0"]["units_built"]["LIGHT"]/(len(self.env.state.factories[agent])*15)) if len(self.agents) > 0 else 0
+            + (self.state.stats["player_0"]["units_built"]["LIGHT"]/(len(self.env.state.factories[agent])*15)) if len(self.agents) > 0 else 0
         )
         reward = reward
 
@@ -241,5 +239,4 @@ class SinglePlayerEnv(gym.Wrapper):
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
-        self.prev_step_metrics = None
         return (obs[0][self.agents[0]], obs[1])

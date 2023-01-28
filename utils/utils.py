@@ -11,11 +11,18 @@ def unit_idx_to_action(idx):
     if -1 < idx < 4:
         return move(idx)
 
-    if idx == 5:
+    if idx == 4:
         return dig()
 
-    if idx == 6:
+    if idx == 5:
         return recharge(20)
+
+    if idx == 6:
+         return self_destruct()
+    
+    
+def self_destruct():
+     return np.array([4, 0, 0, 0, 0, 1])
 
 def recharge(x, repeat=0, n=1):
     """Gets the action for rechargings"""
@@ -37,14 +44,13 @@ def factory_idx_to_action(idx):
     assert -1 < idx < 3
     assert isinstance(idx, int)
     # 0: Build light, 1: Build heavy, 2: Grow lichen
-    return np.array([idx])
+    return idx
 
 
 def outputs_to_actions(unit_output, factory_output, units, factories):
     """Turns outputs from the model into action dicts"""
     unit_actions = unit_output_to_actions(unit_output, units)
     unit_actions.update(factory_output_to_actions(factory_output, factories))
-    
     return unit_actions
 
 def unit_output_to_actions(unit_output, units):

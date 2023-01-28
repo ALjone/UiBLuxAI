@@ -5,15 +5,35 @@ from utils.visualization import animate
 from utils.wrappers import ImageWithUnitsWrapper, SinglePlayerEnv
 import time
 from datetime import datetime
+from torch.utils.tensorboard import SummaryWriter
 
 start_time = time.time()
 
+import io
+import sys
+import traceback
+
+
+class TestableIO(io.BytesIO):
+
+    def __init__(self, old_stream, initial_bytes=None):
+        super(TestableIO, self).__init__(initial_bytes)
+        self.old_stream = old_stream
+
+    def write(self, bytes):
+        if 'unit' in bytes:
+            traceback.print_stack(file=self.old_stream)
+        self.old_stream.write(bytes)
+
+
+sys.stdout = TestableIO(sys.stdout)
+sys.stderr = TestableIO(sys.stderr)
 
 
 max_training_timesteps = 100000
 
 
-print_freq = 150 * 1        # print avg reward in the interval (in num timesteps)
+print_freq = 300 * 1        # print avg reward in the interval (in num timesteps)
 log_freq = 1000 * 2           # log avg reward in the interval (in num timesteps)
 save_model_freq = int(1e5)          # save model frequency (in num timesteps)
 
@@ -22,7 +42,7 @@ checkpoint_path = "model.t"
 update_timestep = 1000 
 
 print_running_reward = 0
-print_running_episodes = 1
+print_running_episodes = 0
 
 log_running_reward = 0
 log_running_episodes = 0
@@ -30,10 +50,12 @@ log_running_episodes = 0
 time_step = 0
 i_episode = 0
 
-env = LuxAI_S2(verbose = 0, collect_stats=True)
+env = LuxAI_S2(verbose = -1, collect_stats=True)
 env = ImageWithUnitsWrapper(env)
 env = SinglePlayerEnv(env)
 ppo_agent = Agent("player_0", env.state.env_cfg)
+
+writer = SummaryWriter()
 
 # training loop
 while time_step <= max_training_timesteps:
@@ -85,6 +107,8 @@ while time_step <= max_training_timesteps:
             print_avg_reward = round(print_avg_reward, 7)
 
             print("Episode : {} \t\t Timestep : {} \t\t Average Reward : {}".format(i_episode, time_step, print_avg_reward))
+
+            writer.add_scalar("Average reward", print_avg_reward)
 
             print_running_reward = 0
             print_running_episodes = 0
