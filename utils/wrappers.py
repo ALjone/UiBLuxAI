@@ -6,8 +6,6 @@ import numpy as np
 import numpy.typing as npt
 from gym import spaces
 
-from luxai_s2.state import ObservationStateDict
-
 from lux.kit import obs_to_game_state
 from lux.utils import my_turn_to_place_factory
 
@@ -23,8 +21,7 @@ class ImageWithUnitsWrapper(gym.ObservationWrapper):
         )
 
     def observation(
-        self, obs: Dict[str, ObservationStateDict]
-    ) -> Dict[str, npt.NDArray]:
+        self, obs) -> Dict[str, npt.NDArray]:
         """Returns the image features as a torch tensor"""
         shared_obs = obs["player_0"]
         unit_mask = np.zeros((self.map_size, self.map_size, 1))
@@ -109,7 +106,8 @@ class ImageWithUnitsWrapper(gym.ObservationWrapper):
         image_features = torch.from_numpy(image_features.transpose(2, 0, 1))
 
         new_obs = dict()
-        for agent in self.agents:
+        #NOTE: This is hardcoded, maybe not so smart, but since self.agents is emptied at the end of the game, it has to be done
+        for agent in ["player_0", "player_1"]:
             new_obs[agent] = {}
             new_obs[agent]["image_features"] = image_features #TODO Shouldn't this dependet on agent?
 
@@ -162,8 +160,8 @@ class SinglePlayerEnv(gym.Wrapper):
         obs, reward, done, info = super().step({agent: action, opp_agent: opp_action})
 
         #NOTE: See here for tips on custom reward function https://github.com/Lux-AI-Challenge/Lux-Design-S2/blob/main/examples/sb3.py
-        return obs, reward[agent], done[agent], info[agent]
+        return (obs[0][agent], obs[1]), reward[agent], done[agent], info[agent]
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
-        return obs
+        return (obs[0][self.agents[0]], obs[1])

@@ -1,4 +1,5 @@
 from typing import List, Tuple
+import torch.nn.functional as F
 import torch
 from torch import nn
 from torchvision.ops import SqueezeExcitation
@@ -23,35 +24,29 @@ class actor(nn.Module):
         for _ in range(n_blocks_robots):
             self.blocks_robots.append(SqueezeExcitation(intput_channels, squeeze_channels))
         for _ in range(n_blocks_factory):
-            self.n_blocks_factory.append(SqueezeExcitation(intput_channels, squeeze_channels))
+            self.blocks_factory.append(SqueezeExcitation(intput_channels, squeeze_channels))
             
         self.blocks_robots.append(nn.Conv2d(intput_channels, output_robot, 1))
-        self.blocks_robots.append(nn.Conv2d(intput_channels, output_factory, 1))
+        self.blocks_factory.append(nn.Conv2d(intput_channels, output_factory, 1))
 
-    def forward(self, x:torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
+    def forward(self, x:torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         if type(x) == np.ndarray:
             x = torch.from_numpy(x)
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
         x = x.float()
 
-
         for layer in self.blocks:
             x = layer(x)
         x_robot = x
-        x_facory = x 
+        x_factory = x 
         for layer in self.blocks_robots:
             x_robot = layer(x_robot)
-        for layer in self.blocks_robots:
-            x_facory = layer(x_facory)
-        return x_robot.squeeze().permute(1, 2, 0), x_facory.squeeze().permute(1, 2, 0)
-
-    def get_action_and_value(self, x, action = None):
-        logits = self.forward(x)
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
-        return action.shape, probs.log_prob(action).shape, probs.entropy().shape
+        for layer in self.blocks_factory:
+            x_factory = layer(x_factory)
+        x_robot = x_robot.permute(0, 2, 3, 1)
+        x_factory = x_factory.permute(0, 2, 3, 1)
+        return F.softmax(x_robot, dim=3), F.softmax(x_factory, dim=3)
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

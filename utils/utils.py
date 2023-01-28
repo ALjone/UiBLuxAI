@@ -51,7 +51,7 @@ def unit_output_to_actions(unit_output, units):
     actions = {}
     for unit in units:
             x, y = unit["pos"][0], unit["pos"][1]
-            action = torch.argmax(unit_output[x, y]).item()
+            action = torch.argmax(unit_output[0, x, y]).item()
             actions[unit["unit_id"]] = [unit_idx_to_action(action)]
 
     return actions
@@ -61,7 +61,7 @@ def factory_output_to_actions(factory_output, factories):
     actions = {}
     for factory in factories:
             x, y = factory["pos"][0], factory["pos"][1]
-            action = torch.argmax(factory_output[x, y]).item()
+            action = torch.argmax(factory_output[0, x, y]).item()
             actions[factory["unit_id"]] = factory_idx_to_action(action)
 
     return actions

@@ -7,17 +7,21 @@ from network.ActorCritic import ActorCritic
 ################################## PPO Policy ##################################
 class RolloutBuffer:
     def __init__(self):
-        self.actions = []
+        self.unit_actions = []
+        self.factory_actions = []
         self.states = []
-        self.logprobs = []
+        self.unit_logprobs = []
+        self.factory_logprobs = []
         self.rewards = []
         self.state_values = []
         self.is_terminals = []
     
     def clear(self):
-        del self.actions[:]
+        del self.unit_actions[:]
+        del self.factory_actions[:]
         del self.states[:]
-        del self.logprobs[:]
+        del self.unit_logprobs[:]
+        del self.factory_logprobs[:]
         del self.rewards[:]
         del self.state_values[:]
         del self.is_terminals[:]
@@ -46,17 +50,17 @@ class PPO:
     def select_action(self, state):
 
         with torch.no_grad():
-            state = torch.FloatTensor(state).to(self.device)
-            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy_old.act(state)
+            state = state.float().to(self.device)
+            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(state)
         
         self.buffer.states.append(state)
-        self.buffer.actions.append(action_logprobs_unit)
-        self.buffer.actions.append(action_probs_factories)
-        self.buffer.logprobs.append(unit_dist_entropy)
-        self.buffer.logprobs.append(factory_dist_entropy)
+        self.buffer.unit_actions.append(action_unit)
+        self.buffer.factory_actions.append(action_factory)
+        self.buffer.unit_logprobs.append(action_logprobs_unit)
+        self.buffer.factory_logprobs.append(action_logprobs_factories)
         self.buffer.state_values.append(state_values)
 
-        return action_logprobs_unit.item(), action_probs_factories.item()
+        return action_logprobs_unit, action_logprobs_factories
 
     def update(self):
         # Monte Carlo estimate of returns
@@ -74,8 +78,10 @@ class PPO:
 
         # convert list to tensor
         old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
-        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(self.device)
-        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(self.device)
+        old_actions_unit = torch.squeeze(torch.stack(self.buffer.unit_actions, dim=0)).detach().to(self.device)
+        old_actions_factory = torch.squeeze(torch.stack(self.buffer.factory_actions, dim=0)).detach().to(self.device)
+        old_logprobs_unit = torch.squeeze(torch.stack(self.buffer.unit_logprobs, dim=0)).detach().to(self.device)
+        old_logprobs_factory = torch.squeeze(torch.stack(self.buffer.factory_logprobs, dim=0)).detach().to(self.device)
         old_state_values = torch.squeeze(torch.stack(self.buffer.state_values, dim=0)).detach().to(self.device)
 
         # calculate advantages
@@ -87,8 +93,9 @@ class PPO:
         for _ in range(self.K_epochs):
 
             # Evaluating old actions and values
-            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_states, old_actions)
-            for logprobs, dist_entropy in [(action_logprobs_unit, unit_dist_entropy), (action_probs_factories, factory_dist_entropy)]:
+            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_states, old_actions_unit, old_actions_factory)
+            for logprobs, dist_entropy, old_logprobs in [(action_logprobs_unit, unit_dist_entropy, old_logprobs_unit),
+                                                          (action_probs_factories, factory_dist_entropy, old_logprobs_factory)]:
                 # match state_values tensor dimensions with rewards tensor
                 state_values = torch.squeeze(state_values)
                 
@@ -96,6 +103,8 @@ class PPO:
                 ratios = torch.exp(logprobs - old_logprobs.detach())
 
                 # Finding Surrogate Loss  
+                print(ratios.shape)
+                print(advantages.shape)
                 surr1 = ratios * advantages
                 surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
