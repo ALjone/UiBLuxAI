@@ -29,8 +29,6 @@ def dig(repeat=0, n=1):
 def move(dir, repeat = 0, n = 1):
     """Gets the action for moving in a direction"""
     #dir (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
-    if dir != 0:
-        print("Moved a unit!", dir)
     return np.array([0, dir, 0, 0, repeat, n])
 
 
@@ -39,7 +37,7 @@ def factory_idx_to_action(idx):
     assert -1 < idx < 3
     assert isinstance(idx, int)
     # 0: Build light, 1: Build heavy, 2: Grow lichen
-    return idx
+    return np.array([idx])
 
 
 def outputs_to_actions(unit_output, factory_output, units, factories):

@@ -63,5 +63,4 @@ class Agent():
         #NOTE How actions are formatted
         # a[0] (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
         # a[1] = direction (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
-
         return outputs_to_actions(unit_output.detach().cpu(), factory_output.detach().cpu(), units, factories)

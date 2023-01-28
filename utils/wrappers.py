@@ -198,13 +198,8 @@ class SinglePlayerEnv(gym.Wrapper):
                         unit_deliver_ice_reward = (
                             0.2 + (1 - dist_penalty) * 0.1
                         )  # encourage unit to move back to factory
-                if action[agent] == 15 and unit["power"] < 70:
-                    # penalize the agent for trying to dig with insufficient power, which wastes 10 power for trying to update the action queue
-                    penalize_power_waste -= 0.005
 
-        # save some stats to the info object so we can record it with our SB3 logger
 
-        
         #print(self.state.stats["player_0"]["lichen_grown"].keys())
         #print(self.state.stats["player_0"]["units_built"]["LIGHT"])
         reward = (
