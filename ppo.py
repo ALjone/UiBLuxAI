@@ -60,7 +60,7 @@ class PPO:
         self.buffer.factory_logprobs.append(action_logprobs_factories)
         self.buffer.state_values.append(state_values)
 
-        return action_unit, action_factory
+        return action_unit.squeeze(), action_factory.squeeze()
 
     def update(self):
         # Monte Carlo estimate of returns

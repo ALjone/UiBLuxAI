@@ -7,6 +7,7 @@ FACTORY_ACTION_IDXS = 3
 def unit_idx_to_action(idx):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
     assert -1 < idx < 7
+    assert isinstance(idx, int)
     if -1 < idx < 4:
         return move(idx)
 
@@ -51,10 +52,9 @@ def outputs_to_actions(unit_output, factory_output, units, factories):
 def unit_output_to_actions(unit_output, units):
     """Turns outputs from the model into action dicts for units"""
     actions = {}
-    unit_output = unit_output.squeeze()
     for unit in units:
             x, y = unit["pos"][0], unit["pos"][1]
-            action = torch.argmax(unit_output[x, y]).item()
+            action = unit_output[x, y].item()
             actions[unit["unit_id"]] = [unit_idx_to_action(action)]
 
     return actions
@@ -62,10 +62,9 @@ def unit_output_to_actions(unit_output, units):
 def factory_output_to_actions(factory_output, factories):
     """Turns outputs from the model into action dicts for factories"""
     actions = {}
-    factory_output = factory_output.squeeze()
     for factory in factories:
             x, y = factory["pos"][0], factory["pos"][1]
-            action = torch.argmax(factory_output[x, y]).item()
-            actions[factory["unit_id"]] = 0#factory_idx_to_action(action)
+            action = factory_output[x, y].item()
+            actions[factory["unit_id"]] = factory_idx_to_action(action)
 
     return actions
