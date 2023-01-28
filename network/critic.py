@@ -1,3 +1,5 @@
+from typing import List, Tuple
+import torch.nn.functional as F
 import torch
 from torch import nn
 from torchvision.ops import SqueezeExcitation
@@ -5,44 +7,49 @@ import numpy as np
 from torch.distributions.categorical import Categorical
 
 
+class block(nn.Module):
+
+    def __init__(self, input_channels, output_channels, kernel_size):
+        
+        self.conv = nn.Sequential(nn.Conv2d(input_channels, output_channels, kernel_size),
+                                  nn.BatchNorm2d(output_channels),
+                                  nn.ReLU())
+        
+    def forward(self, x):
+        return self.conv(x)
+
+
 class critic(nn.Module):
-    def __init__(self, intput_channels, n_blocks = 10, squeeze_channels = 64) -> None:
+    def __init__(self, intput_channels, output_robot:int = 7,output_factory:int = 3, n_blocks:int = 10,n_blocks_robots:int = 1,n_blocks_factory:int = 1,
+                  squeeze_channels:int = 64) -> None:
         super(critic, self).__init__()
 
         #TODO: Add split for factory and unit
         
         self.blocks = torch.nn.ParameterList()
-        self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
-        for _ in range(n_blocks-2):
-            self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
-        self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
-        self.blocks.append(nn.Conv2d(intput_channels, 5, 1))
+        self.blocks_factory = torch.nn.ParameterList()
+        self.blocks_robots = torch.nn.ParameterList()
         
-        self.linear = nn.Linear(11520, 1)
+        self.blocks.append(block(intput_channels, 64, 4))
 
-    def forward(self, x):
+        for _ in range(9):
+            self.blocks.append(block(64, 64))
+
+        self.linear = nn.Linear(100, 1)
+
+    def forward(self, x:torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         if type(x) == np.ndarray:
             x = torch.from_numpy(x)
         if len(x.shape) == 3:
             x = x.unsqueeze(0)
         x = x.float()
 
-
         for layer in self.blocks:
-            x = layer(x) 
+            x = layer(x)
+        
         x = self.linear(x.flatten(1))
-        return x.squeeze()
+
+        return F.softmax(x, dim=3).squeeze()
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
-
-if __name__ == "__main__":
-    net = critic(23, 10)
-    print("Number of parameters in network", net.count_parameters())
-    tens = torch.ones((5, 23, 48, 48))
-
-    print(torch.sum(tens))
-
-    print(torch.sum(net(tens)))
-
-    print(net(tens).shape)
