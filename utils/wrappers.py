@@ -146,6 +146,8 @@ class SinglePlayerEnv(gym.Wrapper):
         super().__init__(env)
         self.previous_ice = 0
         self.dist_to_ice = None
+        self.dist_to_factory = None
+        self.prev_factory_ice = 0
 
 
     def get_reward(self, action, obs):
@@ -160,6 +162,8 @@ class SinglePlayerEnv(gym.Wrapper):
 
         factories = shared_obs["factories"][agent]
         factory_pos = None
+        if factories == {}:
+            return {"player_0" : 0}
         for unit_id in factories:
             factory = factories[unit_id]
             # note that ice converts to water at a 4:1 ratio
@@ -182,6 +186,7 @@ class SinglePlayerEnv(gym.Wrapper):
         ice_tile_distances = np.mean((ice_tile_locations - pos) ** 2, 1)
         closest_ice_tile = ice_tile_locations[np.argmin(ice_tile_distances)]
         dist_to_ice = manhattan_dist(closest_ice_tile, pos)
+        dist_to_factory = manhattan_dist(pos, factory_pos)
 
         if self.env_cfg.verbose > 0 and unit["cargo"]["ice"] > 0:
             print("Unit", unit["unit_id"], "has", unit["cargo"]["ice"], "ice and", unit["cargo"]["metal"], "metal")
@@ -191,21 +196,21 @@ class SinglePlayerEnv(gym.Wrapper):
         elif  unit["cargo"]["ice"] < 20:
             unit_move_to_ice_reward = (self.dist_to_ice-dist_to_ice)/10
         else:
-            if factory_pos is not None:
-                dist_to_factory = manhattan_dist(pos, factory_pos)
-                dist_penalty = min(1.0, dist_to_factory / 10)
-                unit_deliver_ice_reward = (
-                    0.2 + (1 - dist_penalty) * 0.1
-                )  # encourage unit to move back to factory
+            unit_deliver_ice_reward = (self.dist_to_factory-dist_to_factory)/10
 
         unit_mining_reward = max(0, unit["cargo"]["ice"] - self.previous_ice)/20
 
+        transport_water_reward = max(0, (self.prev_factory_ice - factory["cargo"]["ice"])/2)
+
         self.dist_to_ice = dist_to_ice
+        self.dist_to_factory = dist_to_factory
+        self.prev_factory_ice = factory["cargo"]["ice"]
         reward = (
             0
             + unit_move_to_ice_reward
             + unit_deliver_ice_reward
             + unit_mining_reward
+            + transport_water_reward
         )
         reward = reward
         self.previous_ice = unit["cargo"]["ice"]
@@ -233,6 +238,7 @@ class SinglePlayerEnv(gym.Wrapper):
         for unit in units:
             unit = units[unit]
             unit.power = 1000
+            unit.cargo_space = 100
 
         if self.state.real_env_steps < 0:
             opp_action = get_factory(self.state.env_steps, self.env.state.env_cfg, self.state.get_obs(), opp_agent)
@@ -253,4 +259,6 @@ class SinglePlayerEnv(gym.Wrapper):
         obs = self.env.reset(**kwargs)
         self.previous_ice = 0
         self.dist_to_ice = None
+        self.dist_to_factory = None
+        self.prev_factory_ice = 0
         return (obs[0][self.agents[0]], obs[1])

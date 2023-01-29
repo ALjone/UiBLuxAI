@@ -33,15 +33,17 @@ class actor(nn.Module):
         mid_channels = 16
 
         conv_out_channels = 8
+
+        num_layers = 8
         
         self.blocks.append(block(intput_channels, mid_channels, 4))
 
-        for _ in range(3):
+        for _ in range(num_layers-2):
             self.blocks.append(block(mid_channels, mid_channels, 4))
 
         self.blocks.append(block(mid_channels, conv_out_channels, 4))
 
-        self.linear = nn.Linear(((48-3*5)**2)*conv_out_channels, output_robot)
+        self.linear = nn.Linear(((48-3*num_layers)**2)*conv_out_channels, output_robot)
 
         print("Parameters in actor:", self.count_parameters())
 

@@ -51,7 +51,7 @@ i_episode = 0
 env = LuxAI_S2(verbose = 0, collect_stats=True)
 env = ImageWithUnitsWrapper(env)
 env = SinglePlayerEnv(env)
-ppo_agent = Agent("player_0", env.state.env_cfg)
+ppo_agent = Agent("player_0", env.state.env_cfg)#, path = checkpoint_path)
 
 writer = SummaryWriter()
 
@@ -108,6 +108,7 @@ for i in range(max_episodes//print_freq):
 
     print("Episode : {}/{} \t\t Timestep : {} \t\t Average Reward : {} \t\t Average loss : {} \t\t Time used last 100 eps: {} \t\t Time used total: {}".format(i_episode, max_episodes, time_step, print_avg_reward, np.mean(losses), round(time.time()-train_time, 1), round(time.time()-start_time, 1)))
     print(ppo_agent.actions)
+    ppo_agent.actions = [0]*7
 
     writer.add_scalar("Average reward", print_avg_reward, i_episode)
 

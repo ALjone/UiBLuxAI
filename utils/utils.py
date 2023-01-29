@@ -14,7 +14,7 @@ def unit_idx_to_action(idx):
         return dig()
 
     if idx == 6:
-         return transfer(100)
+         return transfer(1000)
     
     #if idx == 7:
     #    return recharge(100)
