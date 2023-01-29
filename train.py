@@ -38,23 +38,20 @@ def train(env, agent, config, writer = None):
 
     #TODO: Move to config
     start_time = time.time()
-    max_episodes = 10000000
-    print_freq = 100        # print avg reward in the interval (in episodes)
-    checkpoint_path = "model.t"
-    batch_size = 256
-    print_running_reward = 0
-    print_running_episodes = 0
     time_step = 0
     i_episode = 0
+
+    print_running_reward = 0
+    print_running_episodes = 0
         
     train_time = time.time()
     if writer is None:
         writer = SummaryWriter()
     # training loop
-    for i in range(max_episodes//print_freq):  
+    for i in range(config["max_episodes"]//config["print_freq"]):  
 
         losses = []
-        for _ in tqdm(range(print_freq), leave = False, desc = "Experiencing"):
+        for _ in tqdm(range(config["print_freq"]), leave = False, desc = "Experiencing"):
             state, original_obs = env.reset()
             step = 0
             while env.state.real_env_steps < 0:
@@ -80,7 +77,7 @@ def train(env, agent, config, writer = None):
                 current_ep_reward += reward
 
                 # update PPO agent
-                if time_step % batch_size == 0:
+                if time_step % config["batch_size"] == 0:
                     losses.append(agent.PPO.update())
 
 
@@ -99,7 +96,7 @@ def train(env, agent, config, writer = None):
         print_avg_reward = print_running_reward / print_running_episodes
         print_avg_reward = round(print_avg_reward, 7)
 
-        print("Episode : {}/{} \t\t Timestep : {} \t\t Average Reward : {} \t\t Average loss : {} \t\t Time used last 100 eps: {} \t\t Time used total: {}".format(i_episode, max_episodes, time_step, print_avg_reward, np.mean(losses), round(time.time()-train_time, 1), round(time.time()-start_time, 1)))
+        print("Episode : {}/{} \t\t Timestep : {} \t\t Average Reward : {} \t\t Average loss : {} \t\t Time used last 100 eps: {} \t\t Time used total: {}".format(i_episode, config["max_episodes"], time_step, print_avg_reward, np.mean(losses), round(time.time()-train_time, 1), round(time.time()-start_time, 1)))
 
         writer.add_scalar("Average reward", print_avg_reward, i_episode)
 
@@ -107,4 +104,4 @@ def train(env, agent, config, writer = None):
         print_running_episodes = 0
         train_time = time.time()
 
-        agent.PPO.save(checkpoint_path)
+        agent.PPO.save(config["checkpoint_path"])

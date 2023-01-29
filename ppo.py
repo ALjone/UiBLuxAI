@@ -98,12 +98,9 @@ class PPO:
 
             for logprobs, dist_entropy, old_logprobs in [(action_logprobs_unit, unit_dist_entropy, old_logprobs_unit),
                                                           (action_probs_factories, factory_dist_entropy, old_logprobs_factory)]:
-                # match state_values tensor dimensions with rewards tensor
-                state_values = torch.squeeze(state_values)
                 
                 # Finding the ratio (pi_theta / pi_theta__old)
 
-                #TODO: This should not be mean
                 ratios = torch.exp(logprobs - old_logprobs.detach())
 
                 # Finding Surrogate Loss  
@@ -111,8 +108,12 @@ class PPO:
                 surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
                 # final loss of clipped objective PPO
-                loss += -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+                loss += -torch.min(surr1, surr2) - 0.01 * dist_entropy
                 
+            # match state_values tensor dimensions with rewards tensor
+            state_values = torch.squeeze(state_values)
+            loss += 0.5 * self.MseLoss(state_values, rewards)
+
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()

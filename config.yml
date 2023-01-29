@@ -1,0 +1,16 @@
+#Training
+max_episodes: 10000000
+print_freq: 100        # print avg reward in the interval (in episodes)
+checkpoint_path: model.t
+
+#PPO 
+batch_size: 512
+actor_lr: 0.0003
+critic_lr: 0.0003
+gamma: 0.99
+epochs_per_batch: 40
+eps_clip: 0.1
+
+#Other
+device: cuda
+load_path: None #model.t

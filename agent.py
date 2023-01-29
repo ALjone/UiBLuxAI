@@ -4,30 +4,26 @@ import numpy as np
 import torch
 import scipy
 from network.actor import actor
-from utils.utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from utils.move_utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from ppo import PPO
 import matplotlib.pyplot as plt
 
 
 class Agent():
-    def __init__(self, player: str, env_cfg: EnvConfig, device=torch.device("cuda"), path=None) -> None:
+    def __init__(self, player: str, env_cfg: EnvConfig, config) -> None:
         self.player = player
         self.opp_player = "player_1" if self.player == "player_0" else "player_0"
-        np.random.seed(0)
         self.env_cfg: EnvConfig = env_cfg
-        self.device = device
+        self.device = config["device"]
 
         self.unit_actions_per_cell = UNIT_ACTION_IDXS
         self.factory_actions_per_cell = FACTORY_ACTION_IDXS
 
-        self.model = actor(23, self.factory_actions_per_cell,
-                           self.factory_actions_per_cell)
 
-        self.PPO = PPO(self.unit_actions_per_cell, self.factory_actions_per_cell, 3e-4, 3e-4, 0.99, 20, 0.1, device)
+        self.PPO = PPO(self.unit_actions_per_cell, self.factory_actions_per_cell, config["actor_lr"], config["critic_lr"], config["gamma"], config["epochs_per_batch"], config["eps_clip"], config["device"])
 
-        self.model.to(self.device)
-        if path is not None:
-            self.PPO.load(path)
+        if config["path"] is not None:
+            self.PPO.load(config["path"])
 
     def early_setup(self, step: int, obs, remainingOverageTime: int = 60):
         if step == 0:
