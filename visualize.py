@@ -35,3 +35,7 @@ def run(path):
     agent = Agent("player_0", env.state.env_cfg, path = path)
     
     play_episode(agent, env, True)
+
+
+if __name__ == "__main__":
+    run("model.t")

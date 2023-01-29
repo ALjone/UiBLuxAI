@@ -23,7 +23,7 @@ class Agent():
         self.model = actor(23, self.factory_actions_per_cell,
                            self.factory_actions_per_cell)
 
-        self.PPO = PPO(self.unit_actions_per_cell, self.factory_actions_per_cell, 3e-4, 3e-4, 0.99, 80, 0.1, device)
+        self.PPO = PPO(self.unit_actions_per_cell, self.factory_actions_per_cell, 3e-4, 3e-4, 0.99, 20, 0.1, device)
 
         self.model.to(self.device)
         if path is not None:

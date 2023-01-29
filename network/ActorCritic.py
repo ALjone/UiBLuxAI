@@ -12,6 +12,9 @@ class ActorCritic(nn.Module):
         self.actor = actor(23, unit_action_dim, factory_action_dim).to(device)
         # critic
         self.critic = critic(23).to(device)
+
+        print("Actor has:", self.actor.count_parameters(), "parameters")
+        print("Critic has:", self.critic.count_parameters(), "parameters")
         
     def forward(self, state):
         return self.act(state)

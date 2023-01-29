@@ -2,13 +2,13 @@ import numpy as np
 import torch
 
 UNIT_ACTION_IDXS = 8
-FACTORY_ACTION_IDXS = 3
+FACTORY_ACTION_IDXS = 4
 
 def unit_idx_to_action(idx):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
     assert -1 < idx < 8
     assert isinstance(idx, int)
-    if -1 < idx < 6:
+    if -1 < idx < 5:
         return move(idx)
 
     if idx == 5:
@@ -31,7 +31,6 @@ def recharge(x, repeat=0, n=1):
 def dig(repeat=0, n=1):
     """Gets the action for digging"""
     return np.array([3, 0, 0, 0, repeat, n])
-
 
 def move(dir, repeat = 0, n = 1):
     """Gets the action for moving in a direction"""

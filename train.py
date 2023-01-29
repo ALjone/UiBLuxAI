@@ -9,7 +9,7 @@ from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 
 from tqdm import tqdm
-start_time = time.time()
+
 
 import io
 import sys
@@ -32,86 +32,79 @@ sys.stdout = TestableIO(sys.stdout)
 sys.stderr = TestableIO(sys.stderr)
 
 
-max_episodes = 10000000
 
 
-print_freq = 1000        # print avg reward in the interval (in episodes)
-save_model_freq = int(print_freq)          # save model frequency (in num timesteps)
+def train(env, agent, config, writer = None):
 
-checkpoint_path = "model.t"
-
-update_timestep = 2048
-
-print_running_reward = 0
-print_running_episodes = 0
-
-time_step = 0
-i_episode = 0
-
-env = LuxAI_S2(verbose = 0, collect_stats=True)
-env = ImageWithUnitsWrapper(env)
-env = SinglePlayerEnv(env)
-ppo_agent = Agent("player_0", env.state.env_cfg)#, path = checkpoint_path)
-
-writer = SummaryWriter()
-
-train_time = time.time()
-
-# training loop
-for i in range(max_episodes//print_freq):  
-
-    losses = []
-    for _ in tqdm(range(print_freq), leave = False, desc = "Experiencing"):
-        state, original_obs = env.reset()
-        step = 0
-        while env.state.real_env_steps < 0:
-            o = original_obs[ppo_agent.player]
-            a = ppo_agent.early_setup(step, o)
-            step += 1
-            state, rewards, dones, infos = env.step(a)
-            state, original_obs = state
-        current_ep_reward = 0
-        
-        while True:
-            # select action with policy
-            action = ppo_agent.act(state)
-            #a = ppo_agent.act(state)
-            state, reward, done, _ = env.step(action)
-            state = state[0] #Getting the first element, because state is a tuple of (state, original_obs)
-
-            # saving reward and is_terminals
-            ppo_agent.PPO.buffer.rewards.append(reward)
-            ppo_agent.PPO.buffer.is_terminals.append(done)
-
-            time_step +=1
-            current_ep_reward += reward
-
-            # update PPO agent
-            if time_step % update_timestep == 0:
-                losses.append(ppo_agent.PPO.update())
-
-
-            # break; if the episode is over
-            if done:
-                break
-            
-
-        print_running_reward += current_ep_reward
-        print_running_episodes += 1
-
-        i_episode += 1
-
-
-    # print average reward till last episode
-    print_avg_reward = print_running_reward / print_running_episodes
-    print_avg_reward = round(print_avg_reward, 7)
-
-    print("Episode : {}/{} \t\t Timestep : {} \t\t Average Reward : {} \t\t Average loss : {} \t\t Time used last 100 eps: {} \t\t Time used total: {}".format(i_episode, max_episodes, time_step, print_avg_reward, np.mean(losses), round(time.time()-train_time, 1), round(time.time()-start_time, 1)))
-
-    writer.add_scalar("Average reward", print_avg_reward, i_episode)
-
+    #TODO: Move to config
+    start_time = time.time()
+    max_episodes = 10000000
+    print_freq = 100        # print avg reward in the interval (in episodes)
+    checkpoint_path = "model.t"
+    batch_size = 256
     print_running_reward = 0
     print_running_episodes = 0
+    time_step = 0
+    i_episode = 0
+        
     train_time = time.time()
+    if writer is None:
+        writer = SummaryWriter()
+    # training loop
+    for i in range(max_episodes//print_freq):  
 
-    ppo_agent.PPO.save(checkpoint_path)
+        losses = []
+        for _ in tqdm(range(print_freq), leave = False, desc = "Experiencing"):
+            state, original_obs = env.reset()
+            step = 0
+            while env.state.real_env_steps < 0:
+                o = original_obs[agent.player]
+                a = agent.early_setup(step, o)
+                step += 1
+                state, rewards, dones, infos = env.step(a)
+                state, original_obs = state
+            current_ep_reward = 0
+            
+            while True:
+                # select action with policy
+                action = agent.act(state)
+                #a = ppo_agent.act(state)
+                state, reward, done, _ = env.step(action)
+                state = state[0] #Getting the first element, because state is a tuple of (state, original_obs)
+
+                # saving reward and is_terminals
+                agent.PPO.buffer.rewards.append(reward)
+                agent.PPO.buffer.is_terminals.append(done)
+
+                time_step +=1
+                current_ep_reward += reward
+
+                # update PPO agent
+                if time_step % batch_size == 0:
+                    losses.append(agent.PPO.update())
+
+
+                # break; if the episode is over
+                if done:
+                    break
+                
+
+            print_running_reward += current_ep_reward
+            print_running_episodes += 1
+
+            i_episode += 1
+
+
+        # print average reward till last episode
+        print_avg_reward = print_running_reward / print_running_episodes
+        print_avg_reward = round(print_avg_reward, 7)
+
+        print("Episode : {}/{} \t\t Timestep : {} \t\t Average Reward : {} \t\t Average loss : {} \t\t Time used last 100 eps: {} \t\t Time used total: {}".format(i_episode, max_episodes, time_step, print_avg_reward, np.mean(losses), round(time.time()-train_time, 1), round(time.time()-start_time, 1)))
+
+        writer.add_scalar("Average reward", print_avg_reward, i_episode)
+
+        print_running_reward = 0
+        print_running_episodes = 0
+        train_time = time.time()
+
+        agent.PPO.save(checkpoint_path)
