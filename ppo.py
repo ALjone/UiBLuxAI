@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.distributions import MultivariateNormal
-from torch.distributions import Categorical
+from tqdm import tqdm
 from network.ActorCritic import ActorCritic
 
 ################################## PPO Policy ##################################
@@ -88,9 +87,9 @@ class PPO:
         advantages = (rewards.detach() - old_state_values.detach())
 
         #TODO: Check if it makes sense to loop over probs and entropy when training
-
+        cum_loss = 0
         # Optimize policy for K epochs
-        for _ in range(self.K_epochs):
+        for _ in tqdm(range(self.K_epochs), leave = False, desc = "Training"):
 
             # Evaluating old actions and values
             action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_states, old_actions_unit, old_actions_factory)
@@ -99,12 +98,9 @@ class PPO:
 
             for logprobs, dist_entropy, old_logprobs in [(action_logprobs_unit, unit_dist_entropy, old_logprobs_unit),
                                                           (action_probs_factories, factory_dist_entropy, old_logprobs_factory)]:
-                # match state_values tensor dimensions with rewards tensor
-                state_values = torch.squeeze(state_values)
                 
                 # Finding the ratio (pi_theta / pi_theta__old)
 
-                #TODO: This should not be mean
                 ratios = torch.exp(logprobs - old_logprobs.detach())
 
                 # Finding Surrogate Loss  
@@ -112,18 +108,25 @@ class PPO:
                 surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
                 # final loss of clipped objective PPO
-                loss += -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+                loss += -torch.min(surr1, surr2) - 0.01 * dist_entropy
                 
+            # match state_values tensor dimensions with rewards tensor
+            state_values = torch.squeeze(state_values)
+            loss += 0.5 * self.MseLoss(state_values, rewards)
+
             # take gradient step
             self.optimizer.zero_grad()
             loss.mean().backward()
             self.optimizer.step()
+            cum_loss += loss.mean().item()
             
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
 
         # clear buffer
         self.buffer.clear()
+
+        return cum_loss/self.K_epochs
     
     def save(self, checkpoint_path):
         torch.save(self.policy_old.state_dict(), checkpoint_path)

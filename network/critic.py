@@ -3,22 +3,31 @@ from torch import nn
 from torchvision.ops import SqueezeExcitation
 import numpy as np
 from torch.distributions.categorical import Categorical
+from .blocks import ResConvBlock, ResSEBlock
 
 
 class critic(nn.Module):
-    def __init__(self, intput_channels, n_blocks = 10, squeeze_channels = 64) -> None:
+    def __init__(self, intput_channels, n_blocks = 6, intermediate_channels = 64, layer_type = "SE") -> None:
         super(critic, self).__init__()
 
-        #TODO: Add split for factory and unit
+
+        if layer_type == "SE":
+            layer = ResSEBlock
+        elif layer_type == "conv":
+            layer = ResConvBlock
+        else:
+            raise ValueError(f"{layer_type} is not a valid layer type")
         
-        self.blocks = torch.nn.ModuleList()
-        self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
+        blocks = []
+        blocks.append(nn.Conv2d(intput_channels, intermediate_channels, kernel_size = 3, padding = 1))
         for _ in range(n_blocks-2):
-            self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
-        self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
-        self.blocks.append(nn.Conv2d(intput_channels, 5, 1))
+            blocks.append(layer(intermediate_channels, intermediate_channels))
+        blocks.append(layer(intermediate_channels, intermediate_channels))
+        blocks.append(nn.Conv2d(intermediate_channels, 5, 1))
+
+        self.conv = nn.Sequential(*blocks)
         
-        self.linear = nn.Linear(11520, 1)
+        self.linear = nn.Linear((48**2)*5, 1)
 
     def forward(self, x):
         if type(x) == np.ndarray:
@@ -28,8 +37,7 @@ class critic(nn.Module):
         x = x.float()
 
 
-        for layer in self.blocks:
-            x = layer(x) 
+        x = self.conv(x)
         x = self.linear(x.flatten(1))
         return x.squeeze()
 
