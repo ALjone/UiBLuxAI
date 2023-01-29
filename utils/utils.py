@@ -69,6 +69,8 @@ def factory_output_to_actions(factory_output, factories):
     for factory in factories:
             x, y = factory["pos"][0], factory["pos"][1]
             action = factory_output[x, y].item()
+            if action == 3:
+                 continue
             actions[factory["unit_id"]] = factory_idx_to_action(action)
 
     return actions
