@@ -40,5 +40,4 @@ class ActorCritic(nn.Module):
         unit_dist_entropy = unit_dist.entropy()
 
         state_values = self.critic(state)
-        
-        return action_logprobs_unit, state_values, unit_dist_entropy
+        return torch.mean(action_logprobs_unit, dim=(1, 2)), torch.mean(action_logprobs_factories, dim = (1, 2)), state_values, unit_dist_entropy, factory_dist_entropy
