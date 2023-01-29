@@ -5,16 +5,20 @@ import numpy as np
 from torch.distributions.categorical import Categorical
 
 
-class actor(nn.Module):
-    def __init__(self, intput_channels, output_channels, n_blocks = 10, squeeze_channels = 64) -> None:
-        super(actor, self).__init__()
+class critic(nn.Module):
+    def __init__(self, intput_channels, n_blocks = 10, squeeze_channels = 64) -> None:
+        super(critic, self).__init__()
+
+        #TODO: Add split for factory and unit
         
         self.blocks = torch.nn.ParameterList()
         self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
         for _ in range(n_blocks-2):
             self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
         self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
-        self.blocks.append(nn.Conv2d(intput_channels, output_channels, 1))
+        self.blocks.append(nn.Conv2d(intput_channels, 5, 1))
+        
+        self.linear = nn.Linear(11520, 1)
 
     def forward(self, x):
         if type(x) == np.ndarray:
@@ -26,25 +30,19 @@ class actor(nn.Module):
 
         for layer in self.blocks:
             x = layer(x) 
-        return x.squeeze().permute(1, 2, 0)
-
-    def get_action_and_value(self, x, action = None):
-        logits = self.forward(x)
-        probs = Categorical(logits=logits)
-        if action is None:
-            action = probs.sample()
-        return action.shape, probs.log_prob(action).shape, probs.entropy().shape
+        x = self.linear(x.flatten(1))
+        return x.squeeze()
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 if __name__ == "__main__":
-    net = actor(23, 10)
+    net = critic(23, 10)
     print("Number of parameters in network", net.count_parameters())
-    tens = torch.ones((1, 23, 48, 48))
+    tens = torch.ones((5, 23, 48, 48))
 
     print(torch.sum(tens))
 
     print(torch.sum(net(tens)))
 
-    print(net.get_action_and_value(tens))
+    print(net(tens).shape)

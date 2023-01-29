@@ -1,12 +1,11 @@
 from typing import Dict
 
+import copy
 import torch
 import gym
 import numpy as np
 import numpy.typing as npt
 from gym import spaces
-
-from luxai_s2.state import ObservationStateDict
 
 from lux.kit import obs_to_game_state
 from lux.utils import my_turn_to_place_factory
@@ -23,8 +22,7 @@ class ImageWithUnitsWrapper(gym.ObservationWrapper):
         )
 
     def observation(
-        self, obs: Dict[str, ObservationStateDict]
-    ) -> Dict[str, npt.NDArray]:
+        self, obs) -> Dict[str, npt.NDArray]:
         """Returns the image features as a torch tensor"""
         shared_obs = obs["player_0"]
         unit_mask = np.zeros((self.map_size, self.map_size, 1))
@@ -109,7 +107,8 @@ class ImageWithUnitsWrapper(gym.ObservationWrapper):
         image_features = torch.from_numpy(image_features.transpose(2, 0, 1))
 
         new_obs = dict()
-        for agent in self.agents:
+        #NOTE: This is hardcoded, maybe not so smart, but since self.agents is emptied at the end of the game, it has to be done
+        for agent in ["player_0", "player_1"]:
             new_obs[agent] = {}
             new_obs[agent]["image_features"] = image_features #TODO Shouldn't this dependet on agent?
 
@@ -144,6 +143,75 @@ class SinglePlayerEnv(gym.Wrapper):
         """
         super().__init__(env)
 
+
+    def get_reward(self, action, obs):
+        #NOTE: Copied from the kit
+        agent = "player_0"
+        shared_obs = obs["player_0"]
+
+        # compute reward
+        # we simply want to encourage the heavy units to move to ice tiles
+        # and mine them and then bring them back to the factory and dump it
+        # as well as survive as long as possible
+
+        factories = shared_obs["factories"][agent]
+        factory_pos = None
+        for unit_id in factories:
+            factory = factories[unit_id]
+            # note that ice converts to water at a 4:1 ratio
+            factory_pos = np.array(factory["pos"])
+            break
+        units = shared_obs["units"][agent]
+        unit_deliver_ice_reward = 0
+        unit_move_to_ice_reward = 0
+        unit_overmining_penalty = 0
+
+        ice_map = shared_obs["board"]["ice"]
+        ice_tile_locations = np.argwhere(ice_map == 1)
+
+        def manhattan_dist(p1, p2):
+            return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
+
+        unit_power = 0
+        for unit_id in units:
+            unit = units[unit_id]
+            if unit["unit_type"] == "HEAVY":
+                pos = np.array(unit["pos"])
+                ice_tile_distances = np.mean((ice_tile_locations - pos) ** 2, 1)
+                closest_ice_tile = ice_tile_locations[np.argmin(ice_tile_distances)]
+                dist_to_ice = manhattan_dist(closest_ice_tile, pos)
+                unit_power = unit["power"]
+                if unit["cargo"]["ice"] < 20:
+
+                    dist_penalty = min(
+                        1.0, dist_to_ice / (10)
+                    )  # go beyond 12 squares manhattan dist and no reward
+                    unit_move_to_ice_reward += (
+                        1 - dist_penalty
+                    ) * 0.1  # encourage unit to move to ice
+                else:
+                    if factory_pos is not None:
+                        dist_to_factory = manhattan_dist(pos, factory_pos)
+                        dist_penalty = min(1.0, dist_to_factory / 10)
+                        unit_deliver_ice_reward = (
+                            0.2 + (1 - dist_penalty) * 0.1
+                        )  # encourage unit to move back to factory
+
+
+        #print(self.state.stats["player_0"]["lichen_grown"].keys())
+        #print(self.state.stats["player_0"]["units_built"]["LIGHT"])
+        reward = (
+            0
+            + unit_move_to_ice_reward
+            + unit_deliver_ice_reward
+            + unit_overmining_penalty
+            #+ (self.state.stats["player_0"]["units_built"]["LIGHT"]/(len(self.env.state.factories[agent])*15)) if len(self.agents) > 0 else 0
+        )
+        reward = reward
+
+
+        return {"player_0" : reward}
+
     def step(self, action):
         agent = self.agents[0]
         opp_agent = self.agents[1]
@@ -160,10 +228,15 @@ class SinglePlayerEnv(gym.Wrapper):
             opp_action = {}
 
         obs, reward, done, info = super().step({agent: action, opp_agent: opp_action})
+         
+        if self.state.real_env_steps < 1:
+            reward = {agent : 0}
+        else:
+            reward = self.get_reward(action, obs[1]) 
 
         #NOTE: See here for tips on custom reward function https://github.com/Lux-AI-Challenge/Lux-Design-S2/blob/main/examples/sb3.py
-        return obs, reward[agent], done[agent], info[agent]
+        return (obs[0][agent], obs[1]), reward[agent], done[agent], info[agent]
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
-        return obs#(o[self.agents[0]] for o in obs)
+        return (obs[0][self.agents[0]], obs[1])
