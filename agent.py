@@ -7,7 +7,7 @@ from utils.utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDX
 from ppo import PPO
 
 class Agent():
-    def __init__(self, player: str, env_cfg: EnvConfig, device = torch.device("cuda")) -> None:
+    def __init__(self, player: str, env_cfg: EnvConfig, device = torch.device("cuda"), path = None) -> None:
         self.player = player
         self.opp_player = "player_1" if self.player == "player_0" else "player_0"
         np.random.seed(0)
@@ -22,6 +22,8 @@ class Agent():
         self.PPO = PPO(7, 3, 3e-4, 3e-4, 0.99, 80, 0.1, device)
 
         self.model.to(self.device)
+        if path is not None:
+            self.PPO.load(path)
 
     def early_setup(self, step: int, obs, remainingOverageTime: int = 60):
         if step == 0:

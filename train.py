@@ -35,11 +35,11 @@ max_training_timesteps = 10000000
 
 print_freq = 100        # print avg reward in the interval (in episodes)
 log_freq = 1000 * 2           # log avg reward in the interval (in num timesteps)
-save_model_freq = int(1e5)          # save model frequency (in num timesteps)
+save_model_freq = int(100)          # save model frequency (in num timesteps)
 
 checkpoint_path = "model.t"
 
-update_timestep = 1000 
+update_timestep = 256 
 
 print_running_reward = 0
 print_running_episodes = 0
@@ -117,3 +117,4 @@ while time_step <= max_training_timesteps:
         print_running_reward = 0
         print_running_episodes = 0
         train_time = time.time()
+        ppo_agent.PPO.save(checkpoint_path)

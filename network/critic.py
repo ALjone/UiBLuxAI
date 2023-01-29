@@ -11,7 +11,7 @@ class critic(nn.Module):
 
         #TODO: Add split for factory and unit
         
-        self.blocks = torch.nn.ParameterList()
+        self.blocks = torch.nn.ModuleList()
         self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))
         for _ in range(n_blocks-2):
             self.blocks.append(SqueezeExcitation(intput_channels, squeeze_channels))

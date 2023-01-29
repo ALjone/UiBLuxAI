@@ -1,23 +1,23 @@
 import numpy as np
 import torch
 
-UNIT_ACTION_IDXS = 7
+UNIT_ACTION_IDXS = 8
 FACTORY_ACTION_IDXS = 3
 
 def unit_idx_to_action(idx):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
-    assert -1 < idx < 7
+    assert -1 < idx < 8
     assert isinstance(idx, int)
-    if -1 < idx < 4:
+    if -1 < idx < 6:
         return move(idx)
 
-    if idx == 4:
+    if idx == 5:
         return dig()
 
-    if idx == 5:
+    if idx == 6:
         return recharge(20)
 
-    if idx == 6:
+    if idx == 7:
          return self_destruct()
     
     

@@ -1,3 +1,3 @@
 from SinglePlayerAgent.main import run
 
-run()
+run("..\model.t")
