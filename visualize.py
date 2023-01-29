@@ -1,5 +1,5 @@
 from luxai_s2.env import LuxAI_S2
-from agent import Agent
+from agents.agent import Agent
 from utils.visualization import animate
 from utils.wrappers import ImageWithUnitsWrapper, SinglePlayerEnv
 

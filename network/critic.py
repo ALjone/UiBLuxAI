@@ -7,7 +7,7 @@ from .blocks import ResConvBlock, ResSEBlock
 
 
 class critic(nn.Module):
-    def __init__(self, intput_channels, n_blocks = 6, intermediate_channels = 64, layer_type = "SE") -> None:
+    def __init__(self, intput_channels, n_blocks = 8, intermediate_channels = 32, layer_type = "SE") -> None:
         super(critic, self).__init__()
 
 

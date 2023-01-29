@@ -1,6 +1,6 @@
 from ppo import PPO
 from luxai_s2.env import LuxAI_S2
-from agent import Agent
+from agents.agent import Agent
 from utils.visualization import animate
 from utils.wrappers import ImageWithUnitsWrapper, SinglePlayerEnv
 import time
@@ -31,37 +31,37 @@ class TestableIO(io.BytesIO):
 sys.stdout = TestableIO(sys.stdout)
 sys.stderr = TestableIO(sys.stderr)
 
+def skip_early_phase(env, agent):
+        state, original_obs = env.reset()
+        step = 0
+        while env.state.real_env_steps < 0:
+            o = original_obs[agent.player]
+            a = agent.early_setup(step, o)
+            step += 1
+            state, rewards, dones, infos = env.step(a)
+            state, original_obs = state
 
-
+        return state
 
 def train(env, agent, config, writer = None):
-
-    #TODO: Move to config
+    
+    #Set all used variables
     start_time = time.time()
     time_step = 0
     i_episode = 0
-
     print_running_reward = 0
     print_running_episodes = 0
-        
     train_time = time.time()
+
     if writer is None:
         writer = SummaryWriter()
     # training loop
-    for i in range(config["max_episodes"]//config["print_freq"]):  
+    for _ in range(config["max_episodes"]//config["print_freq"]):  
 
         losses = []
         for _ in tqdm(range(config["print_freq"]), leave = False, desc = "Experiencing"):
-            state, original_obs = env.reset()
-            step = 0
-            while env.state.real_env_steps < 0:
-                o = original_obs[agent.player]
-                a = agent.early_setup(step, o)
-                step += 1
-                state, rewards, dones, infos = env.step(a)
-                state, original_obs = state
             current_ep_reward = 0
-            
+            state = skip_early_phase(env, agent)
             while True:
                 # select action with policy
                 action = agent.act(state)
@@ -104,4 +104,4 @@ def train(env, agent, config, writer = None):
         print_running_episodes = 0
         train_time = time.time()
 
-        agent.PPO.save(config["checkpoint_path"])
+        agent.PPO.save(config["path"])

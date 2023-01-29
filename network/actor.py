@@ -2,15 +2,13 @@ from typing import List, Tuple
 import torch.nn.functional as F
 import torch
 from torch import nn
-from torchvision.ops import SqueezeExcitation
 import numpy as np
-from torch.distributions.categorical import Categorical
 from .blocks import ResConvBlock, ResSEBlock
 
 
 class actor(nn.Module):
-    def __init__(self, intput_channels, unit_action_space:int = 7, factory_action_space:int = 3,  n_blocks:int = 5, n_blocks_factories_units:int = 1,
-                  intermediate_channels:int = 64, layer_type = "SE") -> None:
+    def __init__(self, intput_channels, unit_action_space:int = 7, factory_action_space:int = 3,  n_blocks:int = 12, n_blocks_factories_units:int = 2,
+                  intermediate_channels:int = 32, layer_type = "SE") -> None:
         super(actor, self).__init__()
         
         if layer_type == "SE":
