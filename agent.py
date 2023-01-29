@@ -3,11 +3,11 @@ from lux.utils import my_turn_to_place_factory
 import numpy as np
 import torch
 from network.actor import actor
-from utils.utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, unit_output_to_actions
+from utils.utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, unit_output_to_actions, self_destruct, unit_idx_to_action
 from ppo import PPO
 
 class Agent():
-    def __init__(self, player: str, env_cfg: EnvConfig, device = torch.device("cuda")) -> None:
+    def __init__(self, player: str, env_cfg: EnvConfig, device = torch.device("cuda"), path = None) -> None:
         self.player = player
         self.opp_player = "player_1" if self.player == "player_0" else "player_0"
         np.random.seed(0)
@@ -17,11 +17,13 @@ class Agent():
         self.unit_actions_per_cell = UNIT_ACTION_IDXS
         self.factory_actions_per_cell = FACTORY_ACTION_IDXS
 
-        self.model = actor(23, self.factory_actions_per_cell, self.factory_actions_per_cell)
+        self.PPO = PPO(self.unit_actions_per_cell, 3e-4, 3e-4, 0.99, 10, 0.1, device)
 
-        self.PPO = PPO(7, 3, 3e-4, 3e-4, 0.99, 80, 0.1, device)
+        if path is not None:
+            self.PPO.load(path)
+            print("Loaded model successfully")
 
-        self.model.to(self.device)
+        self.actions = [0]*UNIT_ACTION_IDXS
 
     def early_setup(self, step: int, obs, remainingOverageTime: int = 60):
         if step == 0:
@@ -45,26 +47,34 @@ class Agent():
                 spawn_loc = potential_spawns[np.random.randint(0, len(potential_spawns))]
                 return dict(spawn=spawn_loc, metal=150, water=150)
             return dict()
-    #TODO: Rename
-    def forward(self, obs):
-        image = obs["image_features"].to(self.device)
-        #units = obs["unit_to_id"]
-        #factories = obs["factory_to_id"]
-
-        return self.PPO.select_action(image)
 
     def act(self, obs, remainingOverageTime: int = 60):
         image = obs["image_features"].to(self.device)
         units = obs["unit_to_id"]
         factories = obs["factory_to_id"]
 
-        unit_output = self.PPO.select_action(image)
+        action = self.PPO.select_action(image).item()
 
-        unit_actions = unit_output_to_actions(unit_output.detach().cpu(), units)
+        self.actions[action] += 1
 
-        if len(["unit_to_id"].keys()) == 0:
-            unit_actions.update({factories[factories.keys()[0]] : 0})
+        unit_actions = {}
+        first = True
+        #Such a bad way to do this
+        for unit in units:
+            if first:
+                unit_actions[unit["unit_id"]] = unit_idx_to_action(action)
+                first = False
+            else:
+                unit_actions[unit["unit_id"]] = self_destruct()
+        
+        
+                
+        if len(obs["unit_to_id"]) == 0:
+            for factory in factories:
+                if factory["cargo"]["metal"] >= 100:
+                    unit_actions[factory["unit_id"]] = 1
+                    break
         #NOTE How actions are formatted
         # a[0] (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
         # a[1] = direction (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
-        return unit_actions #outputs_to_actions(unit_output.detach().cpu(), factory_output.detach().cpu(), units, factories)
+        return unit_actions

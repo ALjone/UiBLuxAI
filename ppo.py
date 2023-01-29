@@ -69,19 +69,18 @@ class PPO:
         # Normalizing the rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
-
         # convert list to tensor
         old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
         old_actions_unit = torch.squeeze(torch.stack(self.buffer.unit_actions, dim=0)).detach().to(self.device)
         old_logprobs_unit = torch.squeeze(torch.stack(self.buffer.unit_logprobs, dim=0)).detach().to(self.device)
         old_state_values = torch.squeeze(torch.stack(self.buffer.state_values, dim=0)).detach().to(self.device)
-
         # calculate advantages
         advantages = (rewards.detach() - old_state_values.detach())
 
-        # Optimize policy for K epochs
-        for _ in range(self.K_epochs):
 
+        cum_loss = 0
+        # Optimize policy for K epochs
+        for i in range(self.K_epochs):
             # Evaluating old actions and values
             action_logprobs,  state_values, dist_entropy = self.policy.evaluate(old_states, old_actions_unit)
 
@@ -100,6 +99,7 @@ class PPO:
 
             # final loss of clipped objective PPO
             loss = -torch.min(surr1, surr2) + 0.5 * self.MseLoss(state_values, rewards) - 0.01 * dist_entropy
+            cum_loss += loss.mean().item()
             
             # take gradient step
             self.optimizer.zero_grad()
@@ -111,6 +111,8 @@ class PPO:
 
         # clear buffer
         self.buffer.clear()
+
+        return cum_loss/self.K_epochs
     
     def save(self, checkpoint_path):
         torch.save(self.policy_old.state_dict(), checkpoint_path)

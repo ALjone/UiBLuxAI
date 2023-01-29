@@ -17,7 +17,7 @@ def play_episode(agent, env, make_gif = True):
         obs, original_obs = obs
     done = False
     while not done:
-        actions = agent.act(step, obs[agent.player])
+        actions = agent.act(obs)
         step += 1
         obs, rewards, done, infos = env.step(actions)
         obs, original_obs = obs
@@ -25,12 +25,13 @@ def play_episode(agent, env, make_gif = True):
             imgs += [env.render("rgb_array", width=640, height=640)]
 
     if make_gif:
+        print("Making gif")
         animate(imgs)
 
-def run():
+def run(path):
     env = LuxAI_S2(verbose = 2)
     env = ImageWithUnitsWrapper(env)
     env = SinglePlayerEnv(env)
-    agent = Agent("player_0", env.state.env_cfg)
+    agent = Agent("player_0", env.state.env_cfg, path = path)
     
     play_episode(agent, env, True)

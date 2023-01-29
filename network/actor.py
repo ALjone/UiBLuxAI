@@ -10,7 +10,7 @@ from torch.distributions.categorical import Categorical
 class block(nn.Module):
 
     def __init__(self, input_channels, output_channels, kernel_size):
-        
+        super(block, self).__init__()
         self.conv = nn.Sequential(nn.Conv2d(input_channels, output_channels, kernel_size),
                                   nn.BatchNorm2d(output_channels),
                                   nn.ReLU())
@@ -29,13 +29,21 @@ class actor(nn.Module):
         self.blocks = torch.nn.ParameterList()
         self.blocks_factory = torch.nn.ParameterList()
         self.blocks_robots = torch.nn.ParameterList()
+
+        mid_channels = 16
+
+        conv_out_channels = 8
         
-        self.blocks.append(block(23, 64, 4))
+        self.blocks.append(block(intput_channels, mid_channels, 4))
 
-        for _ in range(9):
-            self.blocks.append(block(64, 64))
+        for _ in range(3):
+            self.blocks.append(block(mid_channels, mid_channels, 4))
 
-        self.linear = nn.Linear(100, 7)
+        self.blocks.append(block(mid_channels, conv_out_channels, 4))
+
+        self.linear = nn.Linear(((48-3*5)**2)*conv_out_channels, output_robot)
+
+        print("Parameters in actor:", self.count_parameters())
 
     def forward(self, x:torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         if type(x) == np.ndarray:
@@ -48,8 +56,7 @@ class actor(nn.Module):
             x = layer(x)
         
         x = self.linear(x.flatten(1))
-
-        return F.softmax(x, dim=3).squeeze()
+        return F.softmax(x, dim=1).squeeze()
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
