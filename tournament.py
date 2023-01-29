@@ -10,18 +10,4 @@ agents = {"player_0": random_early("player_0", env.state.env_cfg),
           "player_1": conv_v1("player_1", env.state.env_cfg)}
 
 
-run_tournament(env, agents, 1000, ["Random", "Conv v1"])
-
-print("\n\n")
-agents = {"player_0": random_early("player_0", env.state.env_cfg),
-          "player_1": conv_v2("player_1", env.state.env_cfg)}
-
-
-run_tournament(env, agents, 1000, ["Random", "Conv v2"])
-
-print("\n\n")
-agents = {"player_0": conv_v1("player_0", env.state.env_cfg),
-          "player_1": conv_v2("player_1", env.state.env_cfg)}
-
-
-run_tournament(env, agents, 1000, ["Conv v1", "Conv v2"])
+run_tournament(env, agents, 1000, names = ["Random", "Conv v1"])

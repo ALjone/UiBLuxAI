@@ -1,7 +1,7 @@
 from train import train
 from ppo import PPO
 from luxai_s2.env import LuxAI_S2
-from agents.agent import Agent
+from agents.RL_agent import Agent
 from utils.visualization import animate
 from utils.wrappers import ImageWithUnitsWrapper, SinglePlayerEnv
 from utils.utils import load_config

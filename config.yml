@@ -13,3 +13,4 @@ eps_clip: 0.1
 #Other
 device: cuda
 path: None #model.t
+save_path: model.t

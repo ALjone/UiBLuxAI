@@ -1,6 +1,6 @@
 from ppo import PPO
 from luxai_s2.env import LuxAI_S2
-from agents.agent import Agent
+from agents.RL_agent import Agent
 from utils.visualization import animate
 from utils.wrappers import ImageWithUnitsWrapper, SinglePlayerEnv
 import time
@@ -104,4 +104,4 @@ def train(env, agent, config, writer = None):
         print_running_episodes = 0
         train_time = time.time()
 
-        agent.PPO.save(config["path"])
+        agent.PPO.save(config["save_path"])
