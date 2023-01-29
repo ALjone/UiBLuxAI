@@ -52,29 +52,35 @@ class Agent():
                     list(zip(*np.where(obs["board"]["valid_spawns_mask"] == 1))))
 
                 map = np.zeros((48, 48, 3))
-                map[:, :, 0] = np.array(obs["board"]["rubble"])
-                map[:, :, 1] = np.array(obs["board"]["ore"])
-                map[:, :, 2] = np.array(obs["board"]["ice"])
+                map[:, :, 0] = np.array(
+                    obs["board"]["rubble"])/np.linalg.norm(np.array(obs["board"]["rubble"]))
+                map[:, :, 1] = np.array(
+                    obs["board"]["ore"])/np.linalg.norm(np.array(obs["board"]["ore"]))
+                map[:, :, 2] = np.array(
+                    obs["board"]["ice"])/np.linalg.norm(np.array(obs["board"]["ice"]))
 
                 window = np.ones((11, 11, 3))
                 for i in range(0, 5):
-                    window[i+1:10-i, i+1:10-i, 1:] = 4*i * \
-                        np.ones((9-2*i, 9-2*i, 2))
+                    window[i+1:10-i, i+1:10-i, 2] = 2*i * \
+                        np.ones((9-2*i, 9-2*i))
+                    window[i+1:10-i, i+1:10-i, 1] = i * \
+                        np.ones((9-2*i, 9-2*i))
                     window[i+1:10-i, i+1:10-i, 0] = -i*np.ones((9-2*i, 9-2*i))
                 window[5:8, 5:8, 1:] = np.zeros((3, 3, 2))
 
                 final = np.zeros((48, 48, 3))
                 for i in range(3):
-                    final[:, :, i] = scipy.signal.convolve2d(
-                        map[:, :, i], window[:, :, i], mode='same')
+                    final[:, :, i] = scipy.ndimage.convolve(
+                        map[:, :, i], window[:, :, i], mode='constant')
                 final = np.sum(final, axis=2)
                 final = final*obs["board"]["valid_spawns_mask"]
 
                 spawn_loc = np.where(final == np.amax(final))
                 spawn_loc = np.array(
-                    [spawn_loc[0].item(), spawn_loc[1].item()])
+                    [spawn_loc[0][0].item(), spawn_loc[1][0].item()])
                 if (spawn_loc not in potential_spawns):
-                    spawn_loc = potential_spawns[np.random.randint(0)]
+                    spawn_loc = potential_spawns[np.random.randint(
+                        0, len(potential_spawns))]
 
                 return dict(spawn=spawn_loc, metal=150, water=150)
             return dict()
