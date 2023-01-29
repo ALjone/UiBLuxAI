@@ -1,6 +1,7 @@
 from lux.kit import obs_to_game_state, EnvConfig
 from lux.utils import direction_to, my_turn_to_place_factory
 import numpy as np
+import scipy
 
 
 class Agent():
@@ -25,11 +26,27 @@ class Agent():
             # how many factories you have left to place
             factories_to_place = game_state.teams[self.player].factories_to_place
             # whether it is your turn to place a factory
-            my_turn_to_place = my_turn_to_place_factory(game_state.teams[self.player].place_first, step)
+            my_turn_to_place = my_turn_to_place_factory(
+                game_state.teams[self.player].place_first, step)
             if factories_to_place > 0 and my_turn_to_place:
                 # we will spawn our factory in a random location with 150 metal and water if it is our turn to place
-                potential_spawns = np.array(list(zip(*np.where(obs["board"]["valid_spawns_mask"] == 1))))
-                spawn_loc = potential_spawns[np.random.randint(0, len(potential_spawns))]
+                potential_spawns = np.array(
+                    list(zip(*np.where(obs["board"]["valid_spawns_mask"] == 1))))
+                print(obs["board"])
+                window = np.ones((11, 11, 4))
+                for i in range(0, 5):
+                    window[i+1:10-i, i+1:10-i, 2:] = i * \
+                        np.ones((9-2*i, 9-2*i, 2))
+                    window[i+1:10-i, i+1:10-i, 1] = -i*np.ones((9-2*i, 9-2*i))
+
+                final = np.zeros((48, 48, 4))
+                for i in range(4):
+                    final[:, :, i] = scipy.signal.convolve2d(
+                        map[:, :, i], window[:, :, i], mode='same')
+                final = np.sum(final, axis=2)
+
+                spawn_loc = np.where(final == np.amax(final))
+
                 return dict(spawn=spawn_loc, metal=150, water=150)
             return dict()
 
@@ -41,7 +58,7 @@ class Agent():
         factory_tiles, factory_units = [], []
         for unit_id, factory in factories.items():
             if factory.power >= self.env_cfg.ROBOTS["HEAVY"].POWER_COST and \
-            factory.cargo.metal >= self.env_cfg.ROBOTS["HEAVY"].METAL_COST:
+                    factory.cargo.metal >= self.env_cfg.ROBOTS["HEAVY"].METAL_COST:
                 actions[unit_id] = factory.build_heavy()
             if self.env_cfg.max_episode_length - game_state.real_env_steps < 50:
                 if factory.water_cost(game_state) <= factory.cargo.water:
@@ -60,14 +77,18 @@ class Agent():
             adjacent_to_factory = False
             if len(factory_tiles) > 0:
                 factory_distances = np.mean((factory_tiles - unit.pos) ** 2, 1)
-                closest_factory_tile = factory_tiles[np.argmin(factory_distances)]
+                closest_factory_tile = factory_tiles[np.argmin(
+                    factory_distances)]
                 closest_factory = factory_units[np.argmin(factory_distances)]
-                adjacent_to_factory = np.mean((closest_factory_tile - unit.pos) ** 2) == 0
+                adjacent_to_factory = np.mean(
+                    (closest_factory_tile - unit.pos) ** 2) == 0
 
                 # previous ice mining code
                 if unit.cargo.ice < 40:
-                    ice_tile_distances = np.mean((ice_tile_locations - unit.pos) ** 2, 1)
-                    closest_ice_tile = ice_tile_locations[np.argmin(ice_tile_distances)]
+                    ice_tile_distances = np.mean(
+                        (ice_tile_locations - unit.pos) ** 2, 1)
+                    closest_ice_tile = ice_tile_locations[np.argmin(
+                        ice_tile_distances)]
                     if np.all(closest_ice_tile == unit.pos):
                         if unit.power >= unit.dig_cost(game_state) + unit.action_queue_cost(game_state):
                             actions[unit_id] = [unit.dig(repeat=0)]
@@ -81,7 +102,8 @@ class Agent():
                     direction = direction_to(unit.pos, closest_factory_tile)
                     if adjacent_to_factory:
                         if unit.power >= unit.action_queue_cost(game_state):
-                            actions[unit_id] = [unit.transfer(direction, 0, unit.cargo.ice, repeat=0)]
+                            actions[unit_id] = [unit.transfer(
+                                direction, 0, unit.cargo.ice, repeat=0)]
                     else:
                         move_cost = unit.move_cost(game_state, direction)
                         if move_cost is not None and unit.power >= move_cost + unit.action_queue_cost(game_state):
