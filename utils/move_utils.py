@@ -1,7 +1,22 @@
 import numpy as np
 
-UNIT_ACTION_IDXS = 8
+UNIT_ACTION_IDXS = 9
 FACTORY_ACTION_IDXS = 4
+
+# a[0] = action type
+# (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
+
+# a[1] = direction (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
+
+# a[2] = R = resource type (0 = ice, 1 = ore, 2 = water, 3 = metal, 4 power)
+
+# a[3] = X, amount of resources transferred or picked up if action is transfer or pickup.
+# If action is recharge, it is how much energy to store before executing the next action in queue
+
+# a[4] = repeat. If repeat == 0, then action is not recycled and removed once we have executed it a[5] = n times. 
+# Otherwise if repeat > 0 we recycle this action to the back of the action queue and set n = repeat.
+
+# a[5] = n, number of times to execute this action before exhausting it and removing it from the front of the action queue. Minimum is 1.
 
 def unit_idx_to_action(idx):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
@@ -18,6 +33,14 @@ def unit_idx_to_action(idx):
 
     if idx == 7:
          return self_destruct()
+
+    if idx == 8:
+        return transfer()
+
+
+def transfer(x = 10000):
+    """Transfers all the ice to center"""
+    return np.array([1, 0, 0, x, 0, 1])
     
     
 def self_destruct():
