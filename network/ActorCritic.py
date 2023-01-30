@@ -41,12 +41,12 @@ class ActorCritic(nn.Module):
         action_probs_unit, action_probs_factories = self.actor(state)
 
         unit_dist = Categorical(action_probs_unit)
-        action_logprobs_unit = unit_dist.log_prob(unit_action)
-        unit_dist_entropy = (unit_dist.entropy()*state[0]).sum((1, 2))
+        action_logprobs_unit = unit_dist.log_prob(unit_action)*state[:, 0]
+        unit_dist_entropy = (unit_dist.entropy()*state[:, 0]).sum((1, 2))
 
         factory_dist = Categorical(action_probs_factories)
-        action_logprobs_factories = factory_dist.log_prob(factory_action)*state[0]
-        factory_dist_entropy = (factory_dist.entropy()*state[0]).sum((1, 2))
+        action_logprobs_factories = factory_dist.log_prob(factory_action)*state[:, 0]
+        factory_dist_entropy = (factory_dist.entropy()*state[:, 0]).sum((1, 2))
 
         state_values = self.critic(state)
         

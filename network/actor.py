@@ -7,8 +7,8 @@ from .blocks import ResConvBlock, ResSEBlock
 
 
 class actor(nn.Module):
-    def __init__(self, intput_channels, unit_action_space:int = 7, factory_action_space:int = 3,  n_blocks:int = 12, n_blocks_factories_units:int = 2,
-                  intermediate_channels:int = 32, layer_type = "SE") -> None:
+    def __init__(self, intput_channels, unit_action_space:int, factory_action_space,  n_blocks:int = 12, n_blocks_factories_units:int = 2,
+                  intermediate_channels:int = 32, layer_type = "conv") -> None:
         super(actor, self).__init__()
         
         if layer_type == "SE":
@@ -55,6 +55,7 @@ class actor(nn.Module):
         x_robot = x_robot.permute(0, 2, 3, 1)
         x_factory = x_factory.permute(0, 2, 3, 1)
 
+        #TODO: Softmax should happen in categorical due to action masking
         return F.softmax(x_robot, dim=3).squeeze(), F.softmax(x_factory, dim=3).squeeze()
 
     def count_parameters(self):

@@ -3,7 +3,7 @@ from ppo import PPO
 from luxai_s2.env import LuxAI_S2
 from agents.RL_agent import Agent
 from utils.visualization import animate
-from utils.wrappers import ImageWithUnitsWrapper, SinglePlayerEnv
+from wrappers.observation_wrappers import  ImageWithUnitsWrapper, SinglePlayerEnv
 from utils.utils import load_config
 
 config = load_config()

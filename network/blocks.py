@@ -5,8 +5,9 @@ from torchvision.ops import SqueezeExcitation
 
 
 class ResConvBlock(nn.Module):
-    def __init__(self, channels, kernel_size = 3, activation_function = nn.ReLU()):
+    def __init__(self, channels, intermediate_channels ,kernel_size = 3, activation_function = nn.ReLU()):
         super().__init__()
+        assert channels == intermediate_channels
         assert kernel_size%2 == 1 #Need kernel size to be odd in order to preserve size
         self.activation_function = activation_function
         self.conv0 = nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=kernel_size, padding=(kernel_size-1)//2)
