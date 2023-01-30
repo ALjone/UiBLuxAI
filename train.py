@@ -51,6 +51,7 @@ def train(env, agent, config, writer = None):
     i_episode = 0
     print_running_reward = 0
     print_running_episodes = 0
+    highest_reward = 0
     train_time = time.time()
 
     if writer is None:
@@ -104,4 +105,6 @@ def train(env, agent, config, writer = None):
         print_running_episodes = 0
         train_time = time.time()
 
-        agent.PPO.save(config["save_path"])
+        if print_avg_reward > highest_reward:
+            highest_reward == print_avg_reward
+            agent.PPO.save(config["save_path"])
