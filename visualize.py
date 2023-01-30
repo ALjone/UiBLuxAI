@@ -2,6 +2,7 @@ from luxai_s2.env import LuxAI_S2
 from agents.RL_agent import Agent
 from utils.visualization import animate
 from utils.wrappers import ImageWithUnitsWrapper, SinglePlayerEnv
+from utils.utils import load_config
 
 def play_episode(agent, env, make_gif = True):
     obs, original_obs = env.reset()
@@ -28,14 +29,15 @@ def play_episode(agent, env, make_gif = True):
         print("Making gif")
         animate(imgs)
 
-def run(path):
+def run(config):
     env = LuxAI_S2(verbose = 2)
     env = ImageWithUnitsWrapper(env)
     env = SinglePlayerEnv(env)
-    agent = Agent("player_0", env.state.env_cfg, path = path)
+    agent = Agent("player_0", env.state.env_cfg, config)
     
     play_episode(agent, env, True)
 
 
 if __name__ == "__main__":
-    run("model.t")
+    config = load_config()
+    run(config)

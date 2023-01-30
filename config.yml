@@ -7,7 +7,7 @@ batch_size: 512
 actor_lr: 0.0003
 critic_lr: 0.0003
 gamma: 0.99
-epochs_per_batch: 40
+epochs_per_batch: 80
 eps_clip: 0.1
 
 #Other

@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 
 UNIT_ACTION_IDXS = 8
 FACTORY_ACTION_IDXS = 4
@@ -22,6 +21,7 @@ def unit_idx_to_action(idx):
     
     
 def self_destruct():
+     """Gets the action for self-destruction :((("""
      return np.array([4, 0, 0, 0, 0, 1])
 
 def recharge(x, repeat=0, n=1):

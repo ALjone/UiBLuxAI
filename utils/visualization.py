@@ -1,6 +1,5 @@
 import imageio
 
-
 def animate(imgs):
     video_name = 'agents.gif'
     for _ in range(10):
