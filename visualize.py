@@ -1,7 +1,8 @@
 from luxai_s2.env import LuxAI_S2
 from agents.RL_agent import Agent
 from utils.visualization import animate
-from wrappers.observation_wrappers import  ImageWithUnitsWrapper, SinglePlayerEnv
+from wrappers.observation_wrappers import ImageWithUnitsWrapper
+from wrappers.other_wrappers import SinglePlayerEnv
 from utils.utils import load_config
 
 def play_episode(agent, env, make_gif = True):
