@@ -20,32 +20,34 @@ class ActorCritic(nn.Module):
         return self.act(state)
     
     def act(self, state):
-        #TODO: Should these be mean?
+        #NOTE: Assumes first channel is unit mask for our agent
+        #NOTE: Assumes second channel is factory mask for our agent
         action_probs_unit, action_probs_factories = self.actor(state)
         unit_dist, factory_dist = Categorical(action_probs_unit), Categorical(action_probs_factories)
 
         action_unit = unit_dist.sample()
-        action_logprob_unit = unit_dist.log_prob(action_unit)
+        action_logprob_unit = unit_dist.log_prob(action_unit)*state[0]
 
         action_factory = factory_dist.sample()
-        action_logprob_factory = factory_dist.log_prob(action_factory)
+        action_logprob_factory = factory_dist.log_prob(action_factory)*state[0]
 
         state_val = self.critic(state)
 
-        return action_unit.detach(), action_factory.detach(), torch.mean(action_logprob_unit.detach()), torch.mean(action_logprob_factory.detach()), state_val.detach()
+        return action_unit.detach(), action_factory.detach(), torch.sum(action_logprob_unit.detach()), torch.sum(action_logprob_factory.detach()), state_val.detach()
     
     def evaluate(self, state, unit_action, factory_action):
-        #TODO: Should these be mean?
+        #NOTE: Assumes first channel is unit mask for our agent
+        #NOTE: Assumes second channel is factory mask for our agent
         action_probs_unit, action_probs_factories = self.actor(state)
 
         unit_dist = Categorical(action_probs_unit)
         action_logprobs_unit = unit_dist.log_prob(unit_action)
-        unit_dist_entropy = unit_dist.entropy().mean((1, 2))
+        unit_dist_entropy = (unit_dist.entropy()*state[0]).sum((1, 2))
 
         factory_dist = Categorical(action_probs_factories)
-        action_logprobs_factories = factory_dist.log_prob(factory_action)
-        factory_dist_entropy = factory_dist.entropy().mean((1, 2))
+        action_logprobs_factories = factory_dist.log_prob(factory_action)*state[0]
+        factory_dist_entropy = (factory_dist.entropy()*state[0]).sum((1, 2))
 
         state_values = self.critic(state)
         
-        return torch.mean(action_logprobs_unit, dim=(1, 2)), torch.mean(action_logprobs_factories, dim = (1, 2)), state_values, unit_dist_entropy, factory_dist_entropy
+        return torch.sum(action_logprobs_unit, dim=(1, 2)), torch.sum(action_logprobs_factories, dim = (1, 2)), state_values, unit_dist_entropy, factory_dist_entropy

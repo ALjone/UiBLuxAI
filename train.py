@@ -97,7 +97,7 @@ def train(env, agent, config, writer = None):
         print_avg_reward = print_running_reward / print_running_episodes
         print_avg_reward = round(print_avg_reward, 7)
 
-        print("Episode : {}/{} \t\t Timestep : {} \t\t Average Reward : {} \t\t Average loss : {} \t\t Time used last 100 eps: {} \t\t Time used total: {}".format(i_episode, config["max_episodes"], time_step, print_avg_reward, np.mean(losses), round(time.time()-train_time, 1), round(time.time()-start_time, 1)))
+        print("Episode : {}/{} \t\t Timestep : {} \t\t Average Reward : {} \t\t Average loss : {} \t\t Time used last {} eps: {} \t\t Time used total: {}".format(i_episode, config["max_episodes"], time_step, print_avg_reward, np.mean(losses), config["print_freq"], round(time.time()-train_time, 1), round(time.time()-start_time, 1)))
 
         writer.add_scalar("Average reward", print_avg_reward, i_episode)
 
