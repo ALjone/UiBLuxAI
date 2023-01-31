@@ -2,13 +2,17 @@ import torch
 import yaml
 def load_config(change_dict = {}):
     config = yaml.safe_load(open("config.yml"))
+
+    if not config["device"].lower() in ["cpu", "cuda"]:
+        raise ValueError("Expected device in Config to be either 'CPU' or 'CUDA', but found:", config["device"])
+
+    if torch.cuda.is_available() and config["device"] == "cuda":
+        config["device"] = torch.device("cuda")
+    else:
+        config["device"] = torch.device("cpu")
     for key, val in change_dict.items():
         config[key] = val
 
-    if config["device"].lower() in ["cpu", "cuda"]:
-        config["device"] = torch.device(config["device"].lower())
-    else:
-        raise ValueError("Expected device in Config to be either 'CPU' or 'CUDA', but found:", config["device"])
 
     if config["path"] == "None":
         config["path"] = None

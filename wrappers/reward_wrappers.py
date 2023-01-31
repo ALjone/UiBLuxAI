@@ -19,6 +19,13 @@ class IceRewardWrapper(gym.RewardWrapper):
     def reset(self):
         self.units = {}
         return super().reset()
+
+    def get_died_units(self, player = "player_0"):
+        self_destructs = 0
+        units = 0
+        factories = 0
+        for action in self.prev_actions[player]:
+            print(action)
     
     def reward(self, reward):
         # does not work yet. need to get the agent's observation of the current environment 
@@ -30,44 +37,22 @@ class IceRewardWrapper(gym.RewardWrapper):
             return 0
         agent = "player_0"
         shared_obs = obs["player_0"]
-
-        # compute reward
-        # we simply want to encourage the heavy units to move to ice tiles
-        # and mine them and then bring them back to the factory and dump it
-        # as well as survive as long as possible
-
         factories = shared_obs["factories"][agent]
-        factory_pos = None
-        for unit_id in factories:
-            factory = factories[unit_id]
-            # note that ice converts to water at a 4:1 ratio
-            factory_pos = np.array(factory["pos"])
-            break
         units = shared_obs["units"][agent]
-        unit_deliver_ice_reward = 0
-        unit_move_to_ice_reward = 0
-        unit_overmining_penalty = 0
-        delta_ice = 0
-
         ice_map = shared_obs["board"]["ice"]
-        ice_tile_locations = np.argwhere(ice_map == 1)
-        
 
-        def manhattan_dist(p1, p2):
-            return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
+        actions = self.prev_actions
+        
+        ice_picked_up = 0
+
+        ice_tile_locations = np.argwhere(ice_map == 1)
+
+        return 0 
 
         for unit_id in units:
             unit = units[unit_id]
             pos = np.array(unit["pos"])
-            ice_tile_distances = np.mean((ice_tile_locations - pos) ** 2, 1)
-            closest_ice_tile = ice_tile_locations[np.argmin(ice_tile_distances)]
-            dist_to_ice = manhattan_dist(closest_ice_tile, pos)
-            
-            if factory_pos is not None:
-                dist_to_factory = manhattan_dist(pos, factory_pos)
-            else:
-                dist_to_factory = np.inf
-            unit_power = unit["power"]
+
             if unit_id in self.units.keys():
                 prev_state = self.units[unit_id]
             else:

@@ -88,7 +88,6 @@ class PPO:
         # calculate advantages
         advantages = (rewards.detach() - old_state_values.detach())
 
-        #TODO: Check if it makes sense to loop over probs and entropy when training
         cum_loss = 0
         # Optimize policy for K epochs
         for _ in tqdm(range(self.K_epochs), leave = False, desc = "Training"):
