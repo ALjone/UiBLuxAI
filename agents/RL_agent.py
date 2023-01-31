@@ -17,7 +17,7 @@ class Agent():
         self.factory_actions_per_cell = FACTORY_ACTION_IDXS
 
 
-        self.PPO = PPO(self.unit_actions_per_cell, self.factory_actions_per_cell, config["actor_lr"], config["critic_lr"], config["gamma"], config["epochs_per_batch"], config["eps_clip"], config["lmbda"], config["device"])
+        self.PPO = PPO(self.unit_actions_per_cell, self.factory_actions_per_cell, config["actor_lr"], config["critic_lr"], config["gamma"], config["epochs_per_batch"], config["eps_clip"], config["device"])
 
         if config["path"] is not None:
             self.PPO.load(config["path"])
