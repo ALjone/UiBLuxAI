@@ -6,7 +6,7 @@ from .critic import critic
 
 
 class ActorCritic(nn.Module):
-    def __init__(self, unit_action_dim, factory_action_dim, device = torch.device("cuda")):
+    def __init__(self, unit_action_dim, factory_action_dim, device):
         super(ActorCritic, self).__init__()
 
         self.actor = actor(23, unit_action_dim, factory_action_dim).to(device)

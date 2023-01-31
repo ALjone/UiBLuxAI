@@ -28,7 +28,7 @@ class RolloutBuffer:
 
 
 class PPO:
-    def __init__(self, unit_action_dim, factory_action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, device = torch.device("cuda")):
+    def __init__(self, unit_action_dim, factory_action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, device):
         self.device = device
         self.gamma = gamma
         self.eps_clip = eps_clip
