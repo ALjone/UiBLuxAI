@@ -16,8 +16,8 @@ class IceRewardWrapper(gym.RewardWrapper):
 
     def reset(self):
         self.units = {}
-        self.number_of_units = {"player_0" : 0, "player_1" : 1}
-        self.number_of_factories
+        self.number_of_units = {"player_0" : 0, "player_1" : 0}
+        self.number_of_factories = {"player_0" : 0, "player_1" : 0}
         return super().reset()
 
     def get_died_units(self, player = "player_0"):
@@ -31,6 +31,9 @@ class IceRewardWrapper(gym.RewardWrapper):
                     if "unit" in unit_id: units += 1
                     else: factories += 1
                     if action[0] == 4: self_destructs += 1 #Idx 4 is self destruct
+        
+        units_died = units - self.number_of_units[player]
+        return units_died
     
     def reward(self, reward):
         # does not work yet. need to get the agent's observation of the current environment 
