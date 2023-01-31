@@ -1,3 +1,4 @@
+from audioop import reverse
 import torch
 import torch.nn as nn
 from tqdm import tqdm
@@ -63,16 +64,16 @@ class PPO:
 
     def update(self):
         # Monte Carlo estimate of returns
-        rewards = []
+        rewards = torch.zeros(len(self.buffer.rewards), dtype = torch.float32)
         discounted_reward = 0
-        for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
+        for i, (reward, is_terminal) in enumerate(zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)), reverse=True):
             if is_terminal:
                 discounted_reward = 0
             discounted_reward = reward + (self.gamma * discounted_reward)
-            rewards.insert(0, discounted_reward)
+            rewards[i] = discounted_reward
             
         # Normalizing the rewards
-        rewards = torch.tensor(rewards, dtype=torch.float32).to(self.device)
+        rewards = rewards.to(self.device)
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
 
         # convert list to tensor
@@ -116,9 +117,10 @@ class PPO:
 
             # take gradient step
             self.optimizer.zero_grad()
-            loss.mean().backward()
+            loss = loss.mean()
+            loss.backward()
             self.optimizer.step()
-            cum_loss += loss.mean().item()
+            cum_loss += loss.item()
             
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
