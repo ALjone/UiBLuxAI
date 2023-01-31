@@ -1,8 +1,8 @@
 #Training
 max_episodes: 10000000
-print_freq: 100        # print avg reward in the interval (in episodes)
+print_freq: 100 # print avg reward in the interval (in episodes)
 
-#PPO 
+#PPO
 batch_size: 512
 actor_lr: 0.0003
 critic_lr: 0.0003
@@ -15,3 +15,14 @@ lmbda: 0.95
 device: cpu
 path: None #model.t
 save_path: model.t
+
+#Reward
+unit_lost_scale: 1
+units_killed_scale: 1
+factory_lost_scale: 10
+
+lichen_divide_value: 20000
+scaling_lichen: 5
+scaling_ice: 0.1 #Value of ice
+scaling_ore: 0.05
+scaling_delivery_extra: 2 #How much more delivery is worth compared to gathering
