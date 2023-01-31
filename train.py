@@ -1,35 +1,9 @@
-from ppo import PPO
-from luxai_s2.env import LuxAI_S2
-from agents.RL_agent import Agent
-from utils.visualization import animate
-from utils.wrappers import ImageWithUnitsWrapper, SinglePlayerEnv
 import time
-from datetime import datetime
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 
 from tqdm import tqdm
 
-
-import io
-import sys
-import traceback
-
-
-class TestableIO(io.BytesIO):
-
-    def __init__(self, old_stream, initial_bytes=None):
-        super(TestableIO, self).__init__(initial_bytes)
-        self.old_stream = old_stream
-
-    def write(self, bytes):
-        if 'unit' in bytes:
-            traceback.print_stack(file=self.old_stream)
-        self.old_stream.write(bytes)
-
-
-sys.stdout = TestableIO(sys.stdout)
-sys.stderr = TestableIO(sys.stderr)
 
 def skip_early_phase(env, agent):
         state, original_obs = env.reset()
