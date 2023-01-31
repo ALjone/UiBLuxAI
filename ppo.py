@@ -116,9 +116,10 @@ class PPO:
 
             # take gradient step
             self.optimizer.zero_grad()
-            loss.mean().backward()
+            loss = loss.mean()
+            loss.backward()
             self.optimizer.step()
-            cum_loss += loss.mean().item()
+            cum_loss += loss.item()
             
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
