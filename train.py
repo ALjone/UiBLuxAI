@@ -74,7 +74,7 @@ def train(env, agent, config, writer = None):
 
         steps_per_second = step_counter/(time.time()-last_x_ep_time)
         print(f"Episode : {i_episode} \tTimestep : {time_step} \tAverage Reward : {round(print_avg_reward, 3)} \t Average episode length: {round(step_counter/config['print_freq'], 3)}",
-               f"\tAverage loss : {round(np.mean(losses).item(), 3)} \tSteps per second last {config['print_freq']} eps: {round(step_counter/steps_per_second, 3)} \tTime used total: {formate_time(int(time.time()-start_time))}")
+               f"\tAverage loss : {round(np.mean(losses).item(), 3)} \tSteps per second last {config['print_freq']} eps: {int(step_counter/steps_per_second)} \tTime used total: {formate_time(int(time.time()-start_time))}")
 
         print_running_reward = 0
         print_running_episodes = 0
