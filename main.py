@@ -15,7 +15,7 @@ env = LuxAI_S2(verbose=0, collect_stats=True)
 env = ImageWithUnitsWrapper(env)
 env = SinglePlayerEnv(env)
 env = IceRewardWrapper(env, config)
-env = RecordVideo(env, "videos", episode_trigger= lambda x : x % 999 == 0 and x != 0)
+env = RecordVideo(env, "videos", episode_trigger= lambda x : x % 1000 == 0 and x != 0)
 env.reset()
 agent = Agent("player_0", env.state.env_cfg, config)
 

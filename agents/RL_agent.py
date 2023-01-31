@@ -21,6 +21,7 @@ class Agent():
 
         if config["path"] is not None:
             self.PPO.load(config["path"])
+            print("Successfully loaded model")
 
     def early_setup(self, step: int, obs, remainingOverageTime: int = 60):
         obs = obs[1][self.player]

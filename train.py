@@ -1,9 +1,9 @@
 import time
 from torch.utils.tensorboard import SummaryWriter
 import numpy as np
-
+from utils.utils import formate_time
 from tqdm import tqdm
-
+from utils.stat_collector import StatCollector
 
 def skip_early_phase(env, agent):
         state = env.reset()
@@ -16,7 +16,9 @@ def skip_early_phase(env, agent):
         return state
 
 def train(env, agent, config, writer = None):
-    
+    assert env.collect_stats
+
+    stat_collector = StatCollector("player_0")
     #Set all used variables
     start_time = time.time()
     time_step = 0
@@ -24,7 +26,7 @@ def train(env, agent, config, writer = None):
     print_running_reward = 0
     print_running_episodes = 0
     highest_reward = -np.inf
-    train_time = time.time()
+    last_x_ep_time = time.time()
 
     if writer is None:
         writer = SummaryWriter()
@@ -59,7 +61,7 @@ def train(env, agent, config, writer = None):
                 if done:
                     break
                 
-
+            stat_collector.update(env.state.stats)
             print_running_reward += current_ep_reward
             print_running_episodes += 1
 
@@ -70,13 +72,26 @@ def train(env, agent, config, writer = None):
         print_avg_reward = print_running_reward / print_running_episodes
         print_avg_reward = round(print_avg_reward, 7)
 
-        print(f"Episode : {i_episode}/{config['max_episodes']} \tTimestep : {time_step} \tAverage Reward : {round(print_avg_reward, 3)} \t Average episode length: {round(step_counter/config['print_freq'], 3)} \tAverage loss : {np.mean(losses)} \tTime used last {config['print_freq']} eps: {round(time.time()-train_time, 1)} \tTime used total: {round(time.time()-start_time, 1)}")
-
-        writer.add_scalar("Average reward", print_avg_reward, i_episode)
+        steps_per_second = step_counter/(time.time()-last_x_ep_time)
+        print(f"Episode : {i_episode} \tTimestep : {time_step} \tAverage Reward : {round(print_avg_reward, 3)} \t Average episode length: {round(step_counter/config['print_freq'], 3)}",
+               f"\tAverage loss : {round(np.mean(losses).item(), 3)} \tSteps per second last {config['print_freq']} eps: {round(step_counter/steps_per_second, 3)} \tTime used total: {formate_time(int(time.time()-start_time))}")
 
         print_running_reward = 0
         print_running_episodes = 0
 
+        last_x_ep_time = time.time()
+
         if print_avg_reward > highest_reward:
             highest_reward == print_avg_reward
             agent.PPO.save(config["save_path"])
+
+
+        writer.add_scalar("Main/Average reward", print_avg_reward, i_episode)
+        writer.add_scalar("Main/Average episode length", step_counter/config['print_freq'], i_episode)
+        writer.add_scalar("Main/Average steps per second", steps_per_second, i_episode)
+
+        #Update writer with average for last x eps
+        categories = stat_collector.get_last_x(config["print_freq"]) 
+        for category_name, category in categories.items():
+            for name, value in category.items():
+                writer.add_scalar(f"{category_name}/{name}", np.mean(value), i_episode)

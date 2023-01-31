@@ -21,6 +21,7 @@ def load_config(change_dict = {}):
 
 
 def formate_time(seconds):
+    seconds = int(seconds)
     #https://stackoverflow.com/a/775075
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)
