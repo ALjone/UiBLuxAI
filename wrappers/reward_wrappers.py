@@ -22,8 +22,12 @@ class IceRewardWrapper(gym.RewardWrapper):
     
     def reward(self, reward):
         # does not work yet. need to get the agent's observation of the current environment 
-        obs = self.state.get_obs() #does not work as inteded. not the same obs at the one return from step()
-
+        obs_ = self.state.get_obs()
+        obs = {}
+        for k in self.agents:
+            obs[k] = obs_
+        if len(obs)<1:
+            return -100
         agent = "player_0"
         shared_obs = obs["player_0"]
 
@@ -82,10 +86,7 @@ class IceRewardWrapper(gym.RewardWrapper):
             else:
                 delta_ice -= min(0,scaling*(unit["cargo"]["ice"] - prev_state["cargo"]["ice"])) # negative reward for dropping ice. 
             
-
-            if self.dist_to_ice is None:
-                pass
-            elif unit["cargo"]["ice"] < 20:
+            if unit["cargo"]["ice"] < 20:
                 dist_penalty = dist_to_ice / (10) 
                 unit_move_to_ice_reward += dist_penalty
             else:
@@ -108,4 +109,4 @@ class IceRewardWrapper(gym.RewardWrapper):
         reward = reward
 
 
-        return {"player_0" : reward}
+        return reward

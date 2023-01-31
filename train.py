@@ -25,7 +25,7 @@ def train(env, agent, config, writer = None):
     i_episode = 0
     print_running_reward = 0
     print_running_episodes = 0
-    highest_reward = 0
+    highest_reward = -np.inf
     train_time = time.time()
 
     if writer is None:
