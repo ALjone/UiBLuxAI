@@ -53,7 +53,7 @@ def train(env, agent, config, writer = None):
 
                 # update PPO agent
                 if time_step % config["batch_size"] == 0:
-                    losses.append(agent.PPO.update(state["image_features"].to(config["device"])))
+                    losses.append(agent.PPO.update())
 
 
                 # break; if the episode is over
