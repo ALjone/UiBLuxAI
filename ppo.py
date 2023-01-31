@@ -66,11 +66,11 @@ class PPO:
         # Monte Carlo estimate of returns
         rewards = torch.zeros(len(self.buffer.rewards), dtype = torch.float32)
         discounted_reward = 0
-        for i, (reward, is_terminal) in enumerate(zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)), reverse=True):
+        for i, (reward, is_terminal) in enumerate(zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals))):
             if is_terminal:
                 discounted_reward = 0
             discounted_reward = reward + (self.gamma * discounted_reward)
-            rewards[i] = discounted_reward
+            rewards[len(self.buffer.rewards)-i-1] = discounted_reward
             
         # Normalizing the rewards
         rewards = rewards.to(self.device)

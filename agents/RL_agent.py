@@ -1,12 +1,9 @@
 from lux.kit import obs_to_game_state, EnvConfig
 from lux.utils import my_turn_to_place_factory
 import numpy as np
-import torch
 import scipy
-from network.actor import actor
 from utils.move_utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from ppo import PPO
-import matplotlib.pyplot as plt
 
 
 class Agent():

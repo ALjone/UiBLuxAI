@@ -3,18 +3,18 @@ from torch import nn
 from torchvision.ops import SqueezeExcitation
 import numpy as np
 from torch.distributions.categorical import Categorical
-from .blocks import ResConvBlock, ResSEBlock
+from .blocks import ResConvBlock, ResSEBlock, ConvBlock
 
 
 class critic(nn.Module):
-    def __init__(self, intput_channels, n_blocks = 8, intermediate_channels = 32, layer_type = "conv") -> None:
+    def __init__(self, intput_channels, n_blocks = 8, intermediate_channels = 32, layer_type = "SE") -> None:
         super(critic, self).__init__()
 
 
         if layer_type == "SE":
             layer = ResSEBlock
         elif layer_type == "conv":
-            layer = ResConvBlock
+            layer = ConvBlock
         else:
             raise ValueError(f"{layer_type} is not a valid layer type")
         

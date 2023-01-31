@@ -20,7 +20,7 @@ FACTORY_ACTION_IDXS = 4
 
 def unit_idx_to_action(idx):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
-    assert -1 < idx < 8
+    assert -1 < idx < 9
     assert isinstance(idx, int)
     if -1 < idx < 5:
         return move(idx)
@@ -38,7 +38,7 @@ def unit_idx_to_action(idx):
         return transfer()
 
 
-def transfer(x = 10000):
+def transfer(x = 1000):
     """Transfers all the ice to center"""
     return np.array([1, 0, 0, x, 0, 1])
     

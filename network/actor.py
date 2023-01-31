@@ -3,18 +3,18 @@ import torch.nn.functional as F
 import torch
 from torch import nn
 import numpy as np
-from .blocks import ResConvBlock, ResSEBlock
+from .blocks import ResConvBlock, ResSEBlock, ConvBlock
 
 
 class actor(nn.Module):
-    def __init__(self, intput_channels, unit_action_space:int, factory_action_space,  n_blocks:int = 12, n_blocks_factories_units:int = 2,
-                  intermediate_channels:int = 32, layer_type = "conv") -> None:
+    def __init__(self, intput_channels, unit_action_space:int, factory_action_space:int,  n_blocks:int = 12, n_blocks_factories_units:int = 2,
+                  intermediate_channels:int = 32, layer_type = "SE") -> None:
         super(actor, self).__init__()
         
         if layer_type == "SE":
             layer = ResSEBlock
         elif layer_type == "conv":
-            layer = ResConvBlock
+            layer = ConvBlock
         else:
             raise ValueError(f"{layer_type} is not a valid layer type")
         blocks = []

@@ -30,25 +30,6 @@ class ConvBlock(nn.Module):
 
         return self.activation(x)
 
-class ResConvBlock(nn.Module):
-    def __init__(self, channels, intermediate_channels ,kernel_size = 3, activation_function = nn.ReLU()):
-        super().__init__()
-        assert channels == intermediate_channels
-        assert kernel_size%2 == 1 #Need kernel size to be odd in order to preserve size
-        self.activation_function = activation_function
-        self.conv0 = nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=kernel_size, padding=(kernel_size-1)//2)
-        self.conv1 = nn.Conv2d(in_channels=channels, out_channels=channels, kernel_size=kernel_size, padding=(kernel_size-1)//2)
-
-    def forward(self, x):
-        inputs = x
-        x = self.conv0(x)
-        x = self.activation_function(x)
-        x = self.conv1(x)
-        x = self.activation_function(x)
-        return x + inputs
-    
-
-
 class ResSEBlock(nn.Module):
     def __init__(self, input_channels, squeeze_channels, kernel_size = 3, activation_function = nn.ReLU()):
         super().__init__()
