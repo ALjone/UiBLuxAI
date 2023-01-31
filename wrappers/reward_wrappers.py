@@ -41,9 +41,11 @@ class IceRewardWrapper(gym.RewardWrapper):
 
         units_died = units - self.number_of_units[player]
         factories_died = factories - self.number_of_factories[player]
+        self.number_of_units[player] = units
+        self.number_of_factories[player] = factories
         return units_died, factories_died
 
-    def reward(self, reward):
+    def reward(self, rewards):
         # does not work yet. need to get the agent's observation of the current environment
         obs_ = self.state.get_obs()
         obs = {}
@@ -57,7 +59,7 @@ class IceRewardWrapper(gym.RewardWrapper):
             lichen = self.state.board.lichen[agent_lichen_mask].sum(
             )
             # TODO: Check for correctness
-            reward = -1 if reward["player_0"] < 0 else 1
+            reward = -1 if rewards < 0 else 1
             reward += np.tanh(lichen/self.config["lichen_divide_value"])*20
             return reward
 
@@ -65,7 +67,7 @@ class IceRewardWrapper(gym.RewardWrapper):
         shared_obs = obs["player_0"]
         factories = shared_obs["factories"][agent]
         units = shared_obs["units"][agent]
-        factory_map = shared_obs["board"][agent]
+        factory_pos = [factory["pos"] for _, factory in factories.items()]
 
         units_lost, factories_lost = self.get_died_units_and_factories()
         units_killed, _ = self.get_died_units_and_factories("player_1")
@@ -75,11 +77,10 @@ class IceRewardWrapper(gym.RewardWrapper):
             self.config["factory_lost_scale"]
 
         units_killed_reward = units_killed*self.config["units_killed_scale"]
-
         resource_reward = 0
         for unit_id in units:
             unit = units[unit_id]
-            (x, y) = unit["pos"]
+            pos = list(unit["pos"])
 
             if unit_id in self.units.keys():
                 prev_state = self.units[unit_id]
@@ -94,7 +95,7 @@ class IceRewardWrapper(gym.RewardWrapper):
             delta_res = 0
             for res, scale in zip(["ice", "ore"], scaling):
                 # Dropping ice at factory
-                if factory_map[x, y] == 1:
+                if pos in factory_pos:
                     delta_res += scaling_delivery_extra*scale * \
                         (unit["cargo"][res] - prev_state["cargo"][res])
 
@@ -114,5 +115,6 @@ class IceRewardWrapper(gym.RewardWrapper):
             + units_killed_reward
             + resource_reward
         )
-
+        if reward != 0:
+            print(reward)
         return reward
