@@ -42,7 +42,7 @@ class PPO:
                         {'params': self.policy.critic.parameters(), 'lr': lr_critic}
                     ])
 
-        self.policy_old = ActorCritic(unit_action_dim, factory_action_dim).to(device)
+        self.policy_old = ActorCritic(unit_action_dim, factory_action_dim, device = device).to(device)
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
