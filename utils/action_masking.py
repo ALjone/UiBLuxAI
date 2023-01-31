@@ -21,9 +21,7 @@ def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
 #6 = recharge
 #7 = self_destruct
 def single_unit_action_mask(unit, obs, player = "player_0"):
-    
     """Calculates the action mask for one specific unit"""
-    #TODO: Needs to take in a player for the factory stuff?
 
     #TODO: This doesn't care about the fact that adding to action queue costs 1/10 (LIGHT/HEAVY)
     #TODO: Invalid to dig on top of factory
@@ -98,21 +96,32 @@ def single_factory_action_mask(factory, obs):
     if metal < 100 or power < 500:
         action_mask[1] = 0
     
-    if water < calculate_water_cost(factory, obs):
+    if water < calculate_water_cost(*factory["pos"], obs):
         action_mask[2] = 0
+
+    return action_mask
     
 
 
-def unit_action_mask(units, obs):
+def unit_action_mask(obs, player = "player_0"):
+    #TODO: Needs to take in a player for the factory stuff?
+    obs = obs[player]
     action_mask = torch.ones((48, 48, UNIT_ACTION_IDXS))
-    for unit in units:
+    units = obs["units"][player]
+    for unit in units.values():
         x, y = unit["pos"]
-        action_mask[x, y] = single_unit_action_mask(unit, obs)
+        action_mask[x, y] = single_unit_action_mask(unit, obs, player)
+
+    return action_mask
 
 
-def factory_action_mask(factories, obs):
+def factory_action_mask(obs, player = "player_0"):
+    #TODO: Needs to take in a player for the factory stuff?
     action_mask = torch.ones((48, 48, FACTORY_ACTION_IDXS))
-
-    for factory in factories:
+    obs = obs[player]
+    factories = obs["units"][player]
+    for factory in factories.values():
         x, y = factory["pos"]
         action_mask[x, y] = single_factory_action_mask(factory, obs)
+
+    return action_mask

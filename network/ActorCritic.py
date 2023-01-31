@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from .actor import actor
 from .critic import critic
-
+from utils.action_masking import unit_action_mask, factory_action_mask
 
 class ActorCritic(nn.Module):
     def __init__(self, unit_action_dim, factory_action_dim, device):
@@ -12,6 +12,8 @@ class ActorCritic(nn.Module):
         self.actor = actor(23, unit_action_dim, factory_action_dim).to(device)
         # critic
         self.critic = critic(23).to(device)
+
+        self.device = device
 
         print("Actor has:", self.actor.count_parameters(), "parameters")
         print("Critic has:", self.critic.count_parameters(), "parameters")
@@ -22,7 +24,13 @@ class ActorCritic(nn.Module):
     def act(self, state, obs):
         #NOTE: Assumes first channel is unit mask for our agent
         #NOTE: Assumes second channel is factory mask for our agent
+        
+        #unit_mask = unit_action_mask(obs).to(self.device)
+        #factory_mask = factory_action_mask(obs).to(self.device)
+
         action_probs_unit, action_probs_factories = self.actor(state)
+        #action_probs_unit *= unit_mask
+        #action_probs_factories *= factory_mask
         unit_dist, factory_dist = Categorical(action_probs_unit), Categorical(action_probs_factories)
 
         action_unit = unit_dist.sample()
@@ -36,6 +44,8 @@ class ActorCritic(nn.Module):
         return action_unit.detach(), action_factory.detach(), torch.sum(action_logprob_unit.detach()), torch.sum(action_logprob_factory.detach()), state_val.detach()
     
     def evaluate(self, state, unit_action, factory_action):
+        #TODO: Does this also need the same type of action masking?
+
         #NOTE: Assumes first channel is unit mask for our agent
         #NOTE: Assumes second channel is factory mask for our agent
         action_probs_unit, action_probs_factories = self.actor(state)
