@@ -115,6 +115,4 @@ class IceRewardWrapper(gym.RewardWrapper):
             + units_killed_reward
             + resource_reward
         )
-        if reward != 0:
-            print(reward)
         return reward

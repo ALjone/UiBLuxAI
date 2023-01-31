@@ -17,6 +17,7 @@ class actor(nn.Module):
             layer = ConvBlock
         else:
             raise ValueError(f"{layer_type} is not a valid layer type")
+        
         blocks = []
         blocks_factory = []
         blocks_units = []

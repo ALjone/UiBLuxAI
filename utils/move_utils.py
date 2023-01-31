@@ -18,7 +18,7 @@ FACTORY_ACTION_IDXS = 4
 
 # a[5] = n, number of times to execute this action before exhausting it and removing it from the front of the action queue. Minimum is 1.
 
-def unit_idx_to_action(idx):
+def unit_idx_to_action(idx, type):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
     assert -1 < idx < 9
     assert isinstance(idx, int)
@@ -29,7 +29,7 @@ def unit_idx_to_action(idx):
         return dig()
 
     if idx == 6:
-        return recharge(20)
+        return recharge(100 if type == "LIGHT" else 1000)
 
     if idx == 7:
          return self_destruct()
@@ -81,7 +81,7 @@ def unit_output_to_actions(unit_output, units):
     for unit in units:
             x, y = unit["pos"][0], unit["pos"][1]
             action = unit_output[x, y].item()
-            actions[unit["unit_id"]] = [unit_idx_to_action(action)]
+            actions[unit["unit_id"]] = [unit_idx_to_action(action, unit["unit_type"])]
 
     return actions
 

@@ -12,7 +12,7 @@ eps_clip: 0.1
 lmbda: 0.95
 
 #Other
-device: cpu
+device: cuda
 path: None #model.t
 save_path: model.t
 
