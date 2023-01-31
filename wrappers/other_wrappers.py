@@ -122,9 +122,12 @@ class SinglePlayerEnv(gym.Wrapper):
         else:
             reward = self.get_reward(action, obs[1]) 
 
+        self.prev_actions = action
+
         #NOTE: See here for tips on custom reward function https://github.com/Lux-AI-Challenge/Lux-Design-S2/blob/main/examples/sb3.py
         return (obs[0][agent], obs[1]), reward[agent], done[agent], info[agent]
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
+        self.prev_actions = {}
         return (obs[0][self.agents[0]], obs[1])

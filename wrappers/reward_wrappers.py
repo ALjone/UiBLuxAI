@@ -26,8 +26,8 @@ class IceRewardWrapper(gym.RewardWrapper):
         obs = {}
         for k in self.agents:
             obs[k] = obs_
-        if len(obs)<1:
-            return -100
+        if len(self.agents) == 0: #Game is over
+            return 0
         agent = "player_0"
         shared_obs = obs["player_0"]
 
@@ -48,7 +48,6 @@ class IceRewardWrapper(gym.RewardWrapper):
         unit_move_to_ice_reward = 0
         unit_overmining_penalty = 0
         delta_ice = 0
-        power_reward = 0
 
         ice_map = shared_obs["board"]["ice"]
         ice_tile_locations = np.argwhere(ice_map == 1)
@@ -57,13 +56,13 @@ class IceRewardWrapper(gym.RewardWrapper):
         def manhattan_dist(p1, p2):
             return abs(p1[0] - p2[0]) + abs(p1[1] - p2[1])
 
-        unit_power = 0
         for unit_id in units:
             unit = units[unit_id]
             pos = np.array(unit["pos"])
             ice_tile_distances = np.mean((ice_tile_locations - pos) ** 2, 1)
             closest_ice_tile = ice_tile_locations[np.argmin(ice_tile_distances)]
             dist_to_ice = manhattan_dist(closest_ice_tile, pos)
+            
             if factory_pos is not None:
                 dist_to_factory = manhattan_dist(pos, factory_pos)
             else:
@@ -73,9 +72,7 @@ class IceRewardWrapper(gym.RewardWrapper):
                 prev_state = self.units[unit_id]
             else:
                 prev_state = unit
-            
-            if unit_power <1:
-                power_reward -=1
+
             # reward for digging and dropping of ice
             scaling = 10
 
@@ -104,7 +101,6 @@ class IceRewardWrapper(gym.RewardWrapper):
             + unit_deliver_ice_reward
             + unit_overmining_penalty
             + delta_ice
-            + power_reward
         )
         reward = reward
 

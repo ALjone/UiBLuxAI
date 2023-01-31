@@ -14,6 +14,8 @@ env = LuxAI_S2(verbose = 0, collect_stats=True)
 env = ImageWithUnitsWrapper(env)
 env = SinglePlayerEnv(env)
 env = IceRewardWrapper(env)
+env.reset()
+print(env.previous_actions)
 agent = Agent("player_0", env.state.env_cfg, config)
 
 train(env, agent, config)

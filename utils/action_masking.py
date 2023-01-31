@@ -21,9 +21,10 @@ def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
 #6 = recharge
 #7 = self_destruct
 def single_unit_action_mask(unit, obs):
+    
     """Calculates the action mask for one specific unit"""
     #TODO: This doesn't care about the fact that adding to action queue costs 1/10 (LIGHT/HEAVY)
-
+    #TODO: Invalid to dig on top of factory
     action_mask = torch.ones(UNIT_ACTION_IDXS)
     #(x, y) coordinates of unit
     x, y = unit["pos"]
