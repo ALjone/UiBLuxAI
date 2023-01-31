@@ -23,6 +23,7 @@ class Agent():
             self.PPO.load(config["path"])
 
     def early_setup(self, step: int, obs, remainingOverageTime: int = 60):
+        obs = obs[1][self.player]
         if step == 0:
             # bid 0 to not waste resources bidding and declare as the default faction
             return dict(faction="AlphaStrike", bid=0)
@@ -78,12 +79,15 @@ class Agent():
                 return dict(spawn=spawn_loc, metal=150, water=150)
             return dict()
 
-    def act(self, obs, remainingOverageTime: int = 60):
-        image = obs["image_features"].to(self.device)
-        units = obs["unit_to_id"]
-        factories = obs["factory_to_id"]
+    def act(self, state, remainingOverageTime: int = 60):
+        obs = state[1]
+        state = state[0]
 
-        unit_output, factory_output = self.PPO.select_action(image)
+        image = state["image_features"].to(self.device)
+        units = state["unit_to_id"]
+        factories = state["factory_to_id"]
+
+        unit_output, factory_output = self.PPO.select_action(image, obs)
 
         # NOTE How actions are formatted
         # a[0] (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)

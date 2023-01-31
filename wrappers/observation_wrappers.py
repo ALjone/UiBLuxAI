@@ -83,8 +83,11 @@ class ImageWithUnitsWrapper(gym.ObservationWrapper):
                 factory_vec[:2] /= self.env.state.env_cfg.map_size
                 factory_data[factory["pos"][0], factory["pos"][1]] = factory_vec
                 factory_mask[factory["pos"][0], factory["pos"][1]] = 1 if factory["team_id"] == 0 else 0
+
+            #NOTE: Unit mask MUST be first, factory mask MUST be second
             image_features = np.concatenate(
                 [
+                    unit_mask,
                     factory_mask,
                     factory_data,
                     np.expand_dims(shared_obs["board"]["lichen"], -1)
@@ -93,7 +96,6 @@ class ImageWithUnitsWrapper(gym.ObservationWrapper):
                     / self.env.state.env_cfg.MAX_RUBBLE,
                     np.expand_dims(shared_obs["board"]["ice"], -1),
                     np.expand_dims(shared_obs["board"]["ore"], -1),
-                    unit_mask,
                     unit_data,
                 ],
                 axis=-1,

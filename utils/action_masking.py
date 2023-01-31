@@ -20,9 +20,11 @@ def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
 #5 = dig
 #6 = recharge
 #7 = self_destruct
-def single_unit_action_mask(unit, obs):
+def single_unit_action_mask(unit, obs, player = "player_0"):
     
     """Calculates the action mask for one specific unit"""
+    #TODO: Needs to take in a player for the factory stuff?
+
     #TODO: This doesn't care about the fact that adding to action queue costs 1/10 (LIGHT/HEAVY)
     #TODO: Invalid to dig on top of factory
     action_mask = torch.ones(UNIT_ACTION_IDXS)
@@ -51,8 +53,11 @@ def single_unit_action_mask(unit, obs):
     if y == 47 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "down"):
         action_mask[3] = 0
 
+    factories = obs["factories"][player]
+    factory_pos = [factory["pos"] for _, factory in factories.items()]
+
     #Dig
-    if unit["power"] < dig_cost:
+    if unit["power"] < dig_cost or list(unit["pos"]) in factory_pos:
         action_mask[5] = 0
 
     #Recharge, max is 150 for LIGHT and 3000 for heavy per config

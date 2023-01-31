@@ -47,11 +47,11 @@ class PPO:
         
         self.MseLoss = nn.MSELoss()
 
-    def select_action(self, state):
+    def select_action(self, state, obs):
 
         with torch.no_grad():
             state = state.float().to(self.device)
-            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(state)
+            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(state, obs)
         
         self.buffer.states.append(state)
         self.buffer.unit_actions.append(action_unit)

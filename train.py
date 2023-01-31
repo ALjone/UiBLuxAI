@@ -6,14 +6,12 @@ from tqdm import tqdm
 
 
 def skip_early_phase(env, agent):
-        state, original_obs = env.reset()
+        state = env.reset()
         step = 0
         while env.state.real_env_steps < 0:
-            o = original_obs[agent.player]
-            a = agent.early_setup(step, o)
+            a = agent.early_setup(step, state)
             step += 1
             state, rewards, dones, infos = env.step(a)
-            state, original_obs = state
 
         return state
 
@@ -42,7 +40,6 @@ def train(env, agent, config, writer = None):
                 action = agent.act(state)
                 #a = ppo_agent.act(state)
                 state, reward, done, _ = env.step(action)
-                state = state[0] #Getting the first element, because state is a tuple of (state, original_obs)
 
                 # saving reward and is_terminals
                 agent.PPO.buffer.rewards.append(reward)

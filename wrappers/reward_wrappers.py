@@ -34,16 +34,19 @@ class IceRewardWrapper(gym.RewardWrapper):
                 for unit_id, action in action_dict:
                     if "unit" in unit_id:
                         units += 1
-                    else:
+                    elif "factory" in unit_id:
                         factories += 1
+                    else:
+                        raise ValueError("Oh no, what's wrong with this unit ID")
                     if action[0] == 4:
                         self_destructs += 1  # Idx 4 is self destruct
 
-        units_died = units - self.number_of_units[player]
-        factories_died = factories - self.number_of_factories[player]
-        self.number_of_units[player] = units
-        self.number_of_factories[player] = factories
-        return units_died, factories_died
+            units_died = units - self.number_of_units[player] - self_destructs
+            factories_died = factories - self.number_of_factories[player]
+            self.number_of_units[player] = units
+            self.number_of_factories[player] = factories
+            return units_died, factories_died
+        return 0, 0
 
     def reward(self, rewards):
         # does not work yet. need to get the agent's observation of the current environment
@@ -59,7 +62,7 @@ class IceRewardWrapper(gym.RewardWrapper):
             lichen = self.state.board.lichen[agent_lichen_mask].sum(
             )
             # TODO: Check for correctness
-            reward = -1 if rewards < 0 else 1
+            reward = 1 if rewards["player_0"] > rewards["player_1"] else 0
             reward += np.tanh(lichen/self.config["lichen_divide_value"])*20
             return reward
 

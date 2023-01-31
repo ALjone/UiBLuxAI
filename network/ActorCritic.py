@@ -19,7 +19,7 @@ class ActorCritic(nn.Module):
     def forward(self, state):
         return self.act(state)
     
-    def act(self, state):
+    def act(self, state, obs):
         #NOTE: Assumes first channel is unit mask for our agent
         #NOTE: Assumes second channel is factory mask for our agent
         action_probs_unit, action_probs_factories = self.actor(state)
