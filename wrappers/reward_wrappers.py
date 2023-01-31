@@ -55,6 +55,8 @@ class IceRewardWrapper(gym.RewardWrapper):
 
         ice_tile_locations = np.argwhere(ice_map == 1)
 
+        self.get_died_units()
+
         return 0 
 
         for unit_id in units:
