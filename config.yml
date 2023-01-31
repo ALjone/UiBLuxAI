@@ -9,6 +9,7 @@ critic_lr: 0.0003
 gamma: 0.99
 epochs_per_batch: 4
 eps_clip: 0.1
+lmbda: 0.95
 
 #Other
 device: cuda

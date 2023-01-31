@@ -3,7 +3,7 @@ from torch import nn
 from torchvision.ops import SqueezeExcitation
 import numpy as np
 from torch.distributions.categorical import Categorical
-from .blocks import ResConvBlock, ResSEBlock, ConvBlock
+from .blocks import ResSEBlock, ConvBlock
 
 
 class critic(nn.Module):

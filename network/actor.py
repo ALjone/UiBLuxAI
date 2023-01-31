@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch
 from torch import nn
 import numpy as np
-from .blocks import ResConvBlock, ResSEBlock, ConvBlock
+from .blocks import ResSEBlock, ConvBlock
 
 
 class actor(nn.Module):

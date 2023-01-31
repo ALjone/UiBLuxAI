@@ -28,11 +28,12 @@ class RolloutBuffer:
 
 
 class PPO:
-    def __init__(self, unit_action_dim, factory_action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, device = torch.device("cuda")):
+    def __init__(self, unit_action_dim, factory_action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, lmbda, device = torch.device("cuda")):
         self.device = device
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.K_epochs = K_epochs
+        self.lmbda = lmbda
         
         self.buffer = RolloutBuffer()
 
@@ -62,21 +63,25 @@ class PPO:
 
         return action_unit.squeeze(), action_factory.squeeze()
 
-    def update(self):
-        # Monte Carlo estimate of returns
-        rewards = torch.zeros(len(self.buffer.rewards), dtype = torch.float32)
-        discounted_reward = 0
-        for i, (reward, is_terminal) in enumerate(zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals))):
-            if is_terminal:
-                discounted_reward = 0
-            discounted_reward = reward + (self.gamma * discounted_reward)
-            rewards[len(self.buffer.rewards)-i-1] = discounted_reward
-            
-        # Normalizing the rewards
-        rewards = rewards.to(self.device)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
+    def get_gae(self, values, rewards, last_value):
+        returns = []
+        gae = 0
+        for i in reversed(range(len(rewards)-1)):
+            delta = rewards[i] + self.gamma * values[i + 1] * self.buffer.is_terminals[i] - values[i]
+            gae = delta + self.gamma * self.lmbda *self.buffer.is_terminals[i] * gae
+            returns.insert(0, gae + values[i])
+        i += 1
+        delta = rewards[i] + self.gamma * last_value * self.buffer.is_terminals[i] - values[i]
+        gae = delta + self.gamma * self.lmbda *self.buffer.is_terminals[i] * gae
+        returns.insert(0, gae + values[i])
 
+        adv = torch.tensor(returns).to(self.device) - values
+        return returns, (adv - torch.mean(adv)) / (torch.std(adv) + 1e-7)
+
+    def update(self, next_state):
+        #rewards = torch.squeeze(torch.stack(self.buffer.rewards, dim=0)).detach().to(self.device)
         # convert list to tensor
+        #TODO: Make this just be tensors from the get go
         old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
         old_actions_unit = torch.squeeze(torch.stack(self.buffer.unit_actions, dim=0)).detach().to(self.device)
         old_actions_factory = torch.squeeze(torch.stack(self.buffer.factory_actions, dim=0)).detach().to(self.device)
@@ -84,8 +89,10 @@ class PPO:
         old_logprobs_factory = torch.squeeze(torch.stack(self.buffer.factory_logprobs, dim=0)).detach().to(self.device)
         old_state_values = torch.squeeze(torch.stack(self.buffer.state_values, dim=0)).detach().to(self.device)
 
-        # calculate advantages
-        advantages = (rewards.detach() - old_state_values.detach())
+        rewards = torch.tensor(self.buffer.rewards).to(self.device).float()
+        _, advantages = self.get_gae(old_state_values, rewards, self.policy.critic(next_state))
+
+
 
         #TODO: Check if it makes sense to loop over probs and entropy when training
         cum_loss = 0
