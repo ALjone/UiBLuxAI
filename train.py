@@ -32,6 +32,7 @@ def train(env, agent, config, writer = None):
     for _ in range(config["max_episodes"]//config["print_freq"]):  
 
         losses = []
+        step_counter = 0
         for _ in tqdm(range(config["print_freq"]), leave = False, desc = "Experiencing"):
             current_ep_reward = 0
             state = skip_early_phase(env, agent)
@@ -46,6 +47,7 @@ def train(env, agent, config, writer = None):
                 agent.PPO.buffer.is_terminals.append(done)
 
                 time_step +=1
+                step_counter += 1
                 current_ep_reward += reward
 
                 # update PPO agent
@@ -68,13 +70,12 @@ def train(env, agent, config, writer = None):
         print_avg_reward = print_running_reward / print_running_episodes
         print_avg_reward = round(print_avg_reward, 7)
 
-        print("Episode : {}/{} \t\t Timestep : {} \t\t Average Reward : {} \t\t Average loss : {} \t\t Time used last {} eps: {} \t\t Time used total: {}".format(i_episode, config["max_episodes"], time_step, print_avg_reward, np.mean(losses), config["print_freq"], round(time.time()-train_time, 1), round(time.time()-start_time, 1)))
+        print(f"Episode : {i_episode}/{config['max_episodes']} \tTimestep : {time_step} \tAverage Reward : {round(print_avg_reward, 3)} \t Average episode length: {round(step_counter/config['print_freq'], 3)} \tAverage loss : {np.mean(losses)} \tTime used last {config['print_freq']} eps: {round(time.time()-train_time, 1)} \tTime used total: {round(time.time()-start_time, 1)}")
 
         writer.add_scalar("Average reward", print_avg_reward, i_episode)
 
         print_running_reward = 0
         print_running_episodes = 0
-        train_time = time.time()
 
         if print_avg_reward > highest_reward:
             highest_reward == print_avg_reward
