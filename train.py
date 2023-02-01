@@ -73,8 +73,8 @@ def train(env, agent, config, writer = None):
         print_avg_reward = round(print_avg_reward, 7)
 
         steps_per_second = step_counter/(time.time()-last_x_ep_time)
-        print(f"Episode : {i_episode} \tTimestep : {time_step} \tAverage Reward : {round(print_avg_reward, 3)} \t Average episode length: {round(step_counter/config['print_freq'], 3)}",
-               f"\tAverage loss : {round(np.mean(losses).item(), 3)} \tSteps per second last {config['print_freq']} eps: {int(step_counter/steps_per_second)} \tTime used total: {formate_time(int(time.time()-start_time))}")
+        print(f"Episode : {i_episode:>6} \tTimestep : {time_step:>8} \tAverage Reward : {round(print_avg_reward, 3):>7} \t Average episode length: {round(step_counter/config['print_freq'], 3):>5}",
+               f"\tAverage loss : {round(np.mean(losses).item(), 3):>6} \tSteps per second last {config['print_freq']:>5} eps: {int(steps_per_second):>4} \tTime used total: {formate_time(int(time.time()-start_time))}")
 
         print_running_reward = 0
         print_running_episodes = 0
@@ -89,6 +89,7 @@ def train(env, agent, config, writer = None):
         writer.add_scalar("Main/Average reward", print_avg_reward, i_episode)
         writer.add_scalar("Main/Average episode length", step_counter/config['print_freq'], i_episode)
         writer.add_scalar("Main/Average steps per second", steps_per_second, i_episode)
+        writer.add_scalar("Main/Average loss", np.mean(losses).item(), i_episode)
 
         #Update writer with average for last x eps
         categories = stat_collector.get_last_x(config["print_freq"]) 
