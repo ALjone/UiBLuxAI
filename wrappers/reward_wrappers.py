@@ -128,7 +128,6 @@ class IceRewardWrapper(gym.RewardWrapper):
         # update prev state to current
         self.units = {unit_id: units[unit_id] for unit_id in units}
         self.factories = {unit_id: factories[unit_id] for unit_id in factories}
-
         
         reward = (
             0

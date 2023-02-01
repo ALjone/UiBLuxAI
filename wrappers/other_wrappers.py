@@ -2,6 +2,7 @@ from lux.kit import obs_to_game_state
 from lux.utils import my_turn_to_place_factory
 import gym
 import numpy as np
+from utils.move_utils import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 
 
 class SinglePlayerEnv(gym.Wrapper):
@@ -49,11 +50,32 @@ class SinglePlayerEnv(gym.Wrapper):
 
         obs, reward, done, info = super().step(action)
 
+        #Stats
+
         self.prev_actions = action
+        units = self.env.state.units[agent]
+        for unit_id, act in action[agent].items():
+            act = act[0] #Because of action queue
+            if "unit" in unit_id:
+                self.env.state.stats["actions"][agent]["units"][act[0]] += 1
+                #Recharge action if the first element in the action array is 5
+                if act[0] == 5:
+                    self.env.state.stats["power_when_recharge"][agent] += units[unit_id]["power"]
+            elif "factory" in unit_id:
+                self.env.state.stats["actions"][agent]["factories"][act] += 1
 
         return (obs[0][agent], obs[1]), reward, done[agent], info[agent]
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
         self.prev_actions = {}
+        self.env.state.stats["actions"] = {"player_0" : 
+                                                {"factories": [0]*FACTORY_ACTION_IDXS,
+                                                "units" : [0]*UNIT_ACTION_IDXS},
+                                            "player_1":
+                                                {"factories": [0]*FACTORY_ACTION_IDXS,
+                                                 "units": [0]*UNIT_ACTION_IDXS} 
+                                            }
+        self.env.state.stats["power_when_recharge"] = {"player_0": 0,
+                                                       "player_1": 0}
         return (obs[0][self.agents[0]], obs[1])
