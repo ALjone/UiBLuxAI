@@ -140,8 +140,6 @@ def factory_action_mask(obs, device, player = "player_0"):
     for factory in factories.values():
         x, y = factory["pos"]
         mask = single_factory_action_mask(factory, obs, device)
-        #if torch.sum(mask) != 1:
-        #    print(mask)
-        action_mask[x, y] = mask#single_factory_action_mask(factory, obs, device)
+        action_mask[x, y] = mask
 
     return action_mask

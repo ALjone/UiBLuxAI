@@ -49,7 +49,6 @@ def transfer_ore(x = 1000):
     """Transfers all the ore to center"""
     return np.array([1, 0, 1, x, 0, 1])
     
-    
 def self_destruct():
      """Gets the action for self-destruction :((("""
      return np.array([4, 0, 0, 0, 0, 1])
