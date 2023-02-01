@@ -112,7 +112,7 @@ def unit_action_mask(obs, device, player = "player_0"):
     units = obs["units"][player]
     for unit in units.values():
         x, y = unit["pos"]
-        action_mask[x, y] = single_unit_action_mask(unit, obs, player)
+        action_mask[x, y] = single_unit_action_mask(unit, obs, device, player)
 
     return action_mask
 
@@ -126,6 +126,6 @@ def factory_action_mask(obs, device, player = "player_0"):
         x, y = factory["pos"]
         mask = single_factory_action_mask(factory, obs, device)
         print(mask)
-        action_mask[x, y] = #single_factory_action_mask(factory, obs, device)
+        action_mask[x, y] = mask#single_factory_action_mask(factory, obs, device)
 
     return action_mask

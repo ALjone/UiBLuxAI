@@ -17,11 +17,11 @@ actor_n_blocks_after_split: 2
 actor_intermediate_channels: 32
 
 #Architecture - Actor
-critic_n_blocks: 4
-critic_intermediate_channels: 32
+critic_n_blocks: 6
+critic_intermediate_channels: 16
 
 #Other 
-device: mps #cuda, cpu, mps
+device: cuda #cuda, cpu, mps
 path:  None #model.t 
 save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes
