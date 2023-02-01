@@ -26,9 +26,11 @@ Every feature here has a 48x48 channel containing the information in every tile.
 16. `int` Tile metal content  -  amonut of metal on each tile
 17. `int` Tile friendly lichen content  -  amount of friendly lichen on each tile
 18. `int` Tile enemy lichen content  -  amount of enemy lichen on each tile
-19. `int` Friendly unit type  -  1 for light unit, -1 for heavy unit, 0 else
-20. `int` Enemy unit type  -  1 for light unit, -1 for heavy unit, 0 else
-21. `int` Action queue  -  Friendly units that have an action queue
+19. `int` Friendly unit light  -  1 for light unit, 0 else
+20. `int` Friendly unit heavy  -  1 for heavy unit, 0 else
+21. `int` Enemy unit light  -  1 for light unit, 0 else
+22. `int` Enemy unit heavy  -  1 for heavy unit, 0 else
+23. `int` Action queue  -  Friendly units that have an action queue
 
 
 ### Global features
