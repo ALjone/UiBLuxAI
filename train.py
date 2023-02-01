@@ -105,7 +105,6 @@ def train(env, agent, config, writer=None):
                           steps_per_second, i_episode)
         writer.add_scalar("Main/Average loss",
                           np.mean(losses).item(), i_episode)
-        to_log = {}
 
         # Update writer with average for last x eps
         categories = stat_collector.get_last_x(config["print_freq"])
