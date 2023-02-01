@@ -77,11 +77,11 @@ class StatCollector:
         self.power_transfered.append(transf["power"])
 
         #Rewards
-        reward = stats['reward']
-        self.unit_lost_reward.append(reward['units_lost_reward'])
+        reward = stats['rewards']
+        self.unit_lost_reward.append(reward['unit_lost_reward'])
         self.units_killed_reward.append(reward['units_killed_reward'])
-        self.resources_reward.append(reward['resources_reward'])
-        self.factories_lost.append(reward['factories_lost_reward'])
+        self.resources_reward.append(reward['resource_reward'])
+        self.factories_lost_reward.append(reward['factories_lost_reward'])
         self.end_of_episode_reward.append(reward['end_of_episode_reward'])
 
 

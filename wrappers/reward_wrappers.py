@@ -22,9 +22,10 @@ class IceRewardWrapper(gym.RewardWrapper):
         # TODO: Update these
         self.number_of_units = {"player_0": 0, "player_1": 0}
         self.number_of_factories = {"player_0": 0, "player_1": 0}
-        self.env.state.stats['rewards'] = {'unit_lost_reward':0, 'factories_lost_reward':0, 'units_killed_reward':0, 'resource_reward': 0, 'end_of_episode_reward': 0}
-        return super().reset()
-
+        return_val =  super().reset()
+        self.env.state.stats["player_0"]['rewards'] = {'unit_lost_reward':0, 'factories_lost_reward':0, 'units_killed_reward':0, 'resource_reward': 0, 'end_of_episode_reward': 0}
+        return return_val
+    
     def get_died_units_and_factories(self, player="player_0"):
         # TODO: Differentiate between light and heavy robots
         # NOTE: Does not currently work for factories
@@ -74,7 +75,7 @@ class IceRewardWrapper(gym.RewardWrapper):
             # TODO: Check for correctness
             reward = self.config['scaling_win'] if rewards["player_0"] > rewards["player_1"] else -self.config['scaling_win'] if rewards["player_0"] < rewards["player_1"] else 0
             reward += np.tanh(lichen/self.config["lichen_divide_value"])*self.config['scaling_lichen']
-            self.env.state.stats['reward']['end_of_episode_reward'] += reward
+            self.env.state.stats["player_0"]['rewards']['end_of_episode_reward'] += reward
             return reward
 
         agent = "player_0"
@@ -136,8 +137,8 @@ class IceRewardWrapper(gym.RewardWrapper):
             + units_killed_reward
             + resource_reward
         )
-        self.env.state.stats['rewards']['unit_lost_reward'] += unit_lost_reward
-        self.env.state.stats['rewards']['factories_lost_reward'] += factories_lost_reward
-        self.env.state.stats['rewards']['units_killed_reward'] += units_killed_reward
-        self.env.state.stats['rewards']['resource_reward'] += resource_reward
+        self.env.state.stats["player_0"]['rewards']['unit_lost_reward'] += unit_lost_reward
+        self.env.state.stats["player_0"]['rewards']['factories_lost_reward'] += factories_lost_reward
+        self.env.state.stats["player_0"]['rewards']['units_killed_reward'] += units_killed_reward
+        self.env.state.stats["player_0"]['rewards']['resource_reward'] += resource_reward
         return reward
