@@ -17,7 +17,7 @@ def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
 
 def can_transfer_to_tile(x, y, unit_pos, factory_pos):
     pos = [x, y]
-    if pos in unit_pos or pos in factory_pos:
+    if (pos in unit_pos) or (pos in factory_pos):
         return True
     return False
 
@@ -68,7 +68,8 @@ def single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player = "
         action_mask[6] = 0
     
     #Self destruct, requires 10 power
-    if power < (10 if unit["unit_type"] == "LIGHT" else 100):
+    #NOTE: Self destruct is illegal for now
+    if True: #power < (10 if unit["unit_type"] == "LIGHT" else 100):
         action_mask[7] = 0 
 
     #TODO: Only center
