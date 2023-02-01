@@ -17,6 +17,7 @@ def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
 
 def can_transfer_to_tile(x, y, unit_pos, factory_pos):
     pos = [x, y]
+    unit_pos = [list(elem) for elem in unit_pos] #Sometimes this is a numpy array...
     if (pos in unit_pos) or (pos in factory_pos):
         return True
     return False

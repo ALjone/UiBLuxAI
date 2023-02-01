@@ -39,6 +39,9 @@ class StatCollector:
         self.resources_reward = []
         self.end_of_episode_reward = []
 
+        #Action
+        self.unit_action_distribution = []
+
     def update(self, stats):
         """Call this with the stats dict at the end of an episode"""
         stats = stats[self.player]
