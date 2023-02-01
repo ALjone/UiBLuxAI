@@ -7,8 +7,8 @@ from .blocks import ResSEBlock, ConvBlock
 
 
 class actor(nn.Module):
-    def __init__(self, intput_channels, unit_action_space:int, factory_action_space:int,  n_blocks:int = 6, n_blocks_factories_units:int = 2,
-                  intermediate_channels:int = 32, layer_type = "conv") -> None:
+    def __init__(self, intput_channels, unit_action_space:int, factory_action_space:int,  n_blocks:int, n_blocks_factories_units:int,
+                  intermediate_channels:int, layer_type = "conv") -> None:
         super(actor, self).__init__()
         
         if layer_type == "SE":
@@ -17,6 +17,7 @@ class actor(nn.Module):
             layer = ConvBlock
         else:
             raise ValueError(f"{layer_type} is not a valid layer type")
+        
         blocks = []
         blocks_factory = []
         blocks_units = []

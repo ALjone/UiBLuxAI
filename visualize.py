@@ -6,26 +6,22 @@ from wrappers.other_wrappers import SinglePlayerEnv
 from utils.utils import load_config
 
 def play_episode(agent, env, make_gif = True):
-    obs, original_obs = env.reset()
+    obs = env.reset()
     step = 0
     imgs = []
     while env.state.real_env_steps < 0:
-        o = original_obs[agent.player]
-        a = agent.early_setup(step, o)
+        a = agent.early_setup(step, obs)
         step += 1
         obs, rewards, dones, infos = env.step(a)
         if make_gif:
             imgs += [env.render("rgb_array", width=640, height=640)]
-        obs, original_obs = obs
     done = False
     while not done:
         actions = agent.act(obs)
         step += 1
         obs, rewards, done, infos = env.step(actions)
-        obs, original_obs = obs
         if make_gif:
             imgs += [env.render("rgb_array", width=640, height=640)]
-
     if make_gif:
         print("Making gif")
         animate(imgs)

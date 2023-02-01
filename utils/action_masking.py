@@ -15,20 +15,27 @@ def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
     
     return floor(base_cost+ modifier*rubble[x+dir[0], y+dir[1]])
 
+def can_transfer_to_tile(x, y, unit_pos, factory_pos):
+    pos = [x, y]
+    if pos in unit_pos or pos in factory_pos:
+        return True
+    return False
+
+
 #IDX to action:
 #0-4 = move
 #5 = dig
 #6 = recharge
 #7 = self_destruct
-def single_unit_action_mask(unit, obs):
-    """Calculates the action mask for one specific unit"""
-    #TODO: This doesn't care about the fact that adding to action queue costs 1/10 (LIGHT/HEAVY)
 
-    action_mask = torch.ones(UNIT_ACTION_IDXS)
+def single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player = "player_0"):
+    """Calculates the action mask for one specific unit"""
+
+    action_mask = torch.ones(UNIT_ACTION_IDXS, device=device, dtype=torch.uint8)
     #(x, y) coordinates of unit
     x, y = unit["pos"]
     #Power remaining for unit, i.e charge
-    power = unit["power"]
+    power = unit["power"] - (1 if unit["unit_type"] == "LIGHT" else 10) #Subtracting the cost of adding to action queue
     #48x48 map of how much rubble is in which square
     rubble = obs["board"]["rubble"]
     #How much digging costs for this unit
@@ -41,6 +48,7 @@ def single_unit_action_mask(unit, obs):
     #Move
     # (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
     # (0, 0) is top left #TODO: Is this true?
+    #TODO: Should check if there is a factory there
     if x == 0 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "left"):
         action_mask[4] = 0
     if x == 47 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "right"):
@@ -51,21 +59,27 @@ def single_unit_action_mask(unit, obs):
         action_mask[3] = 0
 
     #Dig
-    if unit["power"] < dig_cost:
+    if unit["power"] < dig_cost or list(unit["pos"]) in factory_pos:
         action_mask[5] = 0
 
     #Recharge, max is 150 for LIGHT and 3000 for heavy per config
     #TODO: This should be based on how much is recharged each turn
-    if  power == 150 if unit["unit_type"] else 3000:
+    if  power == (150 if unit["unit_type"] else 3000):
         action_mask[6] = 0
     
     #Self destruct, requires 10 power
-    if power < 10 if unit["unit_type"] == "LIGHT" else 100:
+    if power < (10 if unit["unit_type"] == "LIGHT" else 100):
         action_mask[7] = 0 
 
+    #TODO: Only center
     #Transport ice
-    if unit["cargo"]["ice"] == 0:
+    if unit["cargo"]["ice"] == 0 or not can_transfer_to_tile(x, y, unit_pos, factory_pos):
         action_mask[8] = 0
+
+    #TODO: Only center
+    #Transport ore
+    if unit["cargo"]["ore"] == 0 or not can_transfer_to_tile(x, y, unit_pos, factory_pos):
+        action_mask[9] = 0
 
     return action_mask
 
@@ -79,8 +93,8 @@ def calculate_water_cost(x, y, obs):
 #1 -> HEAVY
 #2 -> LICHEN
 #3 -> NOTHING
-def single_factory_action_mask(factory, obs):
-    action_mask = torch.ones(FACTORY_ACTION_IDXS)
+def single_factory_action_mask(factory, obs, device):
+    action_mask = torch.ones(FACTORY_ACTION_IDXS, device=device, dtype=torch.uint8)
     
     metal = factory["cargo"]["metal"]
     water = factory["cargo"]["water"]
@@ -92,21 +106,40 @@ def single_factory_action_mask(factory, obs):
     if metal < 100 or power < 500:
         action_mask[1] = 0
     
-    if water < calculate_water_cost(factory, obs):
+    if water < calculate_water_cost(*factory["pos"], obs):
         action_mask[2] = 0
+
+    return action_mask
+
+
+def unit_action_mask(obs, device, player = "player_0"):
+    #NOTE: Needs to take in a player for the factory stuff?
+    obs = obs[player]
+    action_mask = torch.ones((48, 48, UNIT_ACTION_IDXS), device=device, dtype=torch.uint8)
+
+    #Get factory position
+    factories = obs["factories"][player]
+    factory_pos = [factory["pos"] for _, factory in factories.items()]
     
+    #Get unit position
+    units = obs["units"][player]
+    unit_pos = [unit["pos"] for _, unit in units.items()]
 
-
-def unit_action_mask(units, obs):
-    action_mask = torch.ones((48, 48, UNIT_ACTION_IDXS))
-    for unit in units:
+    for unit in units.values():
         x, y = unit["pos"]
-        action_mask[x, y] = single_unit_action_mask(unit, obs)
+        action_mask[x, y] = single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player)
+
+    return action_mask
 
 
-def factory_action_mask(factories, obs):
-    action_mask = torch.ones((48, 48, FACTORY_ACTION_IDXS))
-
-    for factory in factories:
+def factory_action_mask(obs, device, player = "player_0"):
+    #note: Needs to take in a player for the factory stuff?
+    action_mask = torch.ones((48, 48, FACTORY_ACTION_IDXS), device=device, dtype=torch.uint8)
+    obs = obs[player]
+    factories = obs["factories"][player]
+    for factory in factories.values():
         x, y = factory["pos"]
-        action_mask[x, y] = single_factory_action_mask(factory, obs)
+        mask = single_factory_action_mask(factory, obs, device)
+        action_mask[x, y] = mask
+
+    return action_mask

@@ -1,6 +1,6 @@
 import numpy as np
 
-UNIT_ACTION_IDXS = 9
+UNIT_ACTION_IDXS = 10
 FACTORY_ACTION_IDXS = 4
 
 # a[0] = action type
@@ -18,9 +18,9 @@ FACTORY_ACTION_IDXS = 4
 
 # a[5] = n, number of times to execute this action before exhausting it and removing it from the front of the action queue. Minimum is 1.
 
-def unit_idx_to_action(idx):
+def unit_idx_to_action(idx, type):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
-    assert -1 < idx < 9
+    assert -1 < idx < UNIT_ACTION_IDXS
     assert isinstance(idx, int)
     if -1 < idx < 5:
         return move(idx)
@@ -29,19 +29,25 @@ def unit_idx_to_action(idx):
         return dig()
 
     if idx == 6:
-        return recharge(20)
+        return recharge(100 if type == "LIGHT" else 1000)
 
     if idx == 7:
          return self_destruct()
 
     if idx == 8:
-        return transfer()
+        return transfer_ice()
+    
+    if idx == 9:
+        return transfer_ore()
 
 
-def transfer(x = 1000):
+def transfer_ice(x = 1000):
     """Transfers all the ice to center"""
     return np.array([1, 0, 0, x, 0, 1])
-    
+
+def transfer_ore(x = 1000):
+    """Transfers all the ore to center"""
+    return np.array([1, 0, 1, x, 0, 1])
     
 def self_destruct():
      """Gets the action for self-destruction :((("""
@@ -81,7 +87,7 @@ def unit_output_to_actions(unit_output, units):
     for unit in units:
             x, y = unit["pos"][0], unit["pos"][1]
             action = unit_output[x, y].item()
-            actions[unit["unit_id"]] = [unit_idx_to_action(action)]
+            actions[unit["unit_id"]] = [unit_idx_to_action(action, unit["unit_type"])]
 
     return actions
 

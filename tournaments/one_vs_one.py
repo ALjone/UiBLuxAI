@@ -3,15 +3,16 @@ from luxai_s2.env import LuxAI_S2
 import matplotlib.pyplot as plt
 import numpy as np
 from utils.visualization import animate
-from utils.wrappers import ImageWithUnitsWrapper
+from wrappers.observation_wrappers import ImageWithUnitsWrapper
 from utils.utils import formate_time
 from tqdm import tqdm
 
 
 def get_winner(rewards):
-    for player, reward in rewards.items():
-        if reward == 0:
-            return 0 if player == "player_0" else 1
+    if rewards["player_0"] > rewards["player_1"]:
+        return 0
+    if rewards["player_1"] > rewards["player_0"]:
+        return 1 
     return 2
 
 
@@ -37,6 +38,10 @@ def run_match(env, agents):
         step += 1
         obs, rewards, dones, infos = env.step(actions)
         done = dones["player_0"] or dones["player_1"]
+    
+    for reward in rewards.values():
+        if reward != -1000 and reward != 0:
+            print(rewards)
 
     return get_winner(rewards)
 

@@ -2,13 +2,19 @@ import torch
 import yaml
 def load_config(change_dict = {}):
     config = yaml.safe_load(open("config.yml"))
+
+    if not config["device"].lower() in ["cpu", "cuda", "mps"]:
+        raise ValueError("Expected device in Config to be either 'CPU' or 'CUDA', but found:", config["device"])
+
+    if torch.cuda.is_available() and config["device"] == "cuda":
+        config["device"] = torch.device("cuda")
+    elif config["device"] == "mps":
+        config["device"] = torch.device("mps")#torch.device("mps")
+    else:
+        config["device"] = torch.device("cpu")
+
     for key, val in change_dict.items():
         config[key] = val
-
-    if config["device"].lower() in ["cpu", "cuda"]:
-        config["device"] = torch.device(config["device"].lower())
-    else:
-        raise ValueError("Expected device in Config to be either 'CPU' or 'CUDA', but found:", config["device"])
 
     if config["path"] == "None":
         config["path"] = None
@@ -17,6 +23,7 @@ def load_config(change_dict = {}):
 
 
 def formate_time(seconds):
+    seconds = int(seconds)
     #https://stackoverflow.com/a/775075
     m, s = divmod(seconds, 60)
     h, m = divmod(m, 60)

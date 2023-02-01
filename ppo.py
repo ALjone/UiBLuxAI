@@ -28,30 +28,30 @@ class RolloutBuffer:
 
 
 class PPO:
-    def __init__(self, unit_action_dim, factory_action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, device = torch.device("cuda")):
-        self.device = device
-        self.gamma = gamma
-        self.eps_clip = eps_clip
-        self.K_epochs = K_epochs
+    def __init__(self, unit_action_dim, factory_action_dim, config):
+        self.device = config["device"]
+        self.gamma = config["gamma"]
+        self.eps_clip = config["eps_clip"]
+        self.K_epochs = config["epochs_per_batch"]
         
         self.buffer = RolloutBuffer()
 
-        self.policy = ActorCritic(unit_action_dim, factory_action_dim).to(device)
+        self.policy = ActorCritic(unit_action_dim, factory_action_dim, config).to(config["device"])
         self.optimizer = torch.optim.Adam([
-                        {'params': self.policy.actor.parameters(), 'lr': lr_actor},
-                        {'params': self.policy.critic.parameters(), 'lr': lr_critic}
+                        {'params': self.policy.actor.parameters(), 'lr': config["actor_lr"]},
+                        {'params': self.policy.critic.parameters(), 'lr': config["critic_lr"]}
                     ])
 
-        self.policy_old = ActorCritic(unit_action_dim, factory_action_dim).to(device)
+        self.policy_old = ActorCritic(unit_action_dim, factory_action_dim, config).to(config["device"])
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
 
-    def select_action(self, state):
+    def select_action(self, state, obs):
 
         with torch.no_grad():
             state = state.float().to(self.device)
-            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(state)
+            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(state, obs)
         
         self.buffer.states.append(state)
         self.buffer.unit_actions.append(action_unit)
@@ -88,7 +88,6 @@ class PPO:
         # calculate advantages
         advantages = (rewards.detach() - old_state_values.detach())
 
-        #TODO: Check if it makes sense to loop over probs and entropy when training
         cum_loss = 0
         # Optimize policy for K epochs
         for _ in tqdm(range(self.K_epochs), leave = False, desc = "Training"):
