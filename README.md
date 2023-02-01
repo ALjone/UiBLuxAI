@@ -68,4 +68,5 @@ Every feature here has a 48x48 channel containing the information in every tile.
 >>> Compute minimum of the two and digg untill this limit is reached.
 7. Deliver resources to closest factory.
 >>> Compute path to closest factory (shortest w.r.t time for now) and create sequence of directions to this point, finish with transfer of all resources.
-
+8. Complete ice-mining loop.
+>>> Finds closest ice, goes to it, mines untill full/all is taken, walks to closest faactory, drop resource, charge. Repeat.
