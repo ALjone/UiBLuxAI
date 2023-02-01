@@ -5,7 +5,7 @@ from utils.utils import formate_time
 from tqdm import tqdm
 from utils.stat_collector import StatCollector
 
-def skip_early_phase(env, agent):
+def do_early_phase(env, agent):
         state = env.reset()
         step = 0
         while env.state.real_env_steps < 0:
@@ -37,7 +37,7 @@ def train(env, agent, config, writer = None):
         step_counter = 0
         for _ in tqdm(range(config["print_freq"]), leave = False, desc = "Experiencing"):
             current_ep_reward = 0
-            state = skip_early_phase(env, agent)
+            state = do_early_phase(env, agent)
             while True:
                 # select action with policy
                 action = agent.act(state)

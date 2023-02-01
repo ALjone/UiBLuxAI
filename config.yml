@@ -24,6 +24,7 @@ critic_intermediate_channels: 32
 device: cuda
 path: model.t
 save_path: model.t
+video_save_rate: 1000 #How often to save a video, in episodes
 
 #Reward
 unit_lost_scale: 1
