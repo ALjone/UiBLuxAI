@@ -51,3 +51,21 @@ Every feature here has a 48x48 channel containing the information in every tile.
 13. `float` Entropy of Ice  -  Statistical entropy of the ice on the map
 14. `float` Entropy of Ore  -  Statistical entropy of the ore on the map
 13. `float` Entropy of Rubble  -  Statistical entropy of the rubble on the map
+
+
+## Action Space
+
+1. Infinite move-loop. 
+>>>One for each direction [NORTH, SOUTH, EAST, WEST]
+2. Pickup.
+>>>One for each (resource, amount) combination. Resources = [ICE, ORE, POWER], Amounts = [50%, 100%]
+3. Self Destruct
+4. No Action.
+>>>Does nothing, allows previous action queues to execute.
+5. Walk to closest ice.
+>>> Computes shortest path to ice (shortest w.r.t power or time???) and creates a sequence of directions towards it (better with long walks along one dim at the time due to limited queue length and option for looping)
+6. Digg untill full or resource is empty.
+>>> Compute minimum of the two and digg untill this limit is reached.
+7. Deliver resources to factory
+>>> Compute path to closest factory (shortest w.r.t time for now) and create sequence of directions to this point, finish with transfer of all resources.
+
