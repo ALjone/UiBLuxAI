@@ -31,6 +31,8 @@ Every feature here has a 48x48 channel containing the information in every tile.
 21. `int` Enemy unit light  -  1 for light unit, 0 else
 22. `int` Enemy unit heavy  -  1 for heavy unit, 0 else
 23. `int` Action queue  -  Friendly units that have an action queue
+24. `int` Lenght of queue  -  Lenght of action queue for each friendly unit on map
+25. `int` Friendly next step  -  Position of every unit with an action queue in the next timestep
 
 
 ### Global features
