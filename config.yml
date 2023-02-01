@@ -16,7 +16,7 @@ actor_n_blocks: 6
 actor_n_blocks_after_split: 2
 actor_intermediate_channels: 32
 
-#Architecture - Actor
+#Architecture - Critic
 critic_n_blocks: 6
 critic_intermediate_channels: 16
 
@@ -27,7 +27,7 @@ save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes
 
 #Reward
-unit_lost_scale: 1
+unit_lost_scale: 0.1
 units_killed_scale: 1
 factory_lost_scale: 10
 
