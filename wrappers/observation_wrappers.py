@@ -107,7 +107,7 @@ class ImageWithUnitsWrapper(gym.ObservationWrapper):
         #NOTE: This is hardcoded, maybe not so smart, but since self.agents is emptied at the end of the game, it has to be done
         for agent in ["player_0", "player_1"]:
             new_obs[agent] = {}
-            new_obs[agent]["image_features"] = image_features #TODO Shouldn't this dependet on agent?
+            new_obs[agent]["image_features"] = image_features.type(torch.float32) #TODO Shouldn't this dependet on agent?
 
             new_obs[agent]["unit_to_id"] = shared_obs["units"][agent].values()
             new_obs[agent]["factory_to_id"] = shared_obs["factories"][agent].values()

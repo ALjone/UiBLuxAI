@@ -22,7 +22,7 @@ critic_intermediate_channels: 32
 
 #Other 
 device: mps #cuda, cpu, mps
-path: model.t 
+path: None
 save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes
 

@@ -9,7 +9,7 @@ def load_config(change_dict = {}):
     if torch.cuda.is_available() and config["device"] == "cuda":
         config["device"] = torch.device("cuda")
     elif config["device"] == "mps":
-        config["device"] = torch.device("mps")
+        config["device"] = torch.device("cpu")#torch.device("mps")
     else:
         config["device"] = torch.device("cpu")
 
