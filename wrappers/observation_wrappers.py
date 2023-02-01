@@ -6,6 +6,93 @@ import numpy as np
 import numpy.typing as npt
 from gym import spaces
 
+class StateSpaceVol1(gym.ObservationWrapper):
+    def __init__(self, env: gym.Env) -> None:
+        super().__init__(env)
+
+
+    def observation(self, obs):
+        shared_obs = obs["player_0"]
+
+        main_player = self.agents[0]
+        #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
+        image_features = torch.zeros((33, 48, 48))
+        global_features = torch.zeros(15)
+
+        unit_mask = torch.zeros((48, 48))
+        factory_mask = torch.zeros((48, 48))
+
+        unit_cargo = torch.zeros((3, 48, 48)) #Power, Ice, Ore
+        factory_cargo = torch.zeros((5, 48, 48))
+
+        board = torch.zeros((4, 48, 48)) #Rubble, Ice, Ore, Lichen
+
+        lichen_mask = torch.zeros((48, 48)) #1 for friendly, 0 for none, -1 for enemy
+
+        unit_type = torch.zeros(2, 48, 48) #LIGHT, HEAVY
+
+        action_queue_length = torch.zeros((48, 48))
+        #TODO: Move this to agent
+        action_queue_type_friendly = torch.zeros((14, 48, 48))
+
+        next_step = torch.zeros((2, 48, 48))
+
+        day = 0
+        night = 0
+        timestep = 0
+        lichen_distribution = 0
+        day_night = 0
+        friendly_factories = 0
+        enemy_factories = 0
+
+        friendly_light = 0
+        friendly_heavy = 0
+        enemy_light = 0
+        enemy_heavy = 0
+        ice_on_map = 0
+        ore_on_map = 0
+        ice_entropy = 0
+        ore_entropy = 0
+        rubble_entropy = 0
+        
+        for player in self.agents:
+            factories = shared_obs["factories"][player]
+            units = shared_obs["units"][player]
+
+            for _, unit in units.items():
+                x, y = unit["pos"]
+                unit_mask[x, y] = (1 if player == main_player else -1)
+                is_light = unit["unit_type"] == "LIGHT"
+                if is_light:
+                    unit_type[0, x, y] = 1
+                else:
+                    unit_type[1, x, y] = 1
+                unit_cargo[0, x, y] = unit["power"]/(150 if is_light else 3000)
+                unit_cargo[1, x, y] = unit["cargo"]["ice"]/(100 if is_light else 1000)
+                unit_cargo[2, x, y] = unit["cargo"]["ore"]/(100 if is_light else 1000)
+
+                print(unit.keys())
+                pass
+        
+            for _, factory in factories.items():
+                x, y = factory["pos"]
+                factory_mask[x, y] = (1 if player == main_player else -1)
+                #TODO: Look at tanh?
+                factory_cargo[0, x, y] = factory["power"]/1000              
+                factory_cargo[1, x, y] = factory["cargo"]["ice"]/1000
+                factory_cargo[2, x, y] = factory["cargo"]["ore"]/1000
+                factory_cargo[3, x, y] = factory["cargo"]["water"]/1000
+                factory_cargo[4, x, y] = factory["cargo"]["metal"]/1000
+
+        board[0] = shared_obs["board"]["rubble"]
+        board[1] = shared_obs["board"]["ice"]
+        board[2] = shared_obs["board"]["ore"]
+        board[3] = shared_obs["board"]["lichen"]
+        #TODO: Flip like Fillip
+        image_state = {}
+
+        return image_state, obs
+
 class ImageWithUnitsWrapper(gym.ObservationWrapper):
 
     """Wrapper, based on the one in the Lux AI Kit, that also returns a mapping from pos -> unit id, so that actions can actually be done"""

@@ -48,6 +48,7 @@ def single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player = "
     #Move
     # (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
     # (0, 0) is top left #TODO: Is this true?
+    #TODO: Should check if there is a factory there
     if x == 0 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "left"):
         action_mask[4] = 0
     if x == 47 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "right"):
