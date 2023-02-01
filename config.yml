@@ -20,9 +20,9 @@ actor_intermediate_channels: 64
 critic_n_blocks: 4
 critic_intermediate_channels: 32
 
-#Other
-device: cuda
-path: model.t
+#Other 
+device: mps #cuda, cpu, mps
+path: model.t 
 save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes
 

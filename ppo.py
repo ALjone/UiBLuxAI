@@ -38,8 +38,8 @@ class PPO:
 
         self.policy = ActorCritic(unit_action_dim, factory_action_dim, config).to(config["device"])
         self.optimizer = torch.optim.Adam([
-                        {'params': self.policy.actor.parameters(), 'lr': config["lr_actor"]},
-                        {'params': self.policy.critic.parameters(), 'lr': config["lr_critic"]}
+                        {'params': self.policy.actor.parameters(), 'lr': config["actor_lr"]},
+                        {'params': self.policy.critic.parameters(), 'lr': config["critic_lr"]}
                     ])
 
         self.policy_old = ActorCritic(unit_action_dim, factory_action_dim, config).to(config["device"])
