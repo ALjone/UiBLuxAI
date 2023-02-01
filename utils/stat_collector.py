@@ -32,6 +32,13 @@ class StatCollector:
         self.ore_transfered = []
         self.power_transfered = []
 
+        #Rewards
+        self.unit_lost_reward = []
+        self.factories_lost_reward = []
+        self.units_killed_reward = []
+        self.resources_reward = []
+        self.end_of_episode_reward = []
+
     def update(self, stats):
         """Call this with the stats dict at the end of an episode"""
         stats = stats[self.player]
@@ -69,6 +76,14 @@ class StatCollector:
         self.ore_transfered.append(transf["ore"])
         self.power_transfered.append(transf["power"])
 
+        #Rewards
+        reward = stats['rewards']
+        self.unit_lost_reward.append(reward['unit_lost_reward'])
+        self.units_killed_reward.append(reward['units_killed_reward'])
+        self.resources_reward.append(reward['resource_reward'])
+        self.factories_lost_reward.append(reward['factories_lost_reward'])
+        self.end_of_episode_reward.append(reward['end_of_episode_reward'])
+
 
 
     def get_last_x(self, x):
@@ -98,7 +113,15 @@ class StatCollector:
                 "transfered": 
                     {"ice_transfered": self.ice_transfered[-x:],
                     "ore_transfered": self.ore_transfered[-x:],
-                    "power_transfered": self.power_transfered[-x:]}
+                    "power_transfered": self.power_transfered[-x:]},
+
+                "rewards":
+                    {"units_lost_reward": self.unit_lost_reward[-x:],
+                    "factories_lost_reward": self.factories_lost_reward[-x:],
+                    "units_killed_reward": self.units_killed_reward[-x:],
+                    "resources_reward": self.resources_reward[-x:],
+                    "end_of_episode_reward": self.end_of_episode_reward[-x:]
+                    }
                 }
     
     def __repr__(self) -> str:
