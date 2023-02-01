@@ -57,25 +57,22 @@ class SinglePlayerEnv(gym.Wrapper):
         for unit_id, act in action[agent].items():
             if "unit" in unit_id:
                 act = act[0] #Because of action queue
-                self.env.state.stats["actions"][agent]["units"][act[0]] += 1
+                self.env.state.stats[agent]["actions"]["units"][act[0]] += 1
                 #Recharge action if the first element in the action array is 5
                 if act[0] == 5 and unit_id in units.keys(): #No idea why this check is needed??? Maybe it died
-                    self.env.state.stats["power_when_recharge"][agent] += units[unit_id].power
+                    self.env.state.stats[agent]["actions"]["average_power_when_recharge"].append(units[unit_id].power)
             elif "factory" in unit_id:
-                self.env.state.stats["actions"][agent]["factories"][act] += 1
+                self.env.state.stats[agent]["actions"]["factories"][act] += 1
 
         return (obs[0][agent], obs[1]), reward, done[agent], info[agent]
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)
         self.prev_actions = {}
-        self.env.state.stats["actions"] = {"player_0" : 
-                                                {"factories": [0]*FACTORY_ACTION_IDXS,
-                                                "units" : [0]*UNIT_ACTION_IDXS},
-                                            "player_1":
-                                                {"factories": [0]*FACTORY_ACTION_IDXS,
-                                                 "units": [0]*UNIT_ACTION_IDXS} 
-                                            }
-        self.env.state.stats["power_when_recharge"] = {"player_0": 0,
-                                                       "player_1": 0}
+        self.env.state.stats["player_0"]["actions"] = {
+                                                        "factories": [0]*FACTORY_ACTION_IDXS,
+                                                        "units" : [0]*UNIT_ACTION_IDXS,
+                                                        "average_power_when_recharge": []
+                                                    }
+
         return (obs[0][self.agents[0]], obs[1])

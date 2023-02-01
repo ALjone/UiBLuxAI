@@ -41,6 +41,8 @@ class StatCollector:
 
         #Action
         self.unit_action_distribution = []
+        self.factory_action_distribution = []
+        self.average_power_when_recharge = []
 
     def update(self, stats):
         """Call this with the stats dict at the end of an episode"""
@@ -87,43 +89,65 @@ class StatCollector:
         self.factories_lost_reward.append(reward['factories_lost_reward'])
         self.end_of_episode_reward.append(reward['end_of_episode_reward'])
 
+        #Action
+        act = stats["actions"]
+        self.unit_action_distribution.append(np.array(act["units"]))
+        self.factory_action_distribution.append(np.array(act["factories"]))
+        self.average_power_when_recharge.append(np.mean(act["average_power_when_recharge"]))
 
 
     def get_last_x(self, x):
         return {"consumption" : 
-                    {"power_consumed": self.power_consumed[-x:]},
+                    {
+                    "power_consumed": self.power_consumed[-x:]
+                    },
                 
                 "generation": 
-                    {"ice_mined": self.ice_mined[-x:],
+                    {
+                    "ice_mined": self.ice_mined[-x:],
                     "ore_mined": self.ore_mined[-x:],
                     "lichen_made": self.lichen_made[-x:],
                     "light_robots_built": self.light_robots_built[-x:],
                     "heavy_robots_built": self.heavy_robots_built[-x:],
                     "metal_made": self.metal_made[-x:],
-                    "water_made": self.water_made[-x:]},
+                    "water_made": self.water_made[-x:]
+                    },
 
                 "destroyed": 
-                    {"rubble_destroyed": self.rubble_destroyed[-x:],
+                    {
+                    "rubble_destroyed": self.rubble_destroyed[-x:],
                     "lichen_destroyed": self.lichen_destroyed[-x:],
                     "light_robots_lost": self.light_robots_lost[-x:],
                     "heavy_robots_lost": self.heavy_robots_lost[-x:],
-                    "factories_lost": self.factories_lost[-x:]},
+                    "factories_lost": self.factories_lost[-x:]
+                    },
 
                 "pickup": 
-                    {"power_picked_up": self.power_picked_up[-x:],
-                    "other_picked_up": self.other_picked_up[-x:]},
+                    {
+                    "power_picked_up": self.power_picked_up[-x:],
+                    "other_picked_up": self.other_picked_up[-x:]
+                    },
 
                 "transfered": 
-                    {"ice_transfered": self.ice_transfered[-x:],
+                    {
+                  "ice_transfered": self.ice_transfered[-x:],
                     "ore_transfered": self.ore_transfered[-x:],
-                    "power_transfered": self.power_transfered[-x:]},
+                    "power_transfered": self.power_transfered[-x:]
+                    },
 
                 "rewards":
-                    {"units_lost_reward": self.unit_lost_reward[-x:],
+                    {
+                    "units_lost_reward": self.unit_lost_reward[-x:],
                     "factories_lost_reward": self.factories_lost_reward[-x:],
                     "units_killed_reward": self.units_killed_reward[-x:],
                     "resources_reward": self.resources_reward[-x:],
                     "end_of_episode_reward": self.end_of_episode_reward[-x:]
+                    },
+                "actions":
+                    {
+                    "unit_action_distribution": np.array(self.unit_action_distribution[-x:]).mean(0),
+                    "factory_action_distribution": np.array(self.factory_action_distribution[-x:]).mean(0),
+                    "average_power_when_recharge": self.average_power_when_recharge[-x:]
                     }
                 }
     
