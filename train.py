@@ -4,22 +4,25 @@ import numpy as np
 from utils.utils import formate_time
 from tqdm import tqdm
 from utils.stat_collector import StatCollector
+from utils.wandb_logging import WAndB
+
 
 def do_early_phase(env, agent):
-        state = env.reset()
-        step = 0
-        while env.state.real_env_steps < 0:
-            a = agent.early_setup(step, state)
-            step += 1
-            state, rewards, dones, infos = env.step(a)
+    state = env.reset()
+    step = 0
+    while env.state.real_env_steps < 0:
+        a = agent.early_setup(step, state)
+        step += 1
+        state, rewards, dones, infos = env.step(a)
 
-        return state
+    return state
 
-def train(env, agent, config, writer = None):
+
+def train(env, agent, config, writer=None):
     assert env.collect_stats
 
     stat_collector = StatCollector("player_0")
-    #Set all used variables
+    # Set all used variables
     start_time = time.time()
     time_step = 0
     i_episode = 0
@@ -30,14 +33,17 @@ def train(env, agent, config, writer = None):
 
     if writer is None:
         writer = SummaryWriter()
+    wb = WAndB(config=config, run_name='Testing run')
     # training loop
-    for _ in range(config["max_episodes"]//config["print_freq"]):  
+    for _ in range(config["max_episodes"]//config["print_freq"]):
 
         losses = []
         step_counter = 0
-        for _ in tqdm(range(config["print_freq"]), leave = False, desc = "Experiencing"):
+        for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
             current_ep_reward = 0
             state = do_early_phase(env, agent)
+            ep_losses = []
+            ep_timesteps = 0
             while True:
                 # select action with policy
                 action = agent.act(state)
@@ -48,25 +54,32 @@ def train(env, agent, config, writer = None):
                 agent.PPO.buffer.rewards.append(reward)
                 agent.PPO.buffer.is_terminals.append(done)
 
-                time_step +=1
+                time_step += 1
                 step_counter += 1
+                ep_timesteps += 1
                 current_ep_reward += reward
 
                 # update PPO agent
                 if time_step % config["batch_size"] == 0:
-                    losses.append(agent.PPO.update())
-
+                    loss = agent.PPO.update()
+                    losses.append(loss)
+                ep_losses.append(loss)
 
                 # break; if the episode is over
                 if done:
                     break
-                
+
             stat_collector.update(env.state.stats)
             print_running_reward += current_ep_reward
             print_running_episodes += 1
+            ep_loss = 0
+            if (ep_losses):
+                ep_loss = sum(ep_losses)/len(ep_losses)
+            wb.log({"Reward pr episode": current_ep_reward,
+                    "Loss pr episode": ep_loss,
+                    "Timesteps pr episode": ep_timesteps})
 
             i_episode += 1
-
 
         # print average reward till last episode
         print_avg_reward = print_running_reward / print_running_episodes
@@ -74,7 +87,7 @@ def train(env, agent, config, writer = None):
 
         steps_per_second = step_counter/(time.time()-last_x_ep_time)
         print(f"Episode : {i_episode:>6} \tTimestep : {time_step:>8} \tAverage Reward : {round(print_avg_reward, 3):>7} \t Average episode length: {round(step_counter/config['print_freq'], 3):>5}",
-               f"\tAverage loss : {round(np.mean(losses).item(), 3):>6} \tSteps per second last {config['print_freq']:>5} eps: {int(steps_per_second):>4} \tTime used total: {formate_time(int(time.time()-start_time))}")
+              f"\tAverage loss : {round(np.mean(losses).item(), 3):>6} \tSteps per second last {config['print_freq']:>5} eps: {int(steps_per_second):>4} \tTime used total: {formate_time(int(time.time()-start_time))}")
 
         print_running_reward = 0
         print_running_episodes = 0
@@ -85,14 +98,17 @@ def train(env, agent, config, writer = None):
             highest_reward == print_avg_reward
             agent.PPO.save(config["save_path"])
 
-
         writer.add_scalar("Main/Average reward", print_avg_reward, i_episode)
-        writer.add_scalar("Main/Average episode length", step_counter/config['print_freq'], i_episode)
-        writer.add_scalar("Main/Average steps per second", steps_per_second, i_episode)
-        writer.add_scalar("Main/Average loss", np.mean(losses).item(), i_episode)
+        writer.add_scalar("Main/Average episode length",
+                          step_counter/config['print_freq'], i_episode)
+        writer.add_scalar("Main/Average steps per second",
+                          steps_per_second, i_episode)
+        writer.add_scalar("Main/Average loss",
+                          np.mean(losses).item(), i_episode)
 
-        #Update writer with average for last x eps
-        categories = stat_collector.get_last_x(config["print_freq"]) 
+        # Update writer with average for last x eps
+        categories = stat_collector.get_last_x(config["print_freq"])
         for category_name, category in categories.items():
             for name, value in category.items():
-                writer.add_scalar(f"{category_name}/{name}", np.mean(value), i_episode)
+                writer.add_scalar(f"{category_name}/{name}",
+                                  np.mean(value), i_episode)
