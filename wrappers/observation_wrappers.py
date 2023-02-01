@@ -18,7 +18,7 @@ class ImageWithUnitsWrapper(gym.ObservationWrapper):
         )
 
     def observation(
-        self, obs) -> Dict[str, npt.NDArray]:
+        self, obs) -> Dict[str, npt.NDArray]:   
         """Returns the image features as a torch tensor"""
         shared_obs = obs["player_0"]
         unit_mask = np.zeros((self.map_size, self.map_size, 1))

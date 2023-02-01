@@ -7,6 +7,8 @@ from wrappers.other_wrappers import SinglePlayerEnv
 from wrappers.reward_wrappers import IceRewardWrapper
 from utils.utils import load_config
 from gym.wrappers import RecordVideo
+import os
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK']='1'
 
 config = load_config()
 
