@@ -15,13 +15,20 @@ def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
     
     return floor(base_cost+ modifier*rubble[x+dir[0], y+dir[1]])
 
+def can_transfer_to_tile(x, y, unit_pos, factory_pos):
+    pos = [x, y]
+    if pos in unit_pos or pos in factory_pos:
+        return True
+    return False
+
+
 #IDX to action:
 #0-4 = move
 #5 = dig
 #6 = recharge
 #7 = self_destruct
 
-def single_unit_action_mask(unit, obs, device, player = "player_0"):
+def single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player = "player_0"):
     """Calculates the action mask for one specific unit"""
 
     action_mask = torch.ones(UNIT_ACTION_IDXS, device=device, dtype=torch.uint8)
@@ -50,9 +57,6 @@ def single_unit_action_mask(unit, obs, device, player = "player_0"):
     if y == 47 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "down"):
         action_mask[3] = 0
 
-    factories = obs["factories"][player]
-    factory_pos = [factory["pos"] for _, factory in factories.items()]
-
     #Dig
     if unit["power"] < dig_cost or list(unit["pos"]) in factory_pos:
         action_mask[5] = 0
@@ -66,12 +70,14 @@ def single_unit_action_mask(unit, obs, device, player = "player_0"):
     if power < (10 if unit["unit_type"] == "LIGHT" else 100):
         action_mask[7] = 0 
 
+    #TODO: Only center
     #Transport ice
-    if unit["cargo"]["ice"] == 0:
+    if unit["cargo"]["ice"] == 0 or not can_transfer_to_tile(x, y, unit_pos, factory_pos):
         action_mask[8] = 0
 
+    #TODO: Only center
     #Transport ore
-    if unit["cargo"]["ore"] == 0:
+    if unit["cargo"]["ore"] == 0 or not can_transfer_to_tile(x, y, unit_pos, factory_pos):
         action_mask[9] = 0
 
     return action_mask
@@ -109,10 +115,18 @@ def unit_action_mask(obs, device, player = "player_0"):
     #NOTE: Needs to take in a player for the factory stuff?
     obs = obs[player]
     action_mask = torch.ones((48, 48, UNIT_ACTION_IDXS), device=device, dtype=torch.uint8)
+
+    #Get factory position
+    factories = obs["factories"][player]
+    factory_pos = [factory["pos"] for _, factory in factories.items()]
+    
+    #Get unit position
     units = obs["units"][player]
+    unit_pos = [unit["pos"] for _, unit in units.items()]
+
     for unit in units.values():
         x, y = unit["pos"]
-        action_mask[x, y] = single_unit_action_mask(unit, obs, device, player)
+        action_mask[x, y] = single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player)
 
     return action_mask
 
@@ -125,7 +139,6 @@ def factory_action_mask(obs, device, player = "player_0"):
     for factory in factories.values():
         x, y = factory["pos"]
         mask = single_factory_action_mask(factory, obs, device)
-        print(mask)
         action_mask[x, y] = mask#single_factory_action_mask(factory, obs, device)
 
     return action_mask
