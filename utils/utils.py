@@ -3,7 +3,7 @@ import yaml
 def load_config(change_dict = {}):
     config = yaml.safe_load(open("config.yml"))
 
-    if not config["device"].lower() in ["cpu", "cuda"], "mps":
+    if not config["device"].lower() in ["cpu", "cuda", "mps"]:
         raise ValueError("Expected device in Config to be either 'CPU' or 'CUDA', but found:", config["device"])
 
     if torch.cuda.is_available() and config["device"] == "cuda":
