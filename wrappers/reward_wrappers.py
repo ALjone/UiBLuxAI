@@ -30,22 +30,22 @@ class IceRewardWrapper(gym.RewardWrapper):
         units = 0
         factories = 0
         units_made = 0
-        if player in self.prev_actions.keys():
-            for action_dict in self.prev_actions[player]:
-                for unit_id, action in action_dict.items():
-                    if "unit" in unit_id:
-                        units += 1
-                        #if action[0] == 4:
-                        #    self_destructs += 1  # Idx 4 is self destruct
-                    elif "factory" in unit_id:
-                        factories += 1
-                        if action in [0, 1]:
-                            units_made += 1
-                    else:
-                        raise ValueError("Oh no, what's wrong with this unit ID")
+        if player in self.prev_actions.keys() and self.state.real_env_steps >= 0:
+            for unit_id, action in self.prev_actions[player].items():
+                if "unit" in unit_id:
+                    units += 1
+                    #if action[0] == 4:
+                    #    self_destructs += 1  # Idx 4 is self destruct
+                elif "factory" in unit_id:
+                    factories += 1
+                    if action in [0, 1]:
+                        units_made += 1
+                else:
+                    raise ValueError("Oh no, what's wrong with this unit ID")
 
             units_died = (self.number_of_units[player] + units_made) - units
-            factories_died = self.number_of_factories[player] - factories
+            #TODO fix this (This is based on actions, and factories that do nothing submit no actions)
+            factories_died = 0#self.number_of_factories[player] - factories
 
             self.number_of_units[player] = units
             self.number_of_factories[player] = factories
