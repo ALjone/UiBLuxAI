@@ -26,7 +26,8 @@ class IceRewardWrapper(gym.RewardWrapper):
 
     def get_died_units_and_factories(self, player="player_0"):
         # TODO: Differentiate between light and heavy robots
-        self_destructs = 0
+        # TODO: Punish for each dead unit, not just for the difference
+        #self_destructs = 0
         units = 0
         factories = 0
         if player in self.prev_actions.keys():
@@ -34,15 +35,16 @@ class IceRewardWrapper(gym.RewardWrapper):
                 for unit_id, action in action_dict:
                     if "unit" in unit_id:
                         units += 1
+                        #if action[0] == 4:
+                        #    self_destructs += 1  # Idx 4 is self destruct
                     elif "factory" in unit_id:
                         factories += 1
                     else:
                         raise ValueError("Oh no, what's wrong with this unit ID")
-                    if action[0] == 4:
-                        self_destructs += 1  # Idx 4 is self destruct
 
-            units_died = units - self.number_of_units[player] - self_destructs
+            units_died = units - self.number_of_units[player]
             factories_died = factories - self.number_of_factories[player]
+
             self.number_of_units[player] = units
             self.number_of_factories[player] = factories
             return units_died, factories_died
@@ -96,13 +98,14 @@ class IceRewardWrapper(gym.RewardWrapper):
             scaling = [self.config["scaling_ice"], self.config["scaling_ore"]]
             scaling_delivery_extra = self.config["scaling_delivery_extra"]
             delta_res = 0
+            #TODO: Tripple check this
             for res, scale in zip(["ice", "ore"], scaling):
-                # Dropping ice at factory
+                # Dropping res at factory
+                #NOTE: Prev - unit, because we want to currently have less than we had
                 if pos in factory_pos:
                     delta_res += scaling_delivery_extra*scale * \
-                        (unit["cargo"][res] - prev_state["cargo"][res])
-
-                # Picking up ice, or dropping it somewhere bad
+                        (prev_state["cargo"][res] - unit["cargo"][res])
+                # Picking up res, or dropping it somewhere bad
                 else:
                     delta_res += scale * \
                         (unit["cargo"][res] - prev_state["cargo"][res])

@@ -20,16 +20,15 @@ def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
 #5 = dig
 #6 = recharge
 #7 = self_destruct
-def single_unit_action_mask(unit, obs, player = "player_0"):
+
+def single_unit_action_mask(unit, obs, device, player = "player_0"):
     """Calculates the action mask for one specific unit"""
 
-    #TODO: This doesn't care about the fact that adding to action queue costs 1/10 (LIGHT/HEAVY)
-    #TODO: Invalid to dig on top of factory
-    action_mask = torch.ones(UNIT_ACTION_IDXS)
+    action_mask = torch.ones(UNIT_ACTION_IDXS, device=device, dtype=torch.uint8)
     #(x, y) coordinates of unit
     x, y = unit["pos"]
     #Power remaining for unit, i.e charge
-    power = unit["power"]
+    power = unit["power"] - (1 if unit["unit_type"] == "LIGHT" else 10) #Subtracting the cost of adding to action queue
     #48x48 map of how much rubble is in which square
     rubble = obs["board"]["rubble"]
     #How much digging costs for this unit
@@ -60,16 +59,20 @@ def single_unit_action_mask(unit, obs, player = "player_0"):
 
     #Recharge, max is 150 for LIGHT and 3000 for heavy per config
     #TODO: This should be based on how much is recharged each turn
-    if  power == 150 if unit["unit_type"] else 3000:
+    if  power == (150 if unit["unit_type"] else 3000):
         action_mask[6] = 0
     
     #Self destruct, requires 10 power
-    if power < 10 if unit["unit_type"] == "LIGHT" else 100:
+    if power < (10 if unit["unit_type"] == "LIGHT" else 100):
         action_mask[7] = 0 
 
     #Transport ice
     if unit["cargo"]["ice"] == 0:
         action_mask[8] = 0
+
+    #Transport ore
+    if unit["cargo"]["ore"] == 0:
+        action_mask[9] = 0
 
     return action_mask
 
@@ -83,8 +86,8 @@ def calculate_water_cost(x, y, obs):
 #1 -> HEAVY
 #2 -> LICHEN
 #3 -> NOTHING
-def single_factory_action_mask(factory, obs):
-    action_mask = torch.ones(FACTORY_ACTION_IDXS)
+def single_factory_action_mask(factory, obs, device):
+    action_mask = torch.ones(FACTORY_ACTION_IDXS, device=device, dtype=torch.uint8)
     
     metal = factory["cargo"]["metal"]
     water = factory["cargo"]["water"]
@@ -103,10 +106,10 @@ def single_factory_action_mask(factory, obs):
     
 
 
-def unit_action_mask(obs, player = "player_0"):
-    #TODO: Needs to take in a player for the factory stuff?
+def unit_action_mask(obs, device, player = "player_0"):
+    #NOTE: Needs to take in a player for the factory stuff?
     obs = obs[player]
-    action_mask = torch.ones((48, 48, UNIT_ACTION_IDXS))
+    action_mask = torch.ones((48, 48, UNIT_ACTION_IDXS), device=device, dtype=torch.uint8)
     units = obs["units"][player]
     for unit in units.values():
         x, y = unit["pos"]
@@ -115,13 +118,13 @@ def unit_action_mask(obs, player = "player_0"):
     return action_mask
 
 
-def factory_action_mask(obs, player = "player_0"):
-    #TODO: Needs to take in a player for the factory stuff?
-    action_mask = torch.ones((48, 48, FACTORY_ACTION_IDXS))
+def factory_action_mask(obs, device, player = "player_0"):
+    #note: Needs to take in a player for the factory stuff?
+    action_mask = torch.ones((48, 48, FACTORY_ACTION_IDXS), device=device, dtype=torch.uint8)
     obs = obs[player]
     factories = obs["units"][player]
     for factory in factories.values():
         x, y = factory["pos"]
-        action_mask[x, y] = single_factory_action_mask(factory, obs)
+        action_mask[x, y] = single_factory_action_mask(factory, obs, device)
 
     return action_mask
