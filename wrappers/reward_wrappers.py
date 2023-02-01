@@ -32,7 +32,7 @@ class IceRewardWrapper(gym.RewardWrapper):
         units_made = 0
         if player in self.prev_actions.keys():
             for action_dict in self.prev_actions[player]:
-                for unit_id, action in action_dict:
+                for unit_id, action in action_dict.items():
                     if "unit" in unit_id:
                         units += 1
                         #if action[0] == 4:
