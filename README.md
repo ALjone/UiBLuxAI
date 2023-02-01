@@ -62,11 +62,9 @@ Every feature here has a 48x48 channel containing the information in every tile.
 3. Self Destruct
 4. No Action.
 >>>Does nothing, allows previous action queues to execute.
-5. Walk to closest ice.
->>> Computes shortest path to ice (shortest w.r.t power or time???) and creates a sequence of directions towards it (better with long walks along one dim at the time due to limited queue length and option for looping)
-6. Digg untill full or resource is empty.
+5. Digg untill full or resource is empty.
 >>> Compute minimum of the two and digg untill this limit is reached.
-7. Deliver resources to closest factory.
+6. Deliver resources to closest factory.
 >>> Compute path to closest factory (shortest w.r.t time for now) and create sequence of directions to this point, finish with transfer of all resources.
-8. Complete ice-mining loop.
->>> Finds closest ice, goes to it, mines untill full/all is taken, walks to closest faactory, drop resource, charge. Repeat.
+7. Complete ice-mining loop.
+>>> Finds closest (closest w.r.t power or time???) and creates a sequence of directions towards it (better with long walks along one dim at the time due to limited queue length and option for looping) ice, goes to it, mines untill full/all is taken, walks to closest faactory, drop resource, charge. Repeat.
