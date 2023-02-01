@@ -11,6 +11,15 @@ epochs_per_batch: 6
 eps_clip: 0.1
 lmbda: 0.95
 
+#Architecture - Actor
+actor_n_blocks: 6
+actor_n_blocks_after_split: 2
+actor_intermediate_channels: 64
+
+#Architecture - Actor
+critic_n_blocks: 4
+critic_intermediate_channels: 32
+
 #Other
 device: cuda
 path: model.t

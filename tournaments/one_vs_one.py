@@ -9,9 +9,10 @@ from tqdm import tqdm
 
 
 def get_winner(rewards):
-    for player, reward in rewards.items():
-        if reward == 0:
-            return 0 if player == "player_0" else 1
+    if rewards["player_0"] > rewards["player_1"]:
+        return 0
+    if rewards["player_1"] > rewards["player_0"]:
+        return 1 
     return 2
 
 

@@ -6,14 +6,14 @@ from .critic import critic
 from utils.action_masking import unit_action_mask, factory_action_mask
 
 class ActorCritic(nn.Module):
-    def __init__(self, unit_action_dim, factory_action_dim, device):
+    def __init__(self, unit_action_dim, factory_action_dim, config):
         super(ActorCritic, self).__init__()
+        self.device = config["device"]
 
-        self.actor = actor(23, unit_action_dim, factory_action_dim).to(device)
+        self.actor = actor(23, unit_action_dim, factory_action_dim, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"]).to(self.device)
         # critic
-        self.critic = critic(23).to(device)
+        self.critic = critic(23, config["critic_n_blocks"], config["critic_intermediate_channels"]).to(self.device)
 
-        self.device = device
 
         print("Actor has:", self.actor.count_parameters(), "parameters")
         print("Critic has:", self.critic.count_parameters(), "parameters")

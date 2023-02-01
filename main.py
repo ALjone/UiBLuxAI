@@ -2,7 +2,6 @@ from train import train
 from ppo import PPO
 from luxai_s2.env import LuxAI_S2
 from agents.RL_agent import Agent
-from utils.visualization import animate
 from wrappers.observation_wrappers import ImageWithUnitsWrapper
 from wrappers.other_wrappers import SinglePlayerEnv
 from wrappers.reward_wrappers import IceRewardWrapper

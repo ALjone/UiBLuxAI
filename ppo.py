@@ -28,21 +28,21 @@ class RolloutBuffer:
 
 
 class PPO:
-    def __init__(self, unit_action_dim, factory_action_dim, lr_actor, lr_critic, gamma, K_epochs, eps_clip, device):
-        self.device = device
-        self.gamma = gamma
-        self.eps_clip = eps_clip
-        self.K_epochs = K_epochs
+    def __init__(self, unit_action_dim, factory_action_dim, config):
+        self.device = config["device"]
+        self.gamma = config["gamma"]
+        self.eps_clip = config["eps_clip"]
+        self.K_epochs = config["epochs_per_batch"]
         
         self.buffer = RolloutBuffer()
 
-        self.policy = ActorCritic(unit_action_dim, factory_action_dim, device = device).to(device)
+        self.policy = ActorCritic(unit_action_dim, factory_action_dim, config).to(config["device"])
         self.optimizer = torch.optim.Adam([
-                        {'params': self.policy.actor.parameters(), 'lr': lr_actor},
-                        {'params': self.policy.critic.parameters(), 'lr': lr_critic}
+                        {'params': self.policy.actor.parameters(), 'lr': config["lr_actor"]},
+                        {'params': self.policy.critic.parameters(), 'lr': config["lr_critic"]}
                     ])
 
-        self.policy_old = ActorCritic(unit_action_dim, factory_action_dim, device = device).to(device)
+        self.policy_old = ActorCritic(unit_action_dim, factory_action_dim, config).to(config["device"])
         self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
