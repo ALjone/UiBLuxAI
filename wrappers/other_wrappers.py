@@ -55,12 +55,12 @@ class SinglePlayerEnv(gym.Wrapper):
         self.prev_actions = action
         units = self.env.state.units[agent]
         for unit_id, act in action[agent].items():
-            act = act[0] #Because of action queue
             if "unit" in unit_id:
+                act = act[0] #Because of action queue
                 self.env.state.stats["actions"][agent]["units"][act[0]] += 1
                 #Recharge action if the first element in the action array is 5
-                if act[0] == 5:
-                    self.env.state.stats["power_when_recharge"][agent] += units[unit_id]["power"]
+                if act[0] == 5 and unit_id in units.keys(): #No idea why this check is needed??? Maybe it died
+                    self.env.state.stats["power_when_recharge"][agent] += units[unit_id].power
             elif "factory" in unit_id:
                 self.env.state.stats["actions"][agent]["factories"][act] += 1
 
