@@ -103,7 +103,6 @@ def single_factory_action_mask(factory, obs, device):
         action_mask[2] = 0
 
     return action_mask
-    
 
 
 def unit_action_mask(obs, device, player = "player_0"):
@@ -125,6 +124,8 @@ def factory_action_mask(obs, device, player = "player_0"):
     factories = obs["units"][player]
     for factory in factories.values():
         x, y = factory["pos"]
-        action_mask[x, y] = single_factory_action_mask(factory, obs, device)
+        mask = single_factory_action_mask(factory, obs, device)
+        print(mask)
+        action_mask[x, y] = #single_factory_action_mask(factory, obs, device)
 
     return action_mask

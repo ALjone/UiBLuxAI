@@ -45,7 +45,9 @@ class SinglePlayerEnv(gym.Wrapper):
         else:
             opp_action = {}
 
-        obs, reward, done, info = super().step({agent: action, opp_agent: opp_action})
+        action = {agent: action, opp_agent: opp_action}
+
+        obs, reward, done, info = super().step(action)
 
         self.prev_actions = action
 

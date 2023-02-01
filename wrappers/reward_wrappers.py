@@ -26,7 +26,6 @@ class IceRewardWrapper(gym.RewardWrapper):
 
     def get_died_units_and_factories(self, player="player_0"):
         # TODO: Differentiate between light and heavy robots
-        # TODO: Punish for each dead unit, not just for the difference
         #self_destructs = 0
         units = 0
         factories = 0
