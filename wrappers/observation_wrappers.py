@@ -12,12 +12,10 @@ class StateSpaceVol1(gym.ObservationWrapper):
 
 
     def observation(self, obs):
-        shared_obs = obs["player_0"]
-
         main_player = self.agents[0]
+        shared_obs = obs[main_player]
+
         #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
-        image_features = torch.zeros((33, 48, 48))
-        global_features = torch.zeros(15)
 
         unit_mask = torch.zeros((48, 48))
         factory_mask = torch.zeros((48, 48))
@@ -31,12 +29,15 @@ class StateSpaceVol1(gym.ObservationWrapper):
 
         unit_type = torch.zeros(2, 48, 48) #LIGHT, HEAVY
 
-        action_queue_length = torch.zeros((48, 48))
         #TODO: Move this to agent
         action_queue_type_friendly = torch.zeros((14, 48, 48))
+        action_queue_length = torch.zeros((48, 48))
 
         next_step = torch.zeros((2, 48, 48))
 
+
+
+        global_features = torch.zeros(15)
         day = 0
         night = 0
         timestep = 0
@@ -71,7 +72,7 @@ class StateSpaceVol1(gym.ObservationWrapper):
                 unit_cargo[1, x, y] = unit["cargo"]["ice"]/(100 if is_light else 1000)
                 unit_cargo[2, x, y] = unit["cargo"]["ore"]/(100 if is_light else 1000)
 
-                print(unit.keys())
+                print(unit.keys()) #For action queue, also next step
                 pass
         
             for _, factory in factories.items():
@@ -84,10 +85,37 @@ class StateSpaceVol1(gym.ObservationWrapper):
                 factory_cargo[3, x, y] = factory["cargo"]["water"]/1000
                 factory_cargo[4, x, y] = factory["cargo"]["metal"]/1000
 
-        board[0] = shared_obs["board"]["rubble"]
+            #Get lichen mask for this player, and add it to the zeros
+            strain_ids = self.state.teams[player].factory_strains
+            agent_lichen_mask = np.isin(
+                self.state.board.lichen_strains, strain_ids
+            )
+            lichen_mask += agent_lichen_mask * (1 if player == main_player else -1)
+
+        #TODO Find max values
+        board[0] = shared_obs["board"]["rubble"]/self.env.state.env_cfg.MAX_RUBBLE
         board[1] = shared_obs["board"]["ice"]
         board[2] = shared_obs["board"]["ore"]
-        board[3] = shared_obs["board"]["lichen"]
+        board[3] = shared_obs["board"]["lichen"]/self.env.state.env_cfg.MAX_LICHEN_PER_TILE
+
+        #TODO: Add action queue type
+        image_features = torch.cat([
+            unit_mask,
+            factory_mask,
+            unit_cargo,
+            factory_cargo,
+            board,
+            lichen_mask,
+            unit_type,
+            action_queue_length,
+            next_step,
+        ])
+        #Unit mask
+        #Factory mask
+        #Unit
+        image_features_flipped = image_features.copy()
+        image_features_flipped[(0, 1, 14)] *= -1 #TODO: DOUBLE CHECK THESE VALUES
+
         #TODO: Flip like Fillip
         image_state = {}
 
