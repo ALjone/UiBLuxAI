@@ -63,7 +63,7 @@ def train(env, agent, config, writer=None):
                 if time_step % config["batch_size"] == 0:
                     loss = agent.PPO.update()
                     losses.append(loss)
-                    ep_losses.append(loss)
+                ep_losses.append(loss)
 
                 # break; if the episode is over
                 if done:
@@ -72,8 +72,11 @@ def train(env, agent, config, writer=None):
             stat_collector.update(env.state.stats)
             print_running_reward += current_ep_reward
             print_running_episodes += 1
+            ep_loss = 0
+            if (ep_losses):
+                ep_loss = sum(ep_losses)/len(ep_losses)
             wb.log({"Reward pr episode": current_ep_reward,
-                    "Loss pr episode": round(np.mean(ep_losses).item(), 3),
+                    "Loss pr episode": ep_loss,
                     "Timesteps pr episode": ep_timesteps})
 
             i_episode += 1
