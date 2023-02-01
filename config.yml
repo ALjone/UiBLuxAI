@@ -36,3 +36,4 @@ scaling_lichen: 5
 scaling_ice: 0.1 #Value of ice
 scaling_ore: 0.05
 scaling_delivery_extra: 2 #How much more delivery is worth compared to gathering
+scaling_win: 5
