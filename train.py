@@ -18,7 +18,7 @@ def do_early_phase(env, agent):
     return state
 
 
-def train(env, agent, config, writer=None):
+def train(env, agent, config, writer=None, log_to_wb=True):
     assert env.collect_stats
 
     stat_collector = StatCollector("player_0")
@@ -33,7 +33,8 @@ def train(env, agent, config, writer=None):
 
     if writer is None:
         writer = SummaryWriter()
-    wb = WAndB(config=config, run_name='Testing run')
+    if (log_to_wb):
+        wb = WAndB(config=config, run_name='Testing run')
     # training loop
     for _ in range(config["max_episodes"]//config["print_freq"]):
 
@@ -75,9 +76,10 @@ def train(env, agent, config, writer=None):
             ep_loss = 0
             if (ep_losses):
                 ep_loss = sum(ep_losses)/len(ep_losses)
-            wb.log({"Reward pr episode": current_ep_reward,
-                    "Loss pr episode": ep_loss,
-                    "Timesteps pr episode": ep_timesteps})
+            if (log_to_wb):
+                wb.log({"Reward pr episode": current_ep_reward,
+                        "Loss pr episode": ep_loss,
+                        "Timesteps pr episode": ep_timesteps})
 
             i_episode += 1
 
