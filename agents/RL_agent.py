@@ -89,13 +89,13 @@ class Agent():
         obs = state[1]
 
         image_features = features["image_features"].to(self.device)
-        action_queue_type = torch.tensor((UNIT_ACTION_IDXS-1, 48, 48)) #-1 because of the do nothing action
+        action_queue_type = torch.zeros((UNIT_ACTION_IDXS-1, 48, 48), device = self.device) #-1 because of the do nothing action
 
         for unit_id, action in self.action_queue.items():
             pos = units[unit_id]
             action_queue_type[action-1, pos[0], pos[1]] = 1
 
-        image_features = torch.stack((image_features, action_queue_type), dim=0)
+        image_features = torch.cat((image_features, action_queue_type), dim=0)
 
         global_features = features["global_features"].to(self.device)
 

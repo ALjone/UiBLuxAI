@@ -44,6 +44,7 @@ def train(env, agent, config):
             state = do_early_phase(env, agent)
             ep_losses = []
             ep_timesteps = 0
+            agent.reset()
             while True:
                 # select action with policy
                 action = agent.act(state)
