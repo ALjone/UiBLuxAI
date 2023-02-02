@@ -35,15 +35,15 @@ def formate_time(seconds):
     else:
         return f'{int(h)} hours, {int(m)} minutes and {int(s)} seconds'
 
-def find_closest_ice_tile(ice_map, unit_pos): 
-    ice_tile_locations = np.argwhere(ice_map == 1)
+def find_closest_tile(tile_map, unit_pos): 
+    tile_locations = np.argwhere(tile_map == 1)
     
-    ice_tile_distances = np.mean(
-    (ice_tile_locations - np.array(unit_pos)) ** 2, 1
+    tile_distances = np.mean(
+    (tile_locations - np.array(unit_pos)) ** 2, 1
     )
 
     # normalize the ice tile location
-    closest_ice_tile = (
-        ice_tile_locations[np.argmin(ice_tile_distances)]
+    closest_tile = (
+        tile_locations[np.argmin(tile_distances)]
     )   
-    return closest_ice_tile
+    return closest_tile 

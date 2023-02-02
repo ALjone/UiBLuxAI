@@ -1,7 +1,9 @@
 import numpy as np
-from .single_move_actions import move, dig, recharge, self_destruct, transfer
+from action_queues import move_north, move_south, move_east, move_west
+from action_queues import pickup, self_destruct, dig
+from action_queues import move_to_closest_factory_and_transport, move_to_closest_res, res_mining_loop
 
-UNIT_ACTION_IDXS = 10
+UNIT_ACTION_IDXS = 13
 FACTORY_ACTION_IDXS = 4
 
 # a[0] = action type
@@ -19,32 +21,41 @@ FACTORY_ACTION_IDXS = 4
 
 # a[5] = n, number of times to execute this action before exhausting it and removing it from the front of the action queue. Minimum is 1.
 
-def unit_idx_to_action(idx, type):
+def unit_idx_to_action(idx, type, obs, factory_map, unit):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
-    assert -1 < idx < UNIT_ACTION_IDXS
+    assert 0 < idx < UNIT_ACTION_IDXS
     assert isinstance(idx, int)
-    if -1 < idx < 5:
-        return move(idx)
-
+    if idx == 0:
+        raise ValueError("This shouldn't be possible! Better to just not submit an action")
+    if idx == 1: 
+        return [] #ABORT QUEUE
+    if idx == 2:
+        return move_north()
+    if idx == 3: 
+        return move_south()
+    if idx == 4: 
+        return move_east()
     if idx == 5:
-        return dig()
-
+        return move_west()
     if idx == 6:
-        return recharge(100 if type == "LIGHT" else 1000)
-
+        return pickup("power")
     if idx == 7:
-         return self_destruct()
-
+        move_to_closest_factory_and_transport(factory_map, unit, "ice")
     if idx == 8:
-        return transfer("ice")
-    
+        move_to_closest_factory_and_transport(factory_map, unit, "ore")
     if idx == 9:
-        return transfer("ore")
+        move_to_closest_res("ice", unit, obs)
+    if idx == 10:
+        move_to_closest_res("ore", unit, obs)
+    if idx == 11:
+        res_mining_loop("ice", unit, obs, factory_map)
+    if idx == 12:
+        res_mining_loop("ore", unit, obs, factory_map)
 
 
 def factory_idx_to_action(idx):
     """Translates an index-action (from argmax) into a Lux-valid action for factories"""
-    assert -1 < idx < 3
+    assert 0 <= idx < (FACTORY_ACTION_IDXS-1) #Minus 1 because action 3 is do nothing
     assert isinstance(idx, int)
     # 0: Build light, 1: Build heavy, 2: Grow lichen
     return idx
@@ -62,6 +73,7 @@ def unit_output_to_actions(unit_output, units):
     for unit in units:
             x, y = unit["pos"][0], unit["pos"][1]
             action = unit_output[x, y].item()
+            if action == 0: continue #The "Do nothing" action
             actions[unit["unit_id"]] = [unit_idx_to_action(action, unit["unit_type"])]
 
     return actions
@@ -72,8 +84,7 @@ def factory_output_to_actions(factory_output, factories):
     for factory in factories:
             x, y = factory["pos"][0], factory["pos"][1]
             action = factory_output[x, y].item()
-            if action == 3:
-                 continue
+            if action == 3: continue
             actions[factory["unit_id"]] = factory_idx_to_action(action)
 
     return actions

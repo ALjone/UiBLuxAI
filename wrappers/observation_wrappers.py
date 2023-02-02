@@ -22,6 +22,7 @@ class StateSpaceVol1(gym.ObservationWrapper):
         #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
 
         unit_mask = np.zeros((1, 48, 48))
+        #TODO: We also need a map for where factories are occupying space? Since they are 3x3
         factory_mask = np.zeros((1, 48, 48))
 
         unit_cargo = np.zeros((3, 48, 48)) #Power, Ice, Ore
