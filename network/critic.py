@@ -36,9 +36,10 @@ class critic(nn.Module):
             image_features = torch.from_numpy(image_features)
         if len(image_features.shape) == 3:
             image_features = image_features.unsqueeze(0)
-        global_image_channels = self.global_block(global_features)
-        image_features = torch.concatenate(image_features, global_image_channels, dim=1)  # Assumning Batch_Size x Channels x 48 x 48
         image_features = image_features.float()
+        global_features = global_features.float()
+        global_image_channels = self.global_block(global_features)
+        image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48
 
         image_features = self.conv(image_features)
         image_features = self.linear(image_features.flatten(1))

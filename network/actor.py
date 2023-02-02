@@ -46,14 +46,16 @@ class actor(nn.Module):
         self.factory_conv = nn.Sequential(*blocks_factory)
 
     def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-
         if type(image_features) == np.ndarray:
             image_features = torch.from_numpy(image_features)
         if len(image_features.shape) == 3:
             image_features = image_features.unsqueeze(0)
-        global_image_channels = self.global_block(global_features)
-        image_features = torch.concatenate(image_features, global_image_channels, dim=1)  # Assumning Batch_Size x Channels x 48 x 48
+
+        global_features = global_features.float()
         image_features = image_features.float()
+
+        global_image_channels = self.global_block(global_features)
+        image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48
 
         # TODO: 12 new dimensions for image_features input
         image_features = self.shared_conv(image_features)

@@ -61,7 +61,7 @@ class GlobalBlock(nn.Module):
         # Batch_size x 12 --> Batch_size x 12 x 1 x 1 --> Batch_size x 12 x 48 x 48
 
         x = x.unsqueeze(dim = -1).unsqueeze(dim = -1)
-        x = torch.repeat(1,1,48,48)
+        x = x.repeat(1,1,48,48)
         return x
 
 

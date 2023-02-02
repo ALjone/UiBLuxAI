@@ -3,7 +3,7 @@ from .action_queues import move_north, move_south, move_east, move_west, move_si
 from .action_queues import pickup, self_destruct, dig
 from .action_queues import move_to_closest_factory_and_transport, move_to_closest_res, res_mining_loop
 
-UNIT_ACTION_IDXS = 13
+UNIT_ACTION_IDXS = 11
 FACTORY_ACTION_IDXS = 4
 
 # a[0] = action type
@@ -47,6 +47,7 @@ def _unit_idx_to_action(idx, obs, factory_map, unit):
         return move_to_closest_res("ice", unit, obs)
     if idx == 10:
         return move_to_closest_res("ore", unit, obs)
+    #TODO: THESE ARE EFFECTIVELY REMOVED DUE TO UNIT_ACTION_IDXS BEING LOWERED
     if idx == 11:
         return res_mining_loop("ice", unit, obs, factory_map)
     if idx == 12:
