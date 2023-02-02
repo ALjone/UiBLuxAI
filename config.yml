@@ -28,7 +28,8 @@ video_save_rate: 1000 #How often to save a video, in episodes
 log_to_wb: False
 
 #Reward
-unit_lost_scale: 0
+unit_lost_scale: 0.1
+birth_kill_relation: 0.5
 units_killed_scale: 1
 factory_lost_scale: 10
 
