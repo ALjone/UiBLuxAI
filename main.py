@@ -2,7 +2,7 @@ from train import train
 from ppo import PPO
 from luxai_s2.env import LuxAI_S2
 from agents.RL_agent import Agent
-from wrappers.observation_wrappers import ImageWithUnitsWrapper
+from wrappers.observation_wrappers import ImageWithUnitsWrapper, StateSpaceVol1
 from wrappers.other_wrappers import SinglePlayerEnv
 from wrappers.reward_wrappers import IceRewardWrapper
 from utils.utils import load_config
@@ -13,7 +13,7 @@ os.environ['PYTORCH_ENABLE_MPS_FALLBACK']='1'
 config = load_config()
 
 env = LuxAI_S2(verbose=0, collect_stats=True)
-env = ImageWithUnitsWrapper(env)
+env = StateSpaceVol1(env)
 env = SinglePlayerEnv(env)
 env = IceRewardWrapper(env, config)
 env = RecordVideo(env, "videos", episode_trigger= lambda x : x % config["video_save_rate"] == 0 and x != 0)

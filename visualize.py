@@ -1,8 +1,9 @@
 from luxai_s2.env import LuxAI_S2
 from agents.RL_agent import Agent
 from utils.visualization import animate
-from wrappers.observation_wrappers import ImageWithUnitsWrapper
+from wrappers.observation_wrappers import ImageWithUnitsWrapper, StateSpaceVol1
 from wrappers.other_wrappers import SinglePlayerEnv
+from wrappers.reward_wrappers import IceRewardWrapper
 from utils.utils import load_config
 
 def play_episode(agent, env, make_gif = True):
@@ -27,9 +28,10 @@ def play_episode(agent, env, make_gif = True):
         animate(imgs)
 
 def run(config):
-    env = LuxAI_S2(verbose = 2)
-    env = ImageWithUnitsWrapper(env)
+    env = LuxAI_S2(verbose=0, collect_stats=True)
+    env = StateSpaceVol1(env)
     env = SinglePlayerEnv(env)
+    env = IceRewardWrapper(env, config)
     agent = Agent("player_0", env.state.env_cfg, config)
     
     play_episode(agent, env, True)

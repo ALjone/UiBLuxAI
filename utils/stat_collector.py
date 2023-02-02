@@ -93,7 +93,8 @@ class StatCollector:
         act = stats["actions"]
         self.unit_action_distribution.append(np.array(act["units"]))
         self.factory_action_distribution.append(np.array(act["factories"]))
-        self.average_power_when_recharge.append(np.mean(act["average_power_when_recharge"]))
+        if len(act["average_power_when_recharge"]) > 0:
+            self.average_power_when_recharge.append(np.mean(act["average_power_when_recharge"]))
 
 
     def get_last_x(self, x):

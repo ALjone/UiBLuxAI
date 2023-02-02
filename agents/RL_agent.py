@@ -84,10 +84,9 @@ class Agent():
     def act(self, state, remainingOverageTime: int = 60):
         obs = state[1]
         state = state[0]
-
-        image = state["image_features"].to(self.device)
-        units = state["unit_to_id"]
-        factories = state["factory_to_id"]
+        image = state[self.player].to(self.device)
+        units = obs[self.player]["units"][self.player].values()
+        factories = obs[self.player]["factories"][self.player].values()
 
         unit_output, factory_output = self.PPO.select_action(image, obs)
 

@@ -22,11 +22,71 @@ _wandb:
       - 16
       - 17
       - 23
+      - 37
       4: 3.10.8
       5: 0.13.9
       8:
       - 3
       - 5
+    visualize:
+      actions/factory_action_distribution:
+        panel_config:
+          fieldSettings:
+            label: label
+            value: value
+          panelDefId: wandb/bar/v0
+          stringSettings:
+            title: Action distribution for factories as a bar plot
+          transform:
+            name: tableWithLeafColNames
+          userQuery:
+            queryFields:
+            - args:
+              - name: runSets
+                value: ${runSets}
+              fields:
+              - fields: []
+                name: id
+              - fields: []
+                name: name
+              - fields: []
+                name: _defaultColorIndex
+              - args:
+                - name: tableKey
+                  value: actions/factory_action_distribution_table
+                fields: []
+                name: summaryTable
+              name: runSets
+        panel_type: Vega2
+      actions/unit_action_distribution:
+        panel_config:
+          fieldSettings:
+            label: label
+            value: value
+          panelDefId: wandb/bar/v0
+          stringSettings:
+            title: Action distribution for units as a bar plot
+          transform:
+            name: tableWithLeafColNames
+          userQuery:
+            queryFields:
+            - args:
+              - name: runSets
+                value: ${runSets}
+              fields:
+              - fields: []
+                name: id
+              - fields: []
+                name: name
+              - fields: []
+                name: _defaultColorIndex
+              - args:
+                - name: tableKey
+                  value: actions/unit_action_distribution_table
+                fields: []
+                name: summaryTable
+              name: runSets
+        panel_type: Vega2
 actor_intermediate_channels:
   desc: null
   value: 32

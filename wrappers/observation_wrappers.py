@@ -6,38 +6,47 @@ import numpy as np
 import numpy.typing as npt
 from gym import spaces
 
+
+#Delta change, idx to mapping
+#TODO: Triple check this!!!
+dirs = [(0, 0), (0, -1), (1, 0), (0, 1), (-1, 0)]
+
 class StateSpaceVol1(gym.ObservationWrapper):
     def __init__(self, env: gym.Env) -> None:
         super().__init__(env)
 
 
     def observation(self, obs):
+        #If we're still in early phase
+        if len(self.agents) == 0:
+            return "", obs
         main_player = self.agents[0]
+        other_player = self.agents[1]
         shared_obs = obs[main_player]
 
         #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
 
-        unit_mask = torch.zeros((48, 48))
-        factory_mask = torch.zeros((48, 48))
+        unit_mask = np.zeros((1, 48, 48))
+        factory_mask = np.zeros((1, 48, 48))
 
-        unit_cargo = torch.zeros((3, 48, 48)) #Power, Ice, Ore
-        factory_cargo = torch.zeros((5, 48, 48))
+        unit_cargo = np.zeros((3, 48, 48)) #Power, Ice, Ore
+        factory_cargo = np.zeros((5, 48, 48))
 
-        board = torch.zeros((4, 48, 48)) #Rubble, Ice, Ore, Lichen
+        board = np.zeros((4, 48, 48)) #Rubble, Ice, Ore, Lichen
 
-        lichen_mask = torch.zeros((48, 48)) #1 for friendly, 0 for none, -1 for enemy
+        lichen_mask = np.zeros((1, 48, 48)) #1 for friendly, 0 for none, -1 for enemy
 
-        unit_type = torch.zeros(2, 48, 48) #LIGHT, HEAVY
+        unit_type = np.zeros((2, 48, 48)) #LIGHT, HEAVY
 
         #TODO: Move this to agent
-        action_queue_type_friendly = torch.zeros((14, 48, 48))
-        action_queue_length = torch.zeros((48, 48))
+        action_queue_type_friendly = np.zeros((14, 48, 48))
+        action_queue_length = np.zeros((1, 48, 48))
 
-        next_step = torch.zeros((2, 48, 48))
+        next_step = np.zeros((2, 48, 48))
 
 
 
-        global_features = torch.zeros(15)
+        global_features = np.zeros(15)
         day = 0
         night = 0
         timestep = 0
@@ -56,13 +65,13 @@ class StateSpaceVol1(gym.ObservationWrapper):
         ore_entropy = 0
         rubble_entropy = 0
         
-        for player in self.agents:
+        for i, player in enumerate(self.agents):
             factories = shared_obs["factories"][player]
             units = shared_obs["units"][player]
 
             for _, unit in units.items():
                 x, y = unit["pos"]
-                unit_mask[x, y] = (1 if player == main_player else -1)
+                unit_mask[0, x, y] = (1 if player == main_player else -1)
                 is_light = unit["unit_type"] == "LIGHT"
                 if is_light:
                     unit_type[0, x, y] = 1
@@ -71,13 +80,20 @@ class StateSpaceVol1(gym.ObservationWrapper):
                 unit_cargo[0, x, y] = unit["power"]/(150 if is_light else 3000)
                 unit_cargo[1, x, y] = unit["cargo"]["ice"]/(100 if is_light else 1000)
                 unit_cargo[2, x, y] = unit["cargo"]["ore"]/(100 if is_light else 1000)
+                
+                action_queue_length[0, x, y] = len(unit["action_queue"])/20
 
-                print(unit.keys()) #For action queue, also next step
+                #Predicting next cell for unit
+                if len(unit["action_queue"]) > 0:
+                    act = unit["action_queue"][0]
+                    if act[0] == 0:
+                        dir = dirs[act[1]] #Get the direction we're moving
+                        next_step[i, x+dir[0], y+dir[1]] = (1 if player == main_player else -1)
                 pass
         
             for _, factory in factories.items():
                 x, y = factory["pos"]
-                factory_mask[x, y] = (1 if player == main_player else -1)
+                factory_mask[0, x, y] = (1 if player == main_player else -1)
                 #TODO: Look at tanh?
                 factory_cargo[0, x, y] = factory["power"]/1000              
                 factory_cargo[1, x, y] = factory["cargo"]["ice"]/1000
@@ -86,20 +102,21 @@ class StateSpaceVol1(gym.ObservationWrapper):
                 factory_cargo[4, x, y] = factory["cargo"]["metal"]/1000
 
             #Get lichen mask for this player, and add it to the zeros
-            strain_ids = self.state.teams[player].factory_strains
-            agent_lichen_mask = np.isin(
-                self.state.board.lichen_strains, strain_ids
-            )
-            lichen_mask += agent_lichen_mask * (1 if player == main_player else -1)
+            if player in self.state.teams.keys():
+                strain_ids = self.state.teams[player].factory_strains
+                agent_lichen_mask = np.isin(
+                    self.state.board.lichen_strains, strain_ids
+                )
+                lichen_mask += agent_lichen_mask * (1 if player == main_player else -1)
 
-        #TODO Find max values
         board[0] = shared_obs["board"]["rubble"]/self.env.state.env_cfg.MAX_RUBBLE
         board[1] = shared_obs["board"]["ice"]
         board[2] = shared_obs["board"]["ore"]
         board[3] = shared_obs["board"]["lichen"]/self.env.state.env_cfg.MAX_LICHEN_PER_TILE
-
-        #TODO: Add action queue type
-        image_features = torch.cat([
+        
+        #TODO: Add action queue type in RL agent
+        #Don't ask why this is np to torch...
+        image_features = torch.tensor(np.concatenate([
             unit_mask,
             factory_mask,
             unit_cargo,
@@ -109,16 +126,14 @@ class StateSpaceVol1(gym.ObservationWrapper):
             unit_type,
             action_queue_length,
             next_step,
-        ])
-        #Unit mask
-        #Factory mask
-        #Unit
-        image_features_flipped = image_features.copy()
+        ]))
+
+        image_features_flipped = image_features.clone()
         image_features_flipped[(0, 1, 14)] *= -1 #TODO: DOUBLE CHECK THESE VALUES
 
-        #TODO: Flip like Fillip
-        image_state = {}
-
+        #TODO: Add global features
+        image_state = {main_player: image_features, other_player: image_features_flipped}
+    
         return image_state, obs
 
 class ImageWithUnitsWrapper(gym.ObservationWrapper):
@@ -136,6 +151,7 @@ class ImageWithUnitsWrapper(gym.ObservationWrapper):
         self, obs) -> Dict[str, npt.NDArray]:   
         """Returns the image features as a torch tensor"""
         shared_obs = obs["player_0"]
+
         unit_mask = np.zeros((self.map_size, self.map_size, 1))
         unit_data = np.zeros(
             (self.map_size, self.map_size, 9)

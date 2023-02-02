@@ -79,7 +79,7 @@ def train(env, agent, config):
         print_avg_reward = round(print_avg_reward, 7)
 
         steps_per_second = step_counter/(time.time()-last_x_ep_time)
-        print(f"Episode : {i_episode:>6} \tTimestep : {time_step:>8} \tAverage Reward : {round(print_avg_reward, 3):>7} \t Average episode length: {round(step_counter/config['print_freq'], 3):>5}",
+        print(f"Episode : {i_episode:>6} \tTimestep : {time_step:>8} \tAverage Reward : {round(print_avg_reward, 3):>7} \t Average episode length: {round(step_counter/config['print_freq'], 3):>7}",
               f"\tAverage loss : {round(np.mean(losses).item(), 3):>6} \tSteps per second last {config['print_freq']:>5} eps: {int(steps_per_second):>4} \tTime used total: {formate_time(int(time.time()-start_time))}")
 
         print_running_reward = 0
@@ -94,19 +94,27 @@ def train(env, agent, config):
 
         log_dict = {}
 
+        log_dict["Main/Average reward"] = print_avg_reward
+        log_dict["Main/Average episode length"] = step_counter/config["print_freq"]
+        log_dict["Main/Average steps per second"] = steps_per_second
+        log_dict["Main/Average loss"] = np.mean(losses).item()
 
-        # Update wandb with average for last x eps
-        categories = stat_collector.get_last_x(config["print_freq"])
-        for category_name, category in categories.items():
-            for name, value in category.items():
-                if name == "unit_action_distribution":
-                    value = [[l, v] for l, v in zip(["Move", "Transfer", "Pickup", "Dig", "Self destruct", "Recharge"], value)]
-                    table = wbtable(["label", "value"], value)
-                    log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for units as a bar plot")
-                elif name == "factory_action_distribution":
-                    value = [[l, v] for l, v in zip(["Build light", "Build heavy", "Grow lichen"], value)]
-                    table = wbtable(["label", "value"], value)
-                    log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for factories as a bar plot")
-                else:
-                    log_dict[f"{category_name}/{name}"] = np.mean(value)
-        wb.log(log_dict)
+        if config["log_to_wb"]:
+            # Update wandb with average for last x eps
+            categories = stat_collector.get_last_x(config["print_freq"])
+            for category_name, category in categories.items():
+                for name, value in category.items():
+
+                    if name == "unit_action_distribution":
+                        value = [[l, v] for l, v in zip(["Move", "Transfer", "Pickup", "Dig", "Self destruct", "Recharge"], value)]
+                        table = wbtable(["label", "value"], value)
+                        log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for units as a bar plot")
+
+                    elif name == "factory_action_distribution":
+                        value = [[l, v] for l, v in zip(["Build light", "Build heavy", "Grow lichen"], value)]
+                        table = wbtable(["label", "value"], value)
+                        log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for factories as a bar plot")
+                    else:
+                        log_dict[f"{category_name}/{name}"] = np.mean(value)
+        
+            wb.log(log_dict)

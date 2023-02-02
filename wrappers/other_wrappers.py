@@ -64,7 +64,7 @@ class SinglePlayerEnv(gym.Wrapper):
             elif "factory" in unit_id:
                 self.env.state.stats[agent]["actions"]["factories"][act] += 1
 
-        return (obs[0][agent], obs[1]), reward, done[agent], info[agent]
+        return obs, reward, done[agent], info[agent]
 
     def reset(self, **kwargs):
         obs = self.env.reset(**kwargs)

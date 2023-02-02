@@ -1,6 +1,6 @@
 #Training
 max_episodes: 10000000
-print_freq: 10 # print avg reward in the interval (in episodes)
+print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
 batch_size: 512
@@ -28,7 +28,7 @@ video_save_rate: 1000 #How often to save a video, in episodes
 log_to_wb: True
 
 #Reward
-unit_lost_scale: 0.1
+unit_lost_scale: 0
 units_killed_scale: 1
 factory_lost_scale: 10
 
