@@ -41,9 +41,7 @@ def dig(unit, part_of_max, repeat):
     else:
         raise ValueError("Unit is neither LIGHT nor HEAVY??")
     
-    return [dig_single(repeat*int(possible_dig_num*part_of_max), int(possible_dig_num*part_of_max))]
-
-
+    return [dig_single(repeat*int(50*part_of_max), int(possible_dig_num*part_of_max))] #50 for LIGHT and HEAVY
 
 def _move_to_tile(loc_x, loc_y, unit_x, unit_y, repeat):
     """Move to the tile specified. Repeat is 0 or 1"""
@@ -59,7 +57,7 @@ def _move_to_tile(loc_x, loc_y, unit_x, unit_y, repeat):
 
     if y_dir_amount > 0:
         action_queue.append(move_single("south", repeat*np.abs(y_dir_amount), np.abs(y_dir_amount)))
-    elif y_dir_amount > 0:
+    elif y_dir_amount < 0:
         action_queue.append(move_single("north", repeat*np.abs(y_dir_amount), np.abs(y_dir_amount)))
 
     return action_queue
