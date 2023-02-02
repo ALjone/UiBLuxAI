@@ -17,3 +17,6 @@ def move_left():
 
 def pickup(type, amount):
     pickup_single(type, amount)
+
+def move_to_nearest_ice(unit, obs):
+    pass

@@ -1,5 +1,6 @@
 import torch 
 import yaml
+import numpy as np
 def load_config(change_dict = {}):
     config = yaml.safe_load(open("config.yml"))
 
@@ -33,3 +34,14 @@ def formate_time(seconds):
         return f'{int(m)} minutes and {int(s)} seconds' 
     else:
         return f'{int(h)} hours, {int(m)} minutes and {int(s)} seconds'
+
+def find_closest_ice_tils(obs):
+    ice_map = shared_obs["board"]["ice"]
+    ice_tile_locations = np.argwhere(ice_map == 1)
+    ice_tile_distances = np.mean(
+    (ice_tile_locations - np.array(unit["pos"])) ** 2, 1
+    )
+    # normalize the ice tile location
+    closest_ice_tile = (
+        ice_tile_locations[np.argmin(ice_tile_distances)] / env_cfg.map_size
+)
