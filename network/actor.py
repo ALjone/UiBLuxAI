@@ -42,16 +42,16 @@ class actor(nn.Module):
         self.unit_conv = nn.Sequential(*blocks_units)
         self.factory_conv = nn.Sequential(*blocks_factory)
 
-    def forward(self, x:torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        if type(x) == np.ndarray:
-            x = torch.from_numpy(x)
-        if len(x.shape) == 3:
-            x = x.unsqueeze(0)
-        x = x.float()
+    def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+        if type(image_features) == np.ndarray:
+            image_features = torch.from_numpy(image_features)
+        if len(image_features.shape) == 3:
+            image_features = image_features.unsqueeze(0)
+        image_features = image_features.float()
 
-        x = self.shared_conv(x)
-        x_robot = self.unit_conv(x)
-        x_factory = self.factory_conv(x)
+        image_features = self.shared_conv(image_features)
+        x_robot = self.unit_conv(image_features)
+        x_factory = self.factory_conv(image_features)
 
         x_robot = x_robot.permute(0, 2, 3, 1)
         x_factory = x_factory.permute(0, 2, 3, 1)

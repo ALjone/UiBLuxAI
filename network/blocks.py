@@ -46,6 +46,25 @@ class ResSEBlock(nn.Module):
         x = self.activation_function(x)
         return x + inputs
 
+class GlobalBlock(nn.Module):
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.activation = nn.ReLU()
+        self.fc1 = nn.Linear(16, 16)
+        self.fc2 = nn.Linear(16, 12)
+        
+    def forward(self, x):
+        x = self.activation(self.fc1(x))
+        x = self.activation(self.fc2(x))
+        # Batch_size x 12 --> Batch_size x 12 x 1 x 1 --> Batch_size x 12 x 48 x 48
+
+        x = x.unsqueeze(dim = -1).unsqueeze(dim = -1)
+        x = torch.repeat(1,1,48,48)
+        return x
+
+
 class RotationInvariantConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0):
         super(RotationInvariantConv2d, self).__init__()

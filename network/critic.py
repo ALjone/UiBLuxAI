@@ -29,17 +29,17 @@ class critic(nn.Module):
         
         self.linear = nn.Linear((48**2)*5, 1)
 
-    def forward(self, x):
-        if type(x) == np.ndarray:
-            x = torch.from_numpy(x)
-        if len(x.shape) == 3:
-            x = x.unsqueeze(0)
-        x = x.float()
+    def forward(self, image_features: torch.Tensor, global_features: torch.Tensor):
+        if type(image_features) == np.ndarray:
+            image_features = torch.from_numpy(image_features)
+        if len(image_features.shape) == 3:
+            image_features = image_features.unsqueeze(0)
+        image_features = image_features.float()
 
 
-        x = self.conv(x)
-        x = self.linear(x.flatten(1))
-        return x.squeeze()
+        image_features = self.conv(image_features)
+        image_features = self.linear(image_features.flatten(1))
+        return image_features.squeeze()
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
