@@ -1,6 +1,6 @@
 #Training
 max_episodes: 10000000
-print_freq: 100 # print avg reward in the interval (in episodes)
+print_freq: 10 # print avg reward in the interval (in episodes)
 
 #PPO
 batch_size: 128

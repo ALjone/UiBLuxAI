@@ -51,9 +51,9 @@ def _move_to_tile(loc_x, loc_y, unit_x, unit_y, repeat):
     x_dir_amount = loc_x-unit_x
 
     if x_dir_amount > 0:
-        action_queue.append(move_single("east", repeat*np.abs(y_dir_amount), np.abs(x_dir_amount)))
+        action_queue.append(move_single("east", repeat*np.abs(x_dir_amount), np.abs(x_dir_amount)))
     elif x_dir_amount < 0:
-        action_queue.append(move_single("west", repeat*np.abs(y_dir_amount), np.abs(x_dir_amount)))
+        action_queue.append(move_single("west", repeat*np.abs(x_dir_amount), np.abs(x_dir_amount)))
 
     y_dir_amount = loc_y-unit_y
 
@@ -90,7 +90,7 @@ def move_to_closest_factory_and_transport(factory_map, unit, res_type, repeat = 
 def res_mining_loop(res_type, unit, obs, factory_map):
     action_queue = []
 
-    action_queue += move_to_closest_res(unit, obs, repeat = 1)
+    action_queue += move_to_closest_res(res_type, unit, obs, repeat = 1)
     action_queue += dig(unit, 1, repeat = 1)
     action_queue += move_to_closest_factory_and_transport(factory_map, unit, res_type, repeat = 1)
     
