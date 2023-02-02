@@ -15,13 +15,8 @@ class StateSpaceVol1(gym.ObservationWrapper):
     def __init__(self, env: gym.Env) -> None:
         super().__init__(env)
 
-
-    def observation(self, obs):
-        #If we're still in early phase
-        if len(self.agents) == 0:
-            return "", obs
+    def image_features(self, obs):
         main_player = self.agents[0]
-        other_player = self.agents[1]
         shared_obs = obs[main_player]
 
         #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
@@ -43,27 +38,6 @@ class StateSpaceVol1(gym.ObservationWrapper):
         action_queue_length = np.zeros((1, 48, 48))
 
         next_step = np.zeros((2, 48, 48))
-
-
-
-        global_features = np.zeros(15)
-        day = 0
-        night = 0
-        timestep = 0
-        lichen_distribution = 0
-        day_night = 0
-        friendly_factories = 0
-        enemy_factories = 0
-
-        friendly_light = 0
-        friendly_heavy = 0
-        enemy_light = 0
-        enemy_heavy = 0
-        ice_on_map = 0
-        ore_on_map = 0
-        ice_entropy = 0
-        ore_entropy = 0
-        rubble_entropy = 0
         
         for i, player in enumerate(self.agents):
             factories = shared_obs["factories"][player]
@@ -131,8 +105,113 @@ class StateSpaceVol1(gym.ObservationWrapper):
         image_features_flipped = image_features.clone()
         image_features_flipped[(0, 1, 14)] *= -1 #TODO: DOUBLE CHECK THESE VALUES
 
+        return image_features, image_features_flipped
+    
+    def global_features(self, obs):
+        main_player = self.agents[0]
+        other_player = self.agents[1]
+        shared_obs = obs[main_player]
+
+
+        #All these are common
+        day = 0
+        night = 0
+        timestep = self.env.state.real_env_steps / 1000
+        day_night = (1 if self.env.state.real_env_steps % 50 < 30 else 0)
+        ice_on_map = np.sum(shared_obs["board"]["ice"])
+        ore_on_map = np.sum(shared_obs["board"]["ore"])
+        ice_entropy = 0
+        ore_entropy = 0
+        rubble_entropy = 0
+
+        #All these must be flipped
+        friendly_factories = len(shared_obs["factories"][main_player].keys())
+        enemy_factories = len(shared_obs["factories"][other_player].keys())
+        friendly_light = len([unit for unit in shared_obs["units"][main_player].values() if unit["unit_type"] == "LIGHT"])
+        friendly_heavy = len([unit for unit in shared_obs["units"][main_player].values() if unit["unit_type"] == "HEAVY"])
+        enemy_light = len([unit for unit in shared_obs["units"][other_player].values() if unit["unit_type"] == "LIGHT"])
+        enemy_heavy = len([unit for unit in shared_obs["units"][other_player].values() if unit["unit_type"] == "HEAVY"])
+
+        #Player 1 lichen
+        strain_ids = self.state.teams[main_player].factory_strains
+        agent_lichen_mask = np.isin(
+            self.state.board.lichen_strains, strain_ids
+        )
+        friendly_lichen_amount =  np.sum(shared_obs["board"]["lichen"]*agent_lichen_mask)
+
+        strain_ids = self.state.teams[other_player].factory_strains
+        agent_lichen_mask = np.isin(
+            self.state.board.lichen_strains, strain_ids
+        )
+        enemy_lichen_amount =  np.sum(shared_obs["board"]["lichen"]*agent_lichen_mask)
+
+        lichen_distribution = 2*(friendly_lichen_amount/(friendly_lichen_amount+enemy_lichen_amount))-1
+
+        #TODO: Double check
+        main_player_vars = torch.concat(day, 
+                            night, 
+                            timestep, 
+                            day_night, 
+                            ice_on_map, 
+                            ore_on_map, 
+                            ice_entropy,
+                            ore_entropy, 
+                            rubble_entropy, 
+                            friendly_factories, 
+                            friendly_light, 
+                            friendly_heavy, 
+                            enemy_factories, 
+                            enemy_light, 
+                            enemy_heavy, 
+                            lichen_distribution
+                            )
+        
+        other_player_vars = torch.concat(day, 
+                            night, 
+                            timestep, 
+                            day_night, 
+                            ice_on_map, 
+                            ore_on_map, 
+                            ice_entropy,
+                            ore_entropy, 
+                            rubble_entropy, 
+                            enemy_factories, 
+                            enemy_light, 
+                            enemy_heavy, 
+                            friendly_factories, 
+                            friendly_light, 
+                            friendly_heavy, 
+                            lichen_distribution * -1
+                            )
+
+        return main_player_vars, other_player_vars
+
+
+    def observation(self, obs):
+        #If we're still in early phase
+        if len(self.agents) == 0:
+            return "", obs
+        main_player = self.agents[0]
+        other_player = self.agents[1]
+
+        
+        main_player_image_features, other_player_image_features = self.image_features(obs)
+
+        main_player_global_features, other_player_global_features = self.global_features(obs)
+
         #TODO: Add global features
-        image_state = {main_player: image_features, other_player: image_features_flipped}
+        image_state = {
+                        main_player: 
+                            {
+                                "image_features": main_player_image_features,
+                                "global_features": main_player_global_features
+                            },
+                        other_player: 
+                            {
+                                "image_features": other_player_image_features,
+                                "global_features": other_player_global_features
+                            }
+                    }
     
         return image_state, obs
 

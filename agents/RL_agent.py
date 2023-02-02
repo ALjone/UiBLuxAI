@@ -82,15 +82,15 @@ class Agent():
             return dict()
 
     def act(self, state, remainingOverageTime: int = 60):
+        features = state[0][self.player]
         obs = state[1]
-        state = state[0]
-        image = state[self.player].to(self.device)
+
+        image_features = features["image_features"].to(self.device)
+        global_features = features["global_features"].to(self.device)
+
         units = obs[self.player]["units"][self.player].values()
         factories = obs[self.player]["factories"][self.player].values()
 
-        unit_output, factory_output = self.PPO.select_action(image, obs)
+        unit_output, factory_output = self.PPO.select_action(image_features, obs)
 
-        # NOTE How actions are formatted
-        # a[0] (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
-        # a[1] = direction (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
         return outputs_to_actions(unit_output.detach().cpu(), factory_output.detach().cpu(), units, factories)

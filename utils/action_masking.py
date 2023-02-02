@@ -2,6 +2,8 @@ from .move_utils import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from math import floor
 import torch
 
+MASK_EPS = 1e-7
+
 
 def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
     if dir == "right":
@@ -51,37 +53,37 @@ def single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player = "
     # (0, 0) is top left #TODO: Is this true?
     #TODO: Should check if there is a factory there
     if x == 0 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "left"):
-        action_mask[4] = 0
+        action_mask[4] = MASK_EPS
     if x == 47 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "right"):
-        action_mask[2] = 0
+        action_mask[2] = MASK_EPS
     if y == 0 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "up"):
-        action_mask[1] = 0
+        action_mask[1] = MASK_EPS
     if y == 47 or power < calculate_move_cost(x, y, move_cost_base, rubble_move_modifier, rubble, "down"):
-        action_mask[3] = 0
+        action_mask[3] = MASK_EPS
 
     #Dig
     if unit["power"] < dig_cost or list(unit["pos"]) in factory_pos:
-        action_mask[5] = 0
+        action_mask[5] = MASK_EPS
 
     #Recharge, max is 150 for LIGHT and 3000 for heavy per config
     #TODO: This should be based on how much is recharged each turn
     if  power == (150 if unit["unit_type"] else 3000):
-        action_mask[6] = 0
+        action_mask[6] = MASK_EPS
     
     #Self destruct, requires 10 power
     #NOTE: Self destruct is illegal for now
     if True: #power < (10 if unit["unit_type"] == "LIGHT" else 100):
-        action_mask[7] = 0 
+        action_mask[7] = MASK_EPS
 
     #TODO: Only center
     #Transport ice
     if unit["cargo"]["ice"] == 0 or not can_transfer_to_tile(x, y, unit_pos, factory_pos):
-        action_mask[8] = 0
+        action_mask[8] = MASK_EPS
 
     #TODO: Only center
     #Transport ore
     if unit["cargo"]["ore"] == 0 or not can_transfer_to_tile(x, y, unit_pos, factory_pos):
-        action_mask[9] = 0
+        action_mask[9] = MASK_EPS
 
     return action_mask
 
@@ -103,13 +105,13 @@ def single_factory_action_mask(factory, obs, device):
     power = factory["power"]
 
     if metal < 10 or power < 50:
-        action_mask[0] = 0
+        action_mask[0] = MASK_EPS
 
     if metal < 100 or power < 500:
-        action_mask[1] = 0
+        action_mask[1] = MASK_EPS
     
     if water < calculate_water_cost(*factory["pos"], obs):
-        action_mask[2] = 0
+        action_mask[2] = MASK_EPS
 
     return action_mask
 

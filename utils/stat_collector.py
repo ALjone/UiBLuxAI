@@ -53,8 +53,8 @@ class StatCollector:
 
         #Generation
         gen = stats["generation"]
-        self.ice_mined.append(sum([val for val in gen["ice"].values()])) #Average over LIGHT, HEAVY 
-        self.ore_mined.append(sum([val for val in gen["ore"].values()])) #Average over LIGHT, HEAVY
+        self.ice_mined.append(sum([val for val in gen["ice"].values()])) #Sum over LIGHT, HEAVY 
+        self.ore_mined.append(sum([val for val in gen["ore"].values()])) #Sum over LIGHT, HEAVY
         self.lichen_made.append(gen["lichen"])
         self.light_robots_built.append(gen["built"]["LIGHT"])
         self.heavy_robots_built.append(gen["built"]["HEAVY"])
