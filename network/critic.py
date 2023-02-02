@@ -3,7 +3,7 @@ from torch import nn
 from torchvision.ops import SqueezeExcitation
 import numpy as np
 from torch.distributions.categorical import Categorical
-from .blocks import ResSEBlock, ConvBlock
+from .blocks import ResSEBlock, ConvBlock, GlobalBlock
 
 
 class critic(nn.Module):
@@ -25,6 +25,8 @@ class critic(nn.Module):
         blocks.append(layer(intermediate_channels, intermediate_channels))
         blocks.append(nn.Conv2d(intermediate_channels, 5, 1))
 
+        self.global_block = GlobalBlock()
+
         self.conv = nn.Sequential(*blocks)
         
         self.linear = nn.Linear((48**2)*5, 1)
@@ -34,8 +36,9 @@ class critic(nn.Module):
             image_features = torch.from_numpy(image_features)
         if len(image_features.shape) == 3:
             image_features = image_features.unsqueeze(0)
+        global_image_channels = self.global_block(global_features)
+        image_features = torch.concatenate(image_features, global_image_channels, dim=1)  # Assumning Batch_Size x Channels x 48 x 48
         image_features = image_features.float()
-
 
         image_features = self.conv(image_features)
         image_features = self.linear(image_features.flatten(1))
