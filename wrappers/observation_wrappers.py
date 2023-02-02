@@ -114,8 +114,8 @@ class StateSpaceVol1(gym.ObservationWrapper):
 
 
         #All these are common
-        day = np.sin((2*np.pi*self.env.state.real_env_step)/1000)*0.3
-        night = np.cos((2*np.pi*self.env.state.real_env_step)/1000)*0.2
+        day = np.sin((2*np.pi*self.env.state.real_env_steps)/1000)*0.3
+        night = np.cos((2*np.pi*self.env.state.real_env_steps)/1000)*0.2
         timestep = self.env.state.real_env_steps / 1000
         day_night = (1 if self.env.state.real_env_steps % 50 < 30 else 0)
         ice_on_map = np.sum(shared_obs["board"]["ice"])
@@ -131,24 +131,29 @@ class StateSpaceVol1(gym.ObservationWrapper):
         friendly_heavy = len([unit for unit in shared_obs["units"][main_player].values() if unit["unit_type"] == "HEAVY"])
         enemy_light = len([unit for unit in shared_obs["units"][other_player].values() if unit["unit_type"] == "LIGHT"])
         enemy_heavy = len([unit for unit in shared_obs["units"][other_player].values() if unit["unit_type"] == "HEAVY"])
-
+        
         #Player 1 lichen
-        strain_ids = self.state.teams[main_player].factory_strains
-        agent_lichen_mask = np.isin(
-            self.state.board.lichen_strains, strain_ids
-        )
-        friendly_lichen_amount =  np.sum(shared_obs["board"]["lichen"]*agent_lichen_mask)
+        if main_player in self.state.teams.keys():
+            strain_ids = self.state.teams[main_player].factory_strains
+            agent_lichen_mask = np.isin(
+                self.state.board.lichen_strains, strain_ids
+            )
+            friendly_lichen_amount =  np.sum(shared_obs["board"]["lichen"]*agent_lichen_mask)
 
-        strain_ids = self.state.teams[other_player].factory_strains
-        agent_lichen_mask = np.isin(
-            self.state.board.lichen_strains, strain_ids
-        )
-        enemy_lichen_amount =  np.sum(shared_obs["board"]["lichen"]*agent_lichen_mask)
-
-        lichen_distribution = 2*(friendly_lichen_amount/(friendly_lichen_amount+enemy_lichen_amount))-1
+            strain_ids = self.state.teams[other_player].factory_strains
+            agent_lichen_mask = np.isin(
+                self.state.board.lichen_strains, strain_ids
+            )
+            enemy_lichen_amount =  np.sum(shared_obs["board"]["lichen"]*agent_lichen_mask)
+            if friendly_lichen_amount + enemy_lichen_amount == 0:
+                lichen_distribution = 0
+            else:
+                lichen_distribution = 2*(friendly_lichen_amount/(friendly_lichen_amount+enemy_lichen_amount))-1
+        else:
+            lichen_distribution = 0
 
         #TODO: Double check
-        main_player_vars = torch.concat(day, 
+        main_player_vars = torch.tensor((day, 
                             night, 
                             timestep, 
                             day_night, 
@@ -163,10 +168,10 @@ class StateSpaceVol1(gym.ObservationWrapper):
                             enemy_factories, 
                             enemy_light, 
                             enemy_heavy, 
-                            lichen_distribution
+                            lichen_distribution)
                             )
         
-        other_player_vars = torch.concat(day, 
+        other_player_vars = torch.tensor((day, 
                             night, 
                             timestep, 
                             day_night, 
@@ -181,8 +186,9 @@ class StateSpaceVol1(gym.ObservationWrapper):
                             friendly_factories, 
                             friendly_light, 
                             friendly_heavy, 
-                            lichen_distribution * -1
+                            lichen_distribution * -1)
                             )
+
 
         return main_player_vars, other_player_vars
 

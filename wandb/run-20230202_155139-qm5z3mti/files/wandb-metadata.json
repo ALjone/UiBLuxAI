@@ -1,0 +1,50 @@
+{
+    "os": "Windows-10-10.0.19044-SP0",
+    "python": "3.10.9",
+    "heartbeatAt": "2023-02-02T14:51:40.618738",
+    "startedAt": "2023-02-02T14:51:39.700629",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "c:\\Users\\Audun\\Lux\\main.py",
+    "codePath": "main.py",
+    "git": {
+        "remote": "https://github.com/ALjone/UiBLuxAI.git",
+        "commit": "5f4b839ee97bdf4748594e67649efa2e7d9eff47"
+    },
+    "email": "audun.henriksen@gmail.com",
+    "root": "C:/Users/Audun/Lux",
+    "host": "DESKTOP-41LHKIR",
+    "username": "Audun",
+    "executable": "C:\\Users\\Audun\\miniconda3\\envs\\LuxAI\\python.exe",
+    "cpu_count": 4,
+    "cpu_count_logical": 4,
+    "cpu_freq": {
+        "current": 3792.0,
+        "min": 0.0,
+        "max": 3792.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3792.0,
+            "min": 0.0,
+            "max": 3792.0
+        }
+    ],
+    "disk": {
+        "total": 465.1578712463379,
+        "used": 410.28146743774414
+    },
+    "gpu": "NVIDIA GeForce GTX 1070",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce GTX 1070",
+            "memory_total": 8589934592
+        }
+    ],
+    "memory": {
+        "total": 31.96031951904297
+    }
+}

@@ -25,7 +25,7 @@ device: cuda #cuda, cpu, mps
 path:  model.t #model.t 
 save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes
-log_to_wb: True
+log_to_wb: False
 
 #Reward
 unit_lost_scale: 0

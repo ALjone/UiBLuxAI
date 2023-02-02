@@ -1,5 +1,5 @@
-from idx_to_lux_move import move
-from idx_to_lux_move import pickup_single
+from .single_move_actions import move
+from .single_move_actions import pickup_single
 import numpy as np
 
 # a[1] = direction (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)

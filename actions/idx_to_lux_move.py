@@ -1,5 +1,5 @@
 import numpy as np
-from single_move_actions import move, dig, recharge, self_destruct, transfer
+from .single_move_actions import move, dig, recharge, self_destruct, transfer
 
 UNIT_ACTION_IDXS = 10
 FACTORY_ACTION_IDXS = 4
