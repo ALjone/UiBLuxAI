@@ -74,15 +74,13 @@ def move_to_closest_res(res_type, unit, obs, repeat = 0)-> list:
 
 def move_to_closest_factory_and_transport(factory_map, unit, res_type, repeat = 0) -> list:
     action_queue = []
-    print(factory_map.shape)
     factory_map[factory_map != 1] = 0         #Turn it into actual pos
 
     factory_loc_x, factory_loc_y = find_closest_tile(factory_map, unit["pos"])
     unit_x, unit_y = unit["pos"]
 
     action_queue += _move_to_tile(factory_loc_x, factory_loc_y, unit_x, unit_y, repeat)
-    if repeat == 1:
-        action_queue.append(transfer_single(res_type, 1000, repeat = repeat))
+    action_queue.append(transfer_single(res_type, 1000, repeat = repeat))
     
     return action_queue
 

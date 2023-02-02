@@ -94,5 +94,4 @@ class Agent():
         unit_output, factory_output = self.PPO.select_action(image_features, obs)
 
         action = outputs_to_actions(unit_output.detach().cpu(), factory_output.detach().cpu(), units, factories, obs, factory_map = image_features[1].detach().cpu().numpy()) #Second channel is always factory_map
-        print(action)
         return action
