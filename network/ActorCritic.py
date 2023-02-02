@@ -23,14 +23,14 @@ class ActorCritic(nn.Module):
     def forward(self, state):
         return self.act(state)
     
-    def act(self, state, obs):
+    def act(self, image_features, global_features, obs):
         #NOTE: Assumes first channel is unit mask for our agent
         #NOTE: Assumes second channel is factory mask for our agent
         
         #unit_mask = unit_action_mask(obs, self.device)
         factory_mask = factory_action_mask(obs, self.device)
 
-        action_probs_unit, action_probs_factories = self.actor(state)
+        action_probs_unit, action_probs_factories = self.actor(image_features, global_features)
         #assert action_probs_unit.shape == unit_mask.shape
         assert action_probs_factories.shape == factory_mask.shape
 
@@ -39,30 +39,30 @@ class ActorCritic(nn.Module):
         unit_dist, factory_dist = Categorical(action_probs_unit), Categorical(action_probs_factories)
 
         action_unit = unit_dist.sample()
-        action_logprob_unit = unit_dist.log_prob(action_unit)*(state[0] == 1)
+        action_logprob_unit = unit_dist.log_prob(action_unit)*(image_features[0] == 1)
 
         action_factory = factory_dist.sample()
-        action_logprob_factory = factory_dist.log_prob(action_factory)*(state[1] == 1)
+        action_logprob_factory = factory_dist.log_prob(action_factory)*(image_features[1] == 1)
 
-        state_val = self.critic(state)
+        state_val = self.critic(image_features, global_features)
 
         return action_unit.detach(), action_factory.detach(), torch.sum(action_logprob_unit.detach()), torch.sum(action_logprob_factory.detach()), state_val.detach()
     
-    def evaluate(self, state, unit_action, factory_action):
+    def evaluate(self, image_features, global_features, unit_action, factory_action):
         #TODO: Does this also need the same type of action masking?
 
         #NOTE: Assumes first channel is unit mask for our agent
         #NOTE: Assumes second channel is factory mask for our agent
-        action_probs_unit, action_probs_factories = self.actor(state)
+        action_probs_unit, action_probs_factories = self.actor(image_features, global_features)
 
         unit_dist = Categorical(action_probs_unit)
-        action_logprobs_unit = unit_dist.log_prob(unit_action)*(state[:, 0] == 1)
-        unit_dist_entropy = (unit_dist.entropy()*state[:, 0]).sum((1, 2))
+        action_logprobs_unit = unit_dist.log_prob(unit_action)*(image_features[:, 0] == 1)
+        unit_dist_entropy = (unit_dist.entropy()*image_features[:, 0]).sum((1, 2))
 
         factory_dist = Categorical(action_probs_factories)
-        action_logprobs_factories = factory_dist.log_prob(factory_action)*(state[:, 1] == 1)
-        factory_dist_entropy = (factory_dist.entropy()*state[:, 0]).sum((1, 2))
+        action_logprobs_factories = factory_dist.log_prob(factory_action)*(image_features[:, 1] == 1)
+        factory_dist_entropy = (factory_dist.entropy()*image_features[:, 0]).sum((1, 2))
 
-        state_values = self.critic(state)
+        state_values = self.critic(image_features, global_features)
         
         return torch.sum(action_logprobs_unit, dim=(1, 2)), torch.sum(action_logprobs_factories, dim = (1, 2)), state_values, unit_dist_entropy, factory_dist_entropy

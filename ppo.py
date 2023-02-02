@@ -9,7 +9,8 @@ class RolloutBuffer:
     def __init__(self):
         self.unit_actions = []
         self.factory_actions = []
-        self.states = []
+        self.image_features = []
+        self.global_features = []
         self.unit_logprobs = []
         self.factory_logprobs = []
         self.rewards = []
@@ -19,7 +20,8 @@ class RolloutBuffer:
     def clear(self):
         del self.unit_actions[:]
         del self.factory_actions[:]
-        del self.states[:]
+        del self.image_features[:]
+        del self.global_features[:]
         del self.unit_logprobs[:]
         del self.factory_logprobs[:]
         del self.rewards[:]
@@ -47,13 +49,14 @@ class PPO:
         
         self.MseLoss = nn.MSELoss()
 
-    def select_action(self, state, obs):
+    def select_action(self, image_features, global_features, obs):
 
         with torch.no_grad():
-            state = state.float().to(self.device)
-            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(state, obs)
+            image_features = image_features.float().to(self.device)
+            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(image_features, global_features, obs)
         
-        self.buffer.states.append(state)
+        self.buffer.image_features.append(image_features)
+        self.buffer.global_features.append(global_features)
         self.buffer.unit_actions.append(action_unit)
         self.buffer.factory_actions.append(action_factory)
         self.buffer.unit_logprobs.append(action_logprobs_unit)
@@ -78,7 +81,8 @@ class PPO:
         rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-7)
 
         # convert list to tensor
-        old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(self.device)
+        old_image_features = torch.squeeze(torch.stack(self.buffer.image_features, dim=0)).detach().to(self.device)
+        old_global_features = torch.squeeze(torch.stack(self.buffer.global_features, dim=0)).detach().to(self.device)
         old_actions_unit = torch.squeeze(torch.stack(self.buffer.unit_actions, dim=0)).detach().to(self.device)
         old_actions_factory = torch.squeeze(torch.stack(self.buffer.factory_actions, dim=0)).detach().to(self.device)
         old_logprobs_unit = torch.squeeze(torch.stack(self.buffer.unit_logprobs, dim=0)).detach().to(self.device)
@@ -93,7 +97,7 @@ class PPO:
         for _ in tqdm(range(self.K_epochs), leave = False, desc = "Training"):
 
             # Evaluating old actions and values
-            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_states, old_actions_unit, old_actions_factory)
+            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_image_features, old_global_features, old_actions_unit, old_actions_factory)
 
             loss = 0
 

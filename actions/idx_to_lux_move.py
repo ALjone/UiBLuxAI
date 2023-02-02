@@ -67,6 +67,17 @@ def outputs_to_actions(unit_output, factory_output, units, factories, obs, facto
     unit_actions.update(_factory_output_to_actions(factory_output, factories))
     return unit_actions
 
+
+def unit_id_to_action_idx(units, unit_output):
+    actions = {}
+    for unit in units:
+        x, y = unit["pos"][0], unit["pos"][1]
+        action_idx = unit_output[x, y].item()
+        if action_idx == 0: continue #The "Do nothing" action
+        actions[unit["unit_id"]] = action_idx
+
+    return actions
+
 def _unit_output_to_actions(unit_output, units, obs, factory_map):
     """Turns outputs from the model into action dicts for units"""
     actions = {}
