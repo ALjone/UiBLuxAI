@@ -3,7 +3,7 @@ import torch.nn.functional as F
 import torch
 from torch import nn
 import numpy as np
-from .blocks import ResSEBlock, ConvBlock
+from .blocks import ResSEBlock, ConvBlock, GlobalBlock
 
 
 class actor(nn.Module):
@@ -38,17 +38,24 @@ class actor(nn.Module):
             blocks_factory.append(layer(intermediate_channels, intermediate_channels))
         blocks_factory.append(nn.Conv2d(intermediate_channels, factory_action_space, 1))
 
+        #Make global features part
+        self.global_block =  GlobalBlock()
+
         self.shared_conv = nn.Sequential(*blocks)
         self.unit_conv = nn.Sequential(*blocks_units)
         self.factory_conv = nn.Sequential(*blocks_factory)
 
     def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+
         if type(image_features) == np.ndarray:
             image_features = torch.from_numpy(image_features)
         if len(image_features.shape) == 3:
             image_features = image_features.unsqueeze(0)
+        global_image_channels = self.global_block(global_features)
+        image_features = torch.concatenate(image_features, global_image_channels, dim=1)  # Assumning Batch_Size x Channels x 48 x 48
         image_features = image_features.float()
 
+        # TODO: 12 new dimensions for image_features input
         image_features = self.shared_conv(image_features)
         x_robot = self.unit_conv(image_features)
         x_factory = self.factory_conv(image_features)
