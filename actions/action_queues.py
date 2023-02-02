@@ -9,22 +9,22 @@ import numpy as np
 
 # a[1] = direction (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
 def move_north():
-    return move_single(1, 1, 1)
+    return [move_single(1, 1, 1)]
 
 def move_east():
-    return move_single(2, 1, 1)
+    return [move_single(2, 1, 1)]
 
 def move_south():
-    return move_single(3, 1, 1)
+    return [move_single(3, 1, 1)]
 
 def move_west():
-    return move_single(4, 1, 1)
+    return [move_single(4, 1, 1)]
 
 def pickup(res_type, amount):
-    pickup_single(res_type, amount)
+    return [pickup_single(res_type, amount)]
 
 def self_destruct():
-    return self_destruct_single()
+    return [self_destruct_single()]
 
 def dig(unit, part_of_max, repeat):
     """Digs until cargo is filled up to percentage_of_max. Repeat is 0 or 1"""
@@ -74,6 +74,7 @@ def move_to_closest_res(res_type, unit, obs, repeat = 0)-> list:
 
 def move_to_closest_factory_and_transport(factory_map, unit, res_type, repeat = 0) -> list:
     action_queue = []
+    print(factory_map.shape)
     factory_map[factory_map != 1] = 0         #Turn it into actual pos
 
     factory_loc_x, factory_loc_y = find_closest_tile(factory_map, unit["pos"])

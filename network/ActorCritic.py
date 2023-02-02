@@ -27,15 +27,15 @@ class ActorCritic(nn.Module):
         #NOTE: Assumes first channel is unit mask for our agent
         #NOTE: Assumes second channel is factory mask for our agent
         
-        unit_mask = unit_action_mask(obs, self.device)
-        factory_mask = factory_action_mask(obs, self.device)
+        #unit_mask = unit_action_mask(obs, self.device)
+        #factory_mask = factory_action_mask(obs, self.device)
 
         action_probs_unit, action_probs_factories = self.actor(state)
-        assert action_probs_unit.shape == unit_mask.shape
-        assert action_probs_factories.shape == factory_mask.shape
+        #assert action_probs_unit.shape == unit_mask.shape
+        #assert action_probs_factories.shape == factory_mask.shape
 
-        action_probs_unit *= unit_mask
-        action_probs_factories *= factory_mask
+        #action_probs_unit *= unit_mask
+        #action_probs_factories *= factory_mask
         unit_dist, factory_dist = Categorical(action_probs_unit), Categorical(action_probs_factories)
 
         action_unit = unit_dist.sample()

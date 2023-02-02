@@ -1,5 +1,5 @@
 import numpy as np
-from .action_queues import move_north, move_south, move_east, move_west
+from .action_queues import move_north, move_south, move_east, move_west, move_single
 from .action_queues import pickup, self_destruct, dig
 from .action_queues import move_to_closest_factory_and_transport, move_to_closest_res, res_mining_loop
 
@@ -28,7 +28,7 @@ def _unit_idx_to_action(idx, obs, factory_map, unit):
     if idx == 0:
         raise ValueError("This shouldn't be possible! Better to just not submit an action")
     if idx == 1: 
-        return [] #ABORT QUEUE
+        return [move_single(0, 0, 1)] #ABORT QUEUE
     if idx == 2:
         return move_north()
     if idx == 3: 
@@ -38,19 +38,19 @@ def _unit_idx_to_action(idx, obs, factory_map, unit):
     if idx == 5:
         return move_west()
     if idx == 6:
-        return pickup("power")
+        return pickup("power", 1000)
     if idx == 7:
-        move_to_closest_factory_and_transport(factory_map, unit, "ice")
+        return move_to_closest_factory_and_transport(factory_map, unit, "ice")
     if idx == 8:
-        move_to_closest_factory_and_transport(factory_map, unit, "ore")
+        return move_to_closest_factory_and_transport(factory_map, unit, "ore")
     if idx == 9:
-        move_to_closest_res("ice", unit, obs)
+        return move_to_closest_res("ice", unit, obs)
     if idx == 10:
-        move_to_closest_res("ore", unit, obs)
+        return move_to_closest_res("ore", unit, obs)
     if idx == 11:
-        res_mining_loop("ice", unit, obs, factory_map)
+        return res_mining_loop("ice", unit, obs, factory_map)
     if idx == 12:
-        res_mining_loop("ore", unit, obs, factory_map)
+        return res_mining_loop("ore", unit, obs, factory_map)
 
 
 def _factory_idx_to_action(idx):
@@ -74,7 +74,7 @@ def _unit_output_to_actions(unit_output, units, obs, factory_map):
             x, y = unit["pos"][0], unit["pos"][1]
             action = unit_output[x, y].item()
             if action == 0: continue #The "Do nothing" action
-            actions[unit["unit_id"]] = [_unit_idx_to_action(action, obs, factory_map, unit)]
+            actions[unit["unit_id"]] = _unit_idx_to_action(action, obs, factory_map, unit)
 
     return actions
 

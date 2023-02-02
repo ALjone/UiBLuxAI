@@ -39,9 +39,8 @@ def find_closest_tile(tile_map, unit_pos):
     tile_locations = np.argwhere(tile_map == 1)
     
     tile_distances = np.mean(
-    (tile_locations - np.array(unit_pos)), 1
+        (tile_locations - np.array(unit_pos)), 1
     )
-
     # normalize the ice tile location
     closest_tile = (
         tile_locations[np.argmin(tile_distances)]
