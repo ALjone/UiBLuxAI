@@ -1,28 +1,28 @@
 import numpy as np
 def pickup(type, x = 1000):
     if type == "ice":
-        return np.array(2, 0, 0, x, 0, 1)
+        return np.array([2, 0, 0, x, 0, 1])
     elif type == "ore":
-        return np.array(2, 0, 1, x, 0, 1)
+        return np.array([2, 0, 1, x, 0, 1])
     elif type == "water":
-        return np.array(2, 0, 2, x, 0, 1)
+        return np.array([2, 0, 2, x, 0, 1])
     elif type == "metal":
-        return np.array(2, 0, 3, x, 0, 1)
+        return np.array([2, 0, 3, x, 0, 1])
     elif type == "power":
-        return np.array(2, 0, 4, x, 0, 1)
+        return np.array([2, 0, 4, x, 0, 1])
 
 def transfer(type, x = 1000):
     """Transfers all the ice to center"""
     if type == "ice":
-        return np.array(1, 0, 0, x, 0, 1)
+        return np.array([1, 0, 0, x, 0, 1])
     elif type == "ore":
-        return np.array(1, 0, 1, x, 0, 1)
+        return np.array([1, 0, 1, x, 0, 1])
     elif type ==" water":
-        return np.array(1, 0, 2, x, 0, 1)
+        return np.array([1, 0, 2, x, 0, 1])
     elif type == "metal":
-        return np.array(1, 0, 3, x, 0, 1)
+        return np.array([1, 0, 3, x, 0, 1])
     elif type == "power":
-        return np.array(1, 0, 4, x, 0, 1)
+        return np.array([1, 0, 4, x, 0, 1])
 
 
 def self_destruct():
