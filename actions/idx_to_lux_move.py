@@ -1,4 +1,5 @@
 import numpy as np
+from single_move_actions import move, dig, recharge, self_destruct, transfer
 
 UNIT_ACTION_IDXS = 10
 FACTORY_ACTION_IDXS = 4
@@ -35,36 +36,10 @@ def unit_idx_to_action(idx, type):
          return self_destruct()
 
     if idx == 8:
-        return transfer_ice()
+        return transfer("ice")
     
     if idx == 9:
-        return transfer_ore()
-
-
-def transfer_ice(x = 1000):
-    """Transfers all the ice to center"""
-    return np.array([1, 0, 0, x, 0, 1])
-
-def transfer_ore(x = 1000):
-    """Transfers all the ore to center"""
-    return np.array([1, 0, 1, x, 0, 1])
-    
-def self_destruct():
-     """Gets the action for self-destruction :((("""
-     return np.array([4, 0, 0, 0, 0, 1])
-
-def recharge(x, repeat=0, n=1):
-    """Gets the action for rechargings"""
-    return np.array([5, 0, 0, x, repeat, n])
-
-def dig(repeat=0, n=1):
-    """Gets the action for digging"""
-    return np.array([3, 0, 0, 0, repeat, n])
-
-def move(dir, repeat = 0, n = 1):
-    """Gets the action for moving in a direction"""
-    #dir (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
-    return np.array([0, dir, 0, 0, repeat, n])
+        return transfer("ore")
 
 
 def factory_idx_to_action(idx):

@@ -2,7 +2,7 @@ from lux.kit import obs_to_game_state, EnvConfig
 from lux.utils import my_turn_to_place_factory
 import numpy as np
 import scipy
-from utils.move_utils import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from ppo import PPO
 import torch
 

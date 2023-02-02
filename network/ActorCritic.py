@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from .actor import actor
 from .critic import critic
-from utils.action_masking import unit_action_mask, factory_action_mask
+from actions.action_masking import unit_action_mask, factory_action_mask
 
 class ActorCritic(nn.Module):
     def __init__(self, unit_action_dim, factory_action_dim, config):

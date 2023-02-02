@@ -1,4 +1,4 @@
-from .move_utils import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from .idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from math import floor
 import torch
 

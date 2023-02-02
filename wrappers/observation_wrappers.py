@@ -114,8 +114,8 @@ class StateSpaceVol1(gym.ObservationWrapper):
 
 
         #All these are common
-        day = 0
-        night = 0
+        day = np.sin((2*np.pi*self.env.state.real_env_step)/1000)*0.3
+        night = np.cos((2*np.pi*self.env.state.real_env_step)/1000)*0.2
         timestep = self.env.state.real_env_steps / 1000
         day_night = (1 if self.env.state.real_env_steps % 50 < 30 else 0)
         ice_on_map = np.sum(shared_obs["board"]["ice"])

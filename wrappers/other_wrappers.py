@@ -2,7 +2,7 @@ from lux.kit import obs_to_game_state
 from lux.utils import my_turn_to_place_factory
 import gym
 import numpy as np
-from utils.move_utils import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from actions.idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 
 
 class SinglePlayerEnv(gym.Wrapper):
