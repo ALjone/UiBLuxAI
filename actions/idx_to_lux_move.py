@@ -77,7 +77,7 @@ def _unit_output_to_actions(unit_output, units, obs, factory_map):
             action = _unit_idx_to_action(action, obs, factory_map, unit)
             if action == []: #If you stand on ice and move to ice...
                 continue
-            actions[unit["unit_id"]] = _unit_idx_to_action(action, obs, factory_map, unit)
+            actions[unit["unit_id"]] = action
 
     return actions
 
