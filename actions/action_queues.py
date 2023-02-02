@@ -88,7 +88,8 @@ def res_mining_loop(res_type, unit, obs, factory_map):
     action_queue = []
 
     action_queue += move_to_closest_res(res_type, unit, obs, repeat = 1)
-    action_queue += dig(unit, 1, repeat = 1)
+    action_queue += dig(unit, 0.5, repeat = 1)
     action_queue += move_to_closest_factory_and_transport(factory_map, unit, res_type, repeat = 1)
-    
+
+    #print(action_queue)
     return action_queue

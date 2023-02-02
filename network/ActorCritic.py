@@ -10,7 +10,7 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
         self.device = config["device"]
 
-        channels = 20
+        channels = 32
 
         self.actor = actor(channels, unit_action_dim, factory_action_dim, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"]).to(self.device)
         # critic

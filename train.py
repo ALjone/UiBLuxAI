@@ -107,6 +107,7 @@ def train(env, agent, config):
                 for name, value in category.items():
 
                     if name == "unit_action_distribution":
+                        #TODO: This dist is super wrong
                         value = [[l, v] for l, v in zip(["Move", "Transfer", "Pickup", "Dig", "Self destruct", "Recharge"], value)]
                         table = wbtable(["label", "value"], value)
                         log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for units as a bar plot")

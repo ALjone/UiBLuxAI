@@ -3,7 +3,7 @@ max_episodes: 10000000
 print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
-batch_size: 256
+batch_size: 1024
 actor_lr: 0.0003
 critic_lr: 0.0003
 gamma: 0.99

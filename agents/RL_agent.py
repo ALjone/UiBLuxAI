@@ -87,20 +87,22 @@ class Agent():
     def act(self, state, remainingOverageTime: int = 60):
         features = state[0][self.player]
         obs = state[1]
+        units = obs[self.player]["units"][self.player].values()
+        factories = obs[self.player]["factories"][self.player].values()
 
         image_features = features["image_features"].to(self.device)
         action_queue_type = torch.zeros((UNIT_ACTION_IDXS-1, 48, 48), device = self.device) #-1 because of the do nothing action
 
         for unit_id, action in self.action_queue.items():
-            pos = units[unit_id]
+            if not unit_id in obs[self.player]["units"][self.player].keys(): continue
+            pos = obs[self.player]["units"][self.player][unit_id]["pos"]
             action_queue_type[action-1, pos[0], pos[1]] = 1
 
+        #First in cat is first in output, so unit/factory mask is kept!!
         image_features = torch.cat((image_features, action_queue_type), dim=0)
 
         global_features = features["global_features"].to(self.device)
 
-        units = obs[self.player]["units"][self.player].values()
-        factories = obs[self.player]["factories"][self.player].values()
 
         unit_output, factory_output = self.PPO.select_action(image_features, global_features, obs)
 
