@@ -1,10 +1,11 @@
 import time
-from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 from utils.utils import formate_time
 from tqdm import tqdm
 from utils.stat_collector import StatCollector
 from utils.wandb_logging import WAndB
+from wandb.plot import bar
+from wandb import Table as wbtable
 
 
 def do_early_phase(env, agent):
@@ -18,7 +19,7 @@ def do_early_phase(env, agent):
     return state
 
 
-def train(env, agent, config, writer=None, log_to_wb=True):
+def train(env, agent, config):
     assert env.collect_stats
 
     stat_collector = StatCollector("player_0")
@@ -31,9 +32,7 @@ def train(env, agent, config, writer=None, log_to_wb=True):
     highest_reward = -np.inf
     last_x_ep_time = time.time()
 
-    if writer is None:
-        writer = SummaryWriter()
-    if (log_to_wb):
+    if (config["log_to_wb"]):
         wb = WAndB(config=config, run_name='Testing run')
     # training loop
     for _ in range(config["max_episodes"]//config["print_freq"]):
@@ -64,7 +63,6 @@ def train(env, agent, config, writer=None, log_to_wb=True):
                 if time_step % config["batch_size"] == 0:
                     loss = agent.PPO.update()
                     losses.append(loss)
-                ep_losses.append(loss)
 
                 # break; if the episode is over
                 if done:
@@ -73,13 +71,6 @@ def train(env, agent, config, writer=None, log_to_wb=True):
             stat_collector.update(env.state.stats)
             print_running_reward += current_ep_reward
             print_running_episodes += 1
-            ep_loss = 0
-            if (ep_losses):
-                ep_loss = sum(ep_losses)/len(ep_losses)
-            if (log_to_wb):
-                wb.log({"Reward pr episode": current_ep_reward,
-                        "Loss pr episode": ep_loss,
-                        "Timesteps pr episode": ep_timesteps})
 
             i_episode += 1
 
@@ -100,17 +91,22 @@ def train(env, agent, config, writer=None, log_to_wb=True):
             highest_reward == print_avg_reward
             agent.PPO.save(config["save_path"])
 
-        writer.add_scalar("Main/Average reward", print_avg_reward, i_episode)
-        writer.add_scalar("Main/Average episode length",
-                          step_counter/config['print_freq'], i_episode)
-        writer.add_scalar("Main/Average steps per second",
-                          steps_per_second, i_episode)
-        writer.add_scalar("Main/Average loss",
-                          np.mean(losses).item(), i_episode)
 
-        # Update writer with average for last x eps
+        log_dict = {}
+
+
+        # Update wandb with average for last x eps
         categories = stat_collector.get_last_x(config["print_freq"])
         for category_name, category in categories.items():
             for name, value in category.items():
-                writer.add_scalar(f"{category_name}/{name}",
-                                  np.mean(value), i_episode)
+                if name == "unit_action_distribution":
+                    value = [[l, v] for l, v in zip(["Move", "Transfer", "Pickup", "Dig", "Self destruct", "Recharge"], value)]
+                    table = wbtable(["label", "value"], value)
+                    log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for units as a bar plot")
+                elif name == "factory_action_distribution":
+                    value = [[l, v] for l, v in zip(["Build light", "Build heavy", "Grow lichen"], value)]
+                    table = wbtable(["label", "value"], value)
+                    log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for factories as a bar plot")
+                else:
+                    log_dict[f"{category_name}/{name}"] = np.mean(value)
+        wb.log(log_dict)

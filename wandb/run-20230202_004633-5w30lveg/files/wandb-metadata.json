@@ -1,0 +1,50 @@
+{
+    "os": "Windows-10-10.0.22621-SP0",
+    "python": "3.10.8",
+    "heartbeatAt": "2023-02-01T23:46:34.330858",
+    "startedAt": "2023-02-01T23:46:33.558370",
+    "docker": null,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "c:\\Users\\Audun\\Projects\\Lux\\UiBLuxAI\\main.py",
+    "codePath": "main.py",
+    "git": {
+        "remote": "https://github.com/ALjone/UiBLuxAI.git",
+        "commit": "fd13ebdc4fbc740ef1b0fc17acb46657108e098e"
+    },
+    "email": "Audun.Henriksen@gmail.com",
+    "root": "C:/Users/Audun/Projects/Lux/UiBLuxAI",
+    "host": "DESKTOP-VU46AA7",
+    "username": "Audun",
+    "executable": "C:\\Users\\Audun\\miniconda3\\envs\\RL\\python.exe",
+    "cpu_count": 24,
+    "cpu_count_logical": 32,
+    "cpu_freq": {
+        "current": 3000.0,
+        "min": 0.0,
+        "max": 3000.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3000.0,
+            "min": 0.0,
+            "max": 3000.0
+        }
+    ],
+    "disk": {
+        "total": 1907.0203590393066,
+        "used": 177.9732894897461
+    },
+    "gpu": "NVIDIA GeForce RTX 4090",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 4090",
+            "memory_total": 25757220864
+        }
+    ],
+    "memory": {
+        "total": 31.817378997802734
+    }
+}

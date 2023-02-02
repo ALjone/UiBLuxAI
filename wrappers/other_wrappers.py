@@ -70,7 +70,7 @@ class SinglePlayerEnv(gym.Wrapper):
         obs = self.env.reset(**kwargs)
         self.prev_actions = {}
         self.env.state.stats["player_0"]["actions"] = {
-                                                        "factories": [0]*FACTORY_ACTION_IDXS,
+                                                        "factories": [0]*(FACTORY_ACTION_IDXS-1), #Minus one because the do nothing action is never registered here
                                                         "units" : [0]*UNIT_ACTION_IDXS,
                                                         "average_power_when_recharge": []
                                                     }

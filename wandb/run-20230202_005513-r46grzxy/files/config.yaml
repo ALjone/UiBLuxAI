@@ -1,0 +1,114 @@
+wandb_version: 1
+
+_wandb:
+  desc: null
+  value:
+    cli_version: 0.13.9
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    python_version: 3.10.8
+    start_time: 1675295713.174952
+    t:
+      1:
+      - 1
+      - 41
+      - 55
+      2:
+      - 1
+      - 41
+      - 55
+      3:
+      - 16
+      - 17
+      - 23
+      - 37
+      4: 3.10.8
+      5: 0.13.9
+      8:
+      - 3
+      - 5
+actor_intermediate_channels:
+  desc: null
+  value: 32
+actor_lr:
+  desc: null
+  value: 0.0003
+actor_n_blocks:
+  desc: null
+  value: 6
+actor_n_blocks_after_split:
+  desc: null
+  value: 2
+batch_size:
+  desc: null
+  value: 512
+critic_intermediate_channels:
+  desc: null
+  value: 16
+critic_lr:
+  desc: null
+  value: 0.0003
+critic_n_blocks:
+  desc: null
+  value: 6
+device:
+  desc: null
+  value: cuda
+epochs_per_batch:
+  desc: null
+  value: 6
+eps_clip:
+  desc: null
+  value: 0.1
+factory_lost_scale:
+  desc: null
+  value: 10
+gamma:
+  desc: null
+  value: 0.99
+lichen_divide_value:
+  desc: null
+  value: 20000
+lmbda:
+  desc: null
+  value: 0.95
+log_to_wb:
+  desc: null
+  value: true
+max_episodes:
+  desc: null
+  value: 10000000
+path:
+  desc: null
+  value: null
+print_freq:
+  desc: null
+  value: 1
+save_path:
+  desc: null
+  value: model.t
+scaling_delivery_extra:
+  desc: null
+  value: 2
+scaling_ice:
+  desc: null
+  value: 0.1
+scaling_lichen:
+  desc: null
+  value: 5
+scaling_ore:
+  desc: null
+  value: 0.05
+scaling_win:
+  desc: null
+  value: 0
+unit_lost_scale:
+  desc: null
+  value: 0.1
+units_killed_scale:
+  desc: null
+  value: 1
+video_save_rate:
+  desc: null
+  value: 1000

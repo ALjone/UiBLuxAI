@@ -1,6 +1,6 @@
 #Training
 max_episodes: 10000000
-print_freq: 100 # print avg reward in the interval (in episodes)
+print_freq: 10 # print avg reward in the interval (in episodes)
 
 #PPO
 batch_size: 512
@@ -25,6 +25,7 @@ device: cuda #cuda, cpu, mps
 path:  None #model.t 
 save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes
+log_to_wb: True
 
 #Reward
 unit_lost_scale: 0.1
