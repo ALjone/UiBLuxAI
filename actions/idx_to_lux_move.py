@@ -74,6 +74,9 @@ def _unit_output_to_actions(unit_output, units, obs, factory_map):
             x, y = unit["pos"][0], unit["pos"][1]
             action = unit_output[x, y].item()
             if action == 0: continue #The "Do nothing" action
+            action = _unit_idx_to_action(action, obs, factory_map, unit)
+            if action == []: #If you stand on ice and move to ice...
+                continue
             actions[unit["unit_id"]] = _unit_idx_to_action(action, obs, factory_map, unit)
 
     return actions
