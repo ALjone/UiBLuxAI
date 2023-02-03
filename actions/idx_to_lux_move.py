@@ -5,6 +5,8 @@ from .action_queues import move_to_closest_factory_and_transport, move_to_closes
 
 UNIT_ACTION_IDXS = 11
 FACTORY_ACTION_IDXS = 4
+MOVE_NAMES = moves = ["No action", "Stop", "Move north", "Move south", "Move east", "Move west", "Pickup power",
+                         "Closest factory ice", "Closest factory ore", "Closest ice", "Closest ore", "Ice loop", "Ore loop"]
 
 # a[0] = action type
 # (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
