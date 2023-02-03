@@ -49,7 +49,8 @@ class ActorCritic(nn.Module):
         return action_unit.detach(), action_factory.detach(), torch.sum(action_logprob_unit.detach()), torch.sum(action_logprob_factory.detach()), state_val.detach()
     
     def evaluate(self, image_features, global_features, unit_action, factory_action):
-        #TODO: Does this also need the same type of action masking?
+        #TODO: Does this also need the same type of action masking? Yes, according to gridnet
+        #https://github.com/vwxyzjn/gym-microrts-paper/blob/master/ppo_gridnet_diverse_impala.py Line number 342
 
         #NOTE: Assumes first channel is unit mask for our agent
         #NOTE: Assumes second channel is factory mask for our agent
