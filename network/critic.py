@@ -29,9 +29,7 @@ class critic(nn.Module):
 
         self.conv = nn.Sequential(*blocks)
         
-        self.linear = nn.Sequential(nn.Linear((48**2)*5, 1024),
-                                    nn.Linear(1024, 512),
-                                    nn.Linear(512, 1))
+        self.linear = nn.Sequential(nn.Linear((48**2)*5, 1))
 
     def forward(self, image_features: torch.Tensor, global_features: torch.Tensor):
         if type(image_features) == np.ndarray:

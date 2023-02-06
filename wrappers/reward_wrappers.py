@@ -118,7 +118,7 @@ class IceRewardWrapper(gym.RewardWrapper):
             for res, scale in zip(["ice", "ore"], scaling):
                 # Dropping res at factory
                 #NOTE: Prev - unit, because we want to currently have less than we had
-                if pos in factory_pos:
+                if pos in [list(fac_pos) for fac_pos in factory_pos]:
                     delta_res += self.config["scaling_delivery_extra"]*scale * \
                         max((prev_state["cargo"][res] - unit["cargo"][res]), 0)
                 # Picking up res, or dropping it somewhere bad
