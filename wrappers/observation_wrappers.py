@@ -12,7 +12,8 @@ from gym import spaces
 dirs = [(0, 0), (0, -1), (1, 0), (0, 1), (-1, 0)]
 
 class StateSpaceVol1(gym.ObservationWrapper):
-    def __init__(self, env: gym.Env) -> None:
+    def __init__(self, env: gym.Env, config) -> None:
+        self.config = config#["map_size"]
         super().__init__(env)
 
     def image_features(self, obs):
@@ -21,23 +22,23 @@ class StateSpaceVol1(gym.ObservationWrapper):
 
         #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
 
-        unit_mask = np.zeros((1, 48, 48))
+        unit_mask = np.zeros((1, self.config["map_size"], self.config["map_size"]))
         #TODO: We also need a map for where factories are occupying space? Since they are 3x3
-        factory_mask = np.zeros((1, 48, 48))
+        factory_mask = np.zeros((1, self.config["map_size"], self.config["map_size"]))
 
-        unit_cargo = np.zeros((3, 48, 48)) #Power, Ice, Ore
-        factory_cargo = np.zeros((5, 48, 48))
+        unit_cargo = np.zeros((3, self.config["map_size"], self.config["map_size"])) #Power, Ice, Ore
+        factory_cargo = np.zeros((5, self.config["map_size"], self.config["map_size"]))
 
-        board = np.zeros((4, 48, 48)) #Rubble, Ice, Ore, Lichen
+        board = np.zeros((4, self.config["map_size"], self.config["map_size"])) #Rubble, Ice, Ore, Lichen
 
-        lichen_mask = np.zeros((1, 48, 48)) #1 for friendly, 0 for none, -1 for enemy
+        lichen_mask = np.zeros((1, self.config["map_size"], self.config["map_size"])) #1 for friendly, 0 for none, -1 for enemy
 
-        unit_type = np.zeros((2, 48, 48)) #LIGHT, HEAVY
+        unit_type = np.zeros((2, self.config["map_size"], self.config["map_size"])) #LIGHT, HEAVY
 
         #TODO: Move this to agent
-        action_queue_length = np.zeros((1, 48, 48))
+        action_queue_length = np.zeros((1, self.config["map_size"], self.config["map_size"]))
 
-        next_step = np.zeros((2, 48, 48))
+        next_step = np.zeros((2, self.config["map_size"], self.config["map_size"]))
         
         for i, player in enumerate(self.agents):
             factories = shared_obs["factories"][player]
@@ -106,7 +107,7 @@ class StateSpaceVol1(gym.ObservationWrapper):
         image_features_flipped = image_features.clone()
         image_features_flipped[(0, 1, 14)] *= -1
 
-        return image_features, image_features_flipped
+        return image_features.to(torch.float32), image_features_flipped.to(torch.float32)
     
     def global_features(self, obs):
         main_player = self.agents[0]
@@ -191,7 +192,7 @@ class StateSpaceVol1(gym.ObservationWrapper):
                             )
 
 
-        return main_player_vars, other_player_vars
+        return main_player_vars.to(torch.float32), other_player_vars.to(torch.float32)
 
 
     def observation(self, obs):

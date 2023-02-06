@@ -12,8 +12,8 @@ os.environ['PYTORCH_ENABLE_MPS_FALLBACK']='1'
 
 config = load_config()
 
-env = LuxAI_S2(verbose=0, collect_stats=True)
-env = StateSpaceVol1(env)
+env = LuxAI_S2(verbose=0, collect_stats=True, map_size = config["map_size"])
+env = StateSpaceVol1(env, config)
 env = SinglePlayerEnv(env)
 env = IceRewardWrapper(env, config)
 env = RecordVideo(env, "videos", episode_trigger= lambda x : x % config["video_save_rate"] == 0 and x != 0)
