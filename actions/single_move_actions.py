@@ -1,28 +1,32 @@
 import numpy as np
-def pickup(type, x = 1000):
-    if type == "ice":
+def pickup(res_type, x = 1000):
+    if res_type == "ice":
         return np.array([2, 0, 0, x, 0, 1])
-    elif type == "ore":
+    elif res_type == "ore":
         return np.array([2, 0, 1, x, 0, 1])
-    elif type == "water":
+    elif res_type == "water":
         return np.array([2, 0, 2, x, 0, 1])
-    elif type == "metal":
+    elif res_type == "metal":
         return np.array([2, 0, 3, x, 0, 1])
-    elif type == "power":
+    elif res_type == "power":
         return np.array([2, 0, 4, x, 0, 1])
+    else:
+        raise ValueError("Unknown type found:", res_type)
 
-def transfer(type, x = 1000):
-    """Transfers all the ice to center"""
-    if type == "ice":
-        return np.array([1, 0, 0, x, 0, 1])
-    elif type == "ore":
-        return np.array([1, 0, 1, x, 0, 1])
-    elif type ==" water":
-        return np.array([1, 0, 2, x, 0, 1])
-    elif type == "metal":
-        return np.array([1, 0, 3, x, 0, 1])
-    elif type == "power":
-        return np.array([1, 0, 4, x, 0, 1])
+def transfer(res_type, x = 1000, repeat = 0):
+    """Transfers all the res to center"""
+    if res_type == "ice":
+        return np.array([1, 0, 0, x, repeat, 1])
+    elif res_type == "ore":
+        return np.array([1, 0, 1, x, repeat, 1])
+    elif res_type ==" water":
+        return np.array([1, 0, 2, x, repeat, 1])
+    elif res_type == "metal":
+        return np.array([1, 0, 3, x, repeat, 1])
+    elif res_type == "power":
+        return np.array([1, 0, 4, x, repeat, 1])
+    else:
+        raise ValueError("Unknown res type found:", res_type)
 
 
 def self_destruct():
@@ -52,3 +56,5 @@ def move(dir, repeat = 0, n = 1):
         return np.array([0, 3, 0, 0, repeat, n])
     elif dir == "west":
         return np.array([0, 4, 0, 0, repeat, n])
+    else: 
+        raise ValueError("Unknown direction found:", dir)

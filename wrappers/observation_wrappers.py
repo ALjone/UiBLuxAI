@@ -22,6 +22,7 @@ class StateSpaceVol1(gym.ObservationWrapper):
         #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
 
         unit_mask = np.zeros((1, 48, 48))
+        #TODO: We also need a map for where factories are occupying space? Since they are 3x3
         factory_mask = np.zeros((1, 48, 48))
 
         unit_cargo = np.zeros((3, 48, 48)) #Power, Ice, Ore
@@ -34,7 +35,6 @@ class StateSpaceVol1(gym.ObservationWrapper):
         unit_type = np.zeros((2, 48, 48)) #LIGHT, HEAVY
 
         #TODO: Move this to agent
-        action_queue_type_friendly = np.zeros((14, 48, 48))
         action_queue_length = np.zeros((1, 48, 48))
 
         next_step = np.zeros((2, 48, 48))
@@ -62,7 +62,8 @@ class StateSpaceVol1(gym.ObservationWrapper):
                     act = unit["action_queue"][0]
                     if act[0] == 0:
                         dir = dirs[act[1]] #Get the direction we're moving
-                        next_step[i, x+dir[0], y+dir[1]] = (1 if player == main_player else -1)
+                        if x+dir[0] < 0 or x+dir[0] > 47 or y+dir[1] < 0 or y+dir[1] > 47: continue
+                        next_step[i, x+dir[0], y+dir[1]] = 1
                 pass
         
             for _, factory in factories.items():
@@ -103,7 +104,7 @@ class StateSpaceVol1(gym.ObservationWrapper):
         ]))
 
         image_features_flipped = image_features.clone()
-        image_features_flipped[(0, 1, 14)] *= -1 #TODO: DOUBLE CHECK THESE VALUES
+        image_features_flipped[(0, 1, 14)] *= -1
 
         return image_features, image_features_flipped
     

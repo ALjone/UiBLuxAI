@@ -3,7 +3,7 @@ max_episodes: 10000000
 print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
-batch_size: 128
+batch_size: 512
 actor_lr: 0.0003
 critic_lr: 0.0003
 gamma: 0.99
@@ -21,14 +21,15 @@ critic_n_blocks: 6
 critic_intermediate_channels: 16
 
 #Other 
-device: cuda #cuda, cpu, mps
-path:  model.t #model.t 
+device: mps #cuda, cpu, mps
+path:  None #model.t 
 save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes
-log_to_wb: False
+log_to_wb: True
 
 #Reward
-unit_lost_scale: 0
+unit_lost_scale: 0.1
+birth_kill_relation: 0.5
 units_killed_scale: 1
 factory_lost_scale: 10
 

@@ -48,14 +48,17 @@ class IceRewardWrapper(gym.RewardWrapper):
                 else:
                     raise ValueError("Oh no, what's wrong with this unit ID:", unit_id)
 
-            units_died = (self.number_of_units[player] + units_made) - units
+            units_died = (self.number_of_units[player] + units_made) - units # This is acctually just change of unit number
             #TODO fix this (This is based on actions, and factories that do nothing submit no actions)
 
             factories_died = 0#self.number_of_factories[player] - factories
 
             self.number_of_units[player] = units
             self.number_of_factories[player] = factories
-            return max(0, units_died), max(0, factories_died)
+
+            # In order to reward building units we allow units died to be negative for now
+            #return max(0, units_died), max(0, factories_died)
+            return units_died, max(0, factories_died)
         return 0, 0
 
     def reward(self, rewards):
@@ -90,8 +93,7 @@ class IceRewardWrapper(gym.RewardWrapper):
         units_lost, factories_lost = self.get_died_units_and_factories()
         units_killed, _ = self.get_died_units_and_factories("player_1")
 
-
-        unit_lost_reward = units_lost*-self.config["unit_lost_scale"]
+        unit_lost_reward = units_lost*-self.config["unit_lost_scale"] if units_lost < 0 else units_lost*-self.config["unit_lost_scale"]*self.config['birth_kill_relation']
         factories_lost_reward = factories_lost*- \
             self.config["factory_lost_scale"]
         # TODO: Implement this
@@ -116,7 +118,7 @@ class IceRewardWrapper(gym.RewardWrapper):
             for res, scale in zip(["ice", "ore"], scaling):
                 # Dropping res at factory
                 #NOTE: Prev - unit, because we want to currently have less than we had
-                if pos in factory_pos:
+                if pos in [list(fac_pos) for fac_pos in factory_pos]:
                     delta_res += self.config["scaling_delivery_extra"]*scale * \
                         max((prev_state["cargo"][res] - unit["cargo"][res]), 0)
                 # Picking up res, or dropping it somewhere bad
@@ -132,8 +134,8 @@ class IceRewardWrapper(gym.RewardWrapper):
         reward = (
             0
             + unit_lost_reward
-            + factories_lost_reward
-            + units_killed_reward
+            #+ factories_lost_reward
+            #+ units_killed_reward
             + resource_reward
         )
         self.env.state.stats["player_0"]['rewards']['unit_lost_reward'] += unit_lost_reward

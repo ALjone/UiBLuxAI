@@ -7,6 +7,7 @@ from wrappers.reward_wrappers import IceRewardWrapper
 from utils.utils import load_config
 
 def play_episode(agent, env, make_gif = True):
+    agent.reset()
     obs = env.reset()
     step = 0
     imgs = []

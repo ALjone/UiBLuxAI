@@ -6,6 +6,7 @@ from utils.stat_collector import StatCollector
 from utils.wandb_logging import WAndB
 from wandb.plot import bar
 from wandb import Table as wbtable
+from actions.idx_to_lux_move import MOVE_NAMES
 
 
 def do_early_phase(env, agent):
@@ -44,6 +45,7 @@ def train(env, agent, config):
             state = do_early_phase(env, agent)
             ep_losses = []
             ep_timesteps = 0
+            agent.reset()
             while True:
                 # select action with policy
                 action = agent.act(state)
@@ -106,7 +108,8 @@ def train(env, agent, config):
                 for name, value in category.items():
 
                     if name == "unit_action_distribution":
-                        value = [[l, v] for l, v in zip(["Move", "Transfer", "Pickup", "Dig", "Self destruct", "Recharge"], value)]
+                        
+                        value = [[l, v] for l, v in zip(MOVE_NAMES, value)]
                         table = wbtable(["label", "value"], value)
                         log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for units as a bar plot")
 
