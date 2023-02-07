@@ -4,7 +4,8 @@ from .action_queues import pickup, self_destruct, dig
 from .action_queues import move_to_closest_factory_and_transport, move_to_closest_res, res_mining_loop
 from .action_queues import transfer_single, self_destruct
 
-UNIT_ACTION_IDXS = 15
+
+UNIT_ACTION_IDXS = 14
 FACTORY_ACTION_IDXS = 4
 MOVE_NAMES = moves = ["No action", "Stop", "Move north", "Move south", "Move east", "Move west", "Pickup power",
                       "Closest factory ice", "Closest factory ore", "Closest ice", "Closest ore", "Digg"]

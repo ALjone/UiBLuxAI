@@ -65,8 +65,12 @@ class actor(nn.Module):
         x_robot = x_robot.permute(0, 2, 3, 1)
         x_factory = x_factory.permute(0, 2, 3, 1)
 
+        x_action_type = F.softmax(x_robot[:,:,:, :5], dim = 3).squeeze()
+        x_direction = F.softmax(x_robot[:,:,:, 5:10], dim = 3).squeeze()
+        x_value = F.softmax(x_robot[:,:,:, 10:], dim = 3).squeeze()
+
         #TODO: Softmax should happen in categorical due to action masking
-        return F.softmax(x_robot, dim=3).squeeze(), F.softmax(x_factory, dim=3).squeeze()
+        return x_action_type, x_direction, x_value, F.softmax(x_factory, dim=3).squeeze()
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

@@ -10,7 +10,7 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
         self.device = config["device"]
 
-        channels = 43
+        channels = 32
 
         self.actor = actor(channels, unit_action_dim, factory_action_dim, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"]).to(self.device)
         # critic
@@ -30,16 +30,28 @@ class ActorCritic(nn.Module):
         #unit_mask = unit_action_mask(obs, self.device)
         factory_mask = factory_action_mask(obs, self.device)
 
-        action_probs_unit, action_probs_factories = self.actor(image_features, global_features)
+
+        action_type_probs, action_direction_probs, action_values_probs, action_probs_factories = self.actor(image_features, global_features)
         #assert action_probs_unit.shape == unit_mask.shape
         assert action_probs_factories.shape == factory_mask.shape
 
         #action_probs_unit *= unit_mask
         action_probs_factories *= factory_mask
-        unit_dist, factory_dist = Categorical(action_probs_unit), Categorical(action_probs_factories)
+        type_dist, direction_dist, value_dist, factory_dist = Categorical(action_type_probs), Categorical(action_direction_probs), Categorical(action_values_probs), Categorical(action_probs_factories)
 
-        action_unit = unit_dist.sample()
-        action_logprob_unit = unit_dist.log_prob(action_unit)*(image_features[0] == 1)
+        action_type = type_dist.sample()
+        action_direction = direction_dist.sample()
+        action_value = value_dist.sample()
+
+        action_unit = torch.stack([action_type, action_direction, action_value], dim = -1)
+
+        unit_mask = (image_features[0] == 1)
+        action_type_logprob = type_dist.log_prob(action_type)*unit_mask
+        action_direction_logprob = direction_dist.log_prob(action_direction)*unit_mask
+        action_value_logprob = value_dist.log_prob(action_value)*unit_mask
+
+        # Current problem: How do we handle logprobs when we are sampling 3 values from 3 different (not independent) distributions
+        action_logprob_unit = torch.sum(action_type_logprob.detach()) * torch.sum(action_direction_logprob.detach()) * torch.sum(action_value_logprob.detach())
 
         action_factory = factory_dist.sample()
         action_logprob_factory = factory_dist.log_prob(action_factory)*(image_features[1] == 1)

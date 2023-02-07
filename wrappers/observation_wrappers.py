@@ -107,6 +107,8 @@ class StateSpaceVol1(gym.ObservationWrapper):
         image_features_flipped = image_features.clone()
         image_features_flipped[(0, 1, 14)] *= -1
 
+        print('IMage shape: ', image_features.shape)
+
         return image_features.to(torch.float32), image_features_flipped.to(torch.float32)
     
     def global_features(self, obs):

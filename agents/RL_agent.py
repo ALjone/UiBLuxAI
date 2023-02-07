@@ -91,18 +91,17 @@ class Agent():
         factories = obs[self.player]["factories"][self.player].values()
 
         image_features = features["image_features"].to(self.device)
-        action_queue_type = torch.zeros((UNIT_ACTION_IDXS-1, 48, 48), device = self.device) #-1 because of the do nothing action
+        #action_queue_type = torch.zeros((UNIT_ACTION_IDXS-1, 48, 48), device = self.device) #-1 because of the do nothing action
 
-        for unit_id, action in self.action_queue.items():
+        '''for unit_id, action in self.action_queue.items():
             if not unit_id in obs[self.player]["units"][self.player].keys(): continue
             pos = obs[self.player]["units"][self.player][unit_id]["pos"]
-            action_queue_type[action-1, pos[0], pos[1]] = 1
+            action_queue_type[action-1, pos[0], pos[1]] = 1'''
 
         #First in cat is first in output, so unit/factory mask is kept!!
-        image_features = torch.cat((image_features, action_queue_type), dim=0)
+        #image_features = torch.cat((image_features, action_queue_type), dim=0)
 
         global_features = features["global_features"].to(self.device)
-
 
         unit_output, factory_output = self.PPO.select_action(image_features, global_features, obs)
 
