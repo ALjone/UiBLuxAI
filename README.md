@@ -54,18 +54,9 @@ Every feature here has a 48x48 channel containing the information in every tile.
 
 
 ## Action Space
-1. No Action.
->>>Does nothing, allows previous action queues to execute.
-2. Infinite move-loop. 
->>>One for each direction [NORTH, SOUTH, EAST, WEST]
-3. Pickup.
->>>One for each (resource, amount) combination. Resources = [POWER], Amounts = [50%, 100%]
-4. Self Destruct
-5. Digg untill full or resource is empty.
->>> Compute minimum of the two and digg untill this limit is reached.
-6, 7. Deliver resources to closest factory.
->>> Compute path to closest factory (shortest w.r.t time for now) and create sequence of directions to this point, finish with transfer of all resources.
-8, 9. Move towards closest res
->>> Finds closest (closest w.r.t power or time???) and creates a sequence of directions towards it (better with long walks along one dim at the time due to limited queue length and option for looping) res, goes to it,
-10, 11. Complete res-mining loop. .
->>> Combines 6/7, 5, and 8/9  
+
+1. First collumn - Action Types:  Move, Dig, Transfer, Pickup, Self-Destruct
+2. Second collumn - Directions:   North, East, South, West, Center
+3. Third Collumn - Values:        25%, 50%, 75%, 100%
+
+Final vector 1x13.
