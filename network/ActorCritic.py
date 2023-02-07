@@ -32,9 +32,6 @@ class ActorCritic(nn.Module):
 
 
         action_type_probs, action_direction_probs, action_values_probs, action_probs_factories = self.actor(image_features, global_features)
-        print(action_type_probs.shape)
-        print(action_direction_probs.shape)
-        print(action_values_probs.shape)
         #assert action_probs_unit.shape == unit_mask.shape
         assert action_probs_factories.shape == factory_mask.shape
 
@@ -45,6 +42,8 @@ class ActorCritic(nn.Module):
         action_type = type_dist.sample()
         action_direction = direction_dist.sample()
         action_value = value_dist.sample()
+
+        action_unit = torch.stack([action_type, action_direction, action_value], dim = -1)
 
         unit_mask = (image_features[0] == 1)
         action_type_logprob = type_dist.log_prob(action_type)*unit_mask
@@ -59,8 +58,7 @@ class ActorCritic(nn.Module):
 
         state_val = self.critic(image_features, global_features)
 
-        return action_type.detach(), action_direction.detach(), action_value.detach(), \
-            action_factory.detach(), torch.sum(action_logprob_unit.detach()), torch.sum(action_logprob_factory.detach()), state_val.detach()
+        return action_unit.detach(), action_factory.detach(), torch.sum(action_logprob_unit.detach()), torch.sum(action_logprob_factory.detach()), state_val.detach()
     
     def evaluate(self, image_features, global_features, unit_action, factory_action):
         #TODO: Does this also need the same type of action masking? Yes, according to gridnet
