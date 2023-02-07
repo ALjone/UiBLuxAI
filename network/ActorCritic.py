@@ -10,7 +10,7 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
         self.device = config["device"]
 
-        channels = 43
+        channels = 32
 
         self.actor = actor(channels, unit_action_dim, factory_action_dim, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"]).to(self.device)
         # critic
@@ -30,7 +30,11 @@ class ActorCritic(nn.Module):
         #unit_mask = unit_action_mask(obs, self.device)
         factory_mask = factory_action_mask(obs, self.device)
 
-        action_probs_unit, action_probs_factories = self.actor(image_features, global_features)
+
+        action_type_probs, action_direction_probs, action_values_probs, action_probs_factories = self.actor(image_features, global_features)
+        print(action_type_probs.shape)
+        print(action_direction_probs.shape)
+        print(action_values_probs.shape)
         #assert action_probs_unit.shape == unit_mask.shape
         assert action_probs_factories.shape == factory_mask.shape
 
