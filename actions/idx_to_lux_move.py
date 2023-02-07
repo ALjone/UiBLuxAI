@@ -26,27 +26,35 @@ MOVE_NAMES = moves = ["No action", "Stop", "Move north", "Move south", "Move eas
 # a[5] = n, number of times to execute this action before exhausting it and removing it from the front of the action queue. Minimum is 1.
 
 
-def _unit_idx_to_action(type_idx, direction_idx, amount_idx, obs, factory_map, unit):
+def _unit_idx_to_action(type_idx, direction_idx, amount_idx, unit):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
 
     amount = [0.25, 0.5, 0.75, 1]
+    resources = ['power', 'ice', 'water', 'ore', 'metal']
     if (type_idx == 0):  # Move
-        return [move_single(direction_idx, 1, 1)]
+        #print('Action 0:',  move_single(direction_idx, 1, 1))
+        return move_single(direction_idx, 1, 1)
 
     elif (type_idx == 1):
-        resources = ['power', 'ice', 'water', 'ore', 'metal']
         res = resources[direction_idx]
-        cargo = unit["cargo"][res]
-        return pickup(res, amount[amount_idx]*int(cargo))
+        cargo = unit["power"]
+        #print('Action 1:', pickup(res, amount[amount_idx]*int(cargo)))
+        return pickup(res, int(amount[amount_idx]*int(cargo)))
 
     elif (type_idx == 2):
+        #print('Action 2:', dig(unit, 1, 0))
         return dig(unit, 1, 0)
 
     # Using amount idx to indicate direction of transferal, and will always transfer all.
     elif (type_idx == 3):
+        res = resources[direction_idx]
+        #print('Action 3:', transfer_single(res, 1000, direction=amount_idx))
+
         return transfer_single(res, 1000, direction=amount_idx)
 
     elif (type_idx == 4):
+        #print('Action 4:', self_destruct())
+        
         return self_destruct()
 
 
@@ -84,10 +92,10 @@ def _unit_output_to_actions(unit_output, units, obs, factory_map):
     actions = {}
     for unit in units:
         x, y = unit["pos"][0], unit["pos"][1]
-        action = unit_output[x, y].item()
-        if action == 0:
+        action = unit_output[x, y].detach()#.item()
+        if action[0] == 0:
             continue  # The "Do nothing" action
-        action = _unit_idx_to_action(action, obs, factory_map, unit)
+        action = _unit_idx_to_action(*action, unit)
         if action == []:  # If you stand on ice and move to ice...
             continue
         actions[unit["unit_id"]] = action

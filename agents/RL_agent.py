@@ -105,10 +105,10 @@ class Agent():
 
         unit_output, factory_output = self.PPO.select_action(image_features, global_features, obs)
 
-        action_idx_dict = unit_id_to_action_idx(units, unit_output)
+        #action_idx_dict = unit_id_to_action_idx(units, unit_output)
 
-        for unit_id, action in action_idx_dict.items():
-            self.action_queue[unit_id] = action
+        #for unit_id, action in action_idx_dict.items():
+        #    self.action_queue[unit_id] = action
 
 
 

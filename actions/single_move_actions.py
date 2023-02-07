@@ -19,15 +19,15 @@ def pickup(res_type, x=1000):
 def transfer(res_type, x=1000, direction=1, repeat=0):
     """Transfers all the res to center"""
     if res_type == "ice":
-        return np.array([direction, 0, 0, x, repeat, 1])
+        return [np.array([direction, 0, 0, x, repeat, 1])]
     elif res_type == "ore":
-        return np.array([direction, 0, 1, x, repeat, 1])
-    elif res_type == " water":
-        return np.array([direction, 0, 2, x, repeat, 1])
+        return [np.array([direction, 0, 1, x, repeat, 1])]
+    elif res_type == "water":
+        return [np.array([direction, 0, 2, x, repeat, 1])]
     elif res_type == "metal":
-        return np.array([direction, 0, 3, x, repeat, 1])
+        return [np.array([direction, 0, 3, x, repeat, 1])]
     elif res_type == "power":
-        return np.array([direction, 0, 4, x, repeat, 1])
+        return [np.array([direction, 0, 4, x, repeat, 1])]
     else:
         raise ValueError("Unknown res type found:", res_type)
 
@@ -44,7 +44,7 @@ def recharge(x, repeat=0, n=1):
 
 def dig(repeat=0, n=1):
     """Gets the action for digging"""
-    return np.array([3, 0, 0, 0, repeat, n])
+    return np.array([3, 0, 0, 0, repeat, n]).astype(int)
 
 
 def move(dir, repeat=0, n=1):

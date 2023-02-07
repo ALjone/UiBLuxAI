@@ -66,11 +66,22 @@ class ActorCritic(nn.Module):
 
         #NOTE: Assumes first channel is unit mask for our agent
         #NOTE: Assumes second channel is factory mask for our agent
-        action_probs_unit, action_probs_factories = self.actor(image_features, global_features)
+        action_type_probs, action_dir_probs, action_value_probs, action_probs_factories = self.actor(image_features, global_features)
 
-        unit_dist = Categorical(action_probs_unit)
-        action_logprobs_unit = unit_dist.log_prob(unit_action)*(image_features[:, 0] == 1)
-        unit_dist_entropy = (unit_dist.entropy()*image_features[:, 0]).sum((1, 2))
+        #unit_dist = Categorical(action_probs_unit)
+        type_dist = Categorical(action_type_probs)
+        dir_dist = Categorical(action_dir_probs)
+        val_dist = Categorical(action_value_probs)
+
+        unit_mask = (image_features[:,0] == 1)
+        action_type_logprob = type_dist.log_prob(unit_action[:,:,:,0])*unit_mask
+        action_direction_logprob = dir_dist.log_prob(unit_action[:,:,:,1])*unit_mask
+        action_value_logprob = val_dist.log_prob(unit_action[:,:,:,2])*unit_mask
+
+        # Current problem: How do we handle logprobs when we are sampling 3 values from 3 different (not independent) distributions
+        action_logprobs_unit = action_type_logprob.detach() * torch.sum(action_direction_logprob.detach()) * torch.sum(action_value_logprob.detach())
+        # TODO: not sure about how to add these entropies
+        unit_dist_entropy = (((type_dist.entropy() + dir_dist.entropy() + val_dist.entropy())/3)  *image_features[:, 0]).sum((1, 2))
 
         factory_dist = Categorical(action_probs_factories)
         action_logprobs_factories = factory_dist.log_prob(factory_action)*(image_features[:, 1] == 1)
