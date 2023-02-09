@@ -10,7 +10,7 @@ import torch
 class Agent():
     def __init__(self, player: str, env_cfg: EnvConfig, config) -> None:
         self.player = player
-        self.opp_player = "player_1" if self.player == "player_0" else "player_0"
+        self.opp_player = 1 if self.player == 0 else 1
         self.env_cfg: EnvConfig = env_cfg
         self.device = config["device"]
 
@@ -24,65 +24,47 @@ class Agent():
             self.PPO.load(config["path"])
             print("Successfully loaded model")
 
-    def early_setup(self, step: int, obs, remainingOverageTime: int = 60):
-        obs = obs[1][self.player]
+    def early_setup(self, step: int, state, valid_spawn_mask, remainingOverageTime: int = 60):
+        num_envs = valid_spawn_mask.shape[0]
         if step == 0:
+            raise ValueError("You're supposed to handle bidding outside of this...")
             # bid 0 to not waste resources bidding and declare as the default faction
             return dict(faction="AlphaStrike", bid=0)
         else:
-            game_state = obs_to_game_state(step, self.env_cfg, obs)
-            # factory placement period
-
-            # how much water and metal you have in your starting pool to give to new factories
-            water_left = game_state.teams[self.player].water
-            metal_left = game_state.teams[self.player].metal
-
-            # how many factories you have left to place
-            factories_to_place = game_state.teams[self.player].factories_to_place
             # whether it is your turn to place a factory
-            my_turn_to_place = my_turn_to_place_factory(
-                game_state.teams[self.player].place_first, step)
-            if factories_to_place > 0 and my_turn_to_place:
-                # we will spawn our factory in a random location with 150 metal and water if it is our turn to place
-                potential_spawns = np.array(
-                    list(zip(*np.where(obs["board"]["valid_spawns_mask"] == 1))))
+            # we will spawn our factory in a random location with 150 metal and water if it is our turn to place
+            potential_spawns = np.array(
+                list(zip(*np.where(valid_spawn_mask == 1))))
 
-                map = np.zeros((48, 48, 3))
-                map[:, :, 0] = np.array(
-                    obs["board"]["rubble"])/np.linalg.norm(np.array(obs["board"]["rubble"]))
-                map[:, :, 1] = np.array(
-                    obs["board"]["ore"])/np.linalg.norm(np.array(obs["board"]["ore"]))
-                map[:, :, 2] = np.array(
-                    obs["board"]["ice"])/np.linalg.norm(np.array(obs["board"]["ice"]))
+            map = np.zeros((num_envs, valid_spawn_mask.shape[1], valid_spawn_mask.shape[2], 3))
+            map[:, :, :, 0] = state.board.map.rubble/ np.linalg.norm(state.board.map.rubble, axis = (1, 2), keepdims=True)
+            map[:, :, :, 1] = state.board.map.ore/np.linalg.norm(state.board.map.ore, axis = (1, 2), keepdims=True)
+            map[:, :, :, 2] = state.board.map.ice/np.linalg.norm(state.board.map.ice, axis = (1, 2), keepdims=True)
 
-                window = np.ones((11, 11, 3))
-                for i in range(0, 5):
-                    window[i+1:10-i, i+1:10-i, 2] = 2*i * \
-                        np.ones((9-2*i, 9-2*i))
-                    window[i+1:10-i, i+1:10-i, 1] = i * \
-                        np.ones((9-2*i, 9-2*i))
-                    window[i+1:10-i, i+1:10-i, 0] = -i*np.ones((9-2*i, 9-2*i))
-                window[5:8, 5:8, 1:] = np.zeros((3, 3, 2))
+            #print(np.linalg.norm(np.array(state.board.map.ice), axis = (1, 2)).shape)
 
-                final = np.zeros((48, 48, 3))
-                for i in range(3):
-                    final[:, :, i] = scipy.ndimage.convolve(
-                        map[:, :, i], window[:, :, i], mode='constant')
-                final = np.sum(final, axis=2)
-                final = final*obs["board"]["valid_spawns_mask"]
+            window = np.ones((num_envs, 11, 11, 3))
+            for i in range(0, 5):
+                window[:, i+1:10-i, i+1:10-i, 2] = 2*i * \
+                    np.ones((num_envs, 9-2*i, 9-2*i))
+                window[:, i+1:10-i, i+1:10-i, 1] = i * \
+                    np.ones((num_envs, 9-2*i, 9-2*i))
+                window[:, i+1:10-i, i+1:10-i, 0] = -i * \
+                    np.ones((num_envs, 9-2*i, 9-2*i))
+            window[:, 5:8, 5:8, 1:] = np.zeros((num_envs, 3, 3, 2))
 
-                spawn_loc = np.where(final == np.amax(final))
-                spawn_loc = np.array(
-                    [spawn_loc[0][0].item(), spawn_loc[1][0].item()])
-                if (spawn_loc not in potential_spawns):
-                    spawn_loc = potential_spawns[np.random.randint(
-                        0, len(potential_spawns))]
+            #TODO: Herman plz fix, make this vectorized over num_envs
+            #final = np.zeros((num_envs, 48, 48, 3))
+            final = scipy.ndimage.convolve(
+                map, window, mode='constant')
+            final = np.sum(final, axis=3)
+            final[valid_spawn_mask == 0] = -np.infty
 
-                return dict(spawn=spawn_loc, metal=150, water=150)
-            return dict()
 
-    def reset(self):
-        self.action_queue = {} 
+            idx = final.reshape(final.shape[0],-1).argmax(-1)
+            out = np.unravel_index(idx, final.shape[-2:])
+
+            return np.array(out).T, np.ones(valid_spawn_mask.shape[0])*150, np.ones(valid_spawn_mask.shape[0])*150
     
     def act(self, state, remainingOverageTime: int = 60):
         features = state[0][self.player]
@@ -93,10 +75,7 @@ class Agent():
         image_features = features["image_features"].to(self.device)
         #action_queue_type = torch.zeros((UNIT_ACTION_IDXS-1, 48, 48), device = self.device) #-1 because of the do nothing action
 
-        '''for unit_id, action in self.action_queue.items():
-            if not unit_id in obs[self.player]["units"][self.player].keys(): continue
-            pos = obs[self.player]["units"][self.player][unit_id]["pos"]
-            action_queue_type[action-1, pos[0], pos[1]] = 1'''
+
 
         #First in cat is first in output, so unit/factory mask is kept!!
         #image_features = torch.cat((image_features, action_queue_type), dim=0)

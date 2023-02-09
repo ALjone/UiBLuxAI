@@ -13,6 +13,7 @@ lmbda: 0.95
 
 #Environment
 map_size: 48
+parallel_envs: 10
 
 #Architecture - Actor
 actor_n_blocks: 6
@@ -24,7 +25,7 @@ critic_n_blocks: 6
 critic_intermediate_channels: 16
 
 #Other 
-device: mps #cuda, cpu, mps
+device: cuda #cuda, cpu, mps
 path:  None #model.t 
 save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes

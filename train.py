@@ -9,21 +9,59 @@ from wandb import Table as wbtable
 from actions.idx_to_lux_move import MOVE_NAMES
 
 
-def do_early_phase(env, agent):
-    state = env.reset()
-    step = 0
-    while env.state.real_env_steps < 0:
-        a = agent.early_setup(step, state)
+def do_early_phase(env, agents, config):
+    num_envs = config["parallel_envs"]
+    state = env.reset(np.random.randint(0, 2**32-1, dtype=np.int64, size = num_envs))
+    
+    #valid_factory_mask = np.array(state.board.valid_spawns_mask)
+    #NOTE: The way below is 10-20% faster than the way above, and about 250% faster than using the built in state.board.valid_spawns all the way through
+    valid_spawns_mask = np.array(~state.board.map.ice & ~state.board.map.ore) 
+    valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, 1, axis=1)
+    valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, -1, axis=1)
+    valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, 1, axis=2)
+    valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, -1, axis=2)
+    valid_spawns_mask[:, [0, -1], :] = False
+    valid_spawns_mask[:, :, [0, -1]] = False
+    step = 1
+
+    bid, faction = np.zeros((num_envs, 2)), np.zeros((num_envs, 2))
+    state, _ = env.step_bid(state, bid, faction)
+    spawn = np.zeros((num_envs, 2, 2), dtype=np.int8)
+    water = np.zeros((num_envs, 2), dtype=np.int8)
+    metal = np.zeros((num_envs, 2), dtype=np.int8)
+
+    #They should always have same real_env_steps
+    while (state.real_env_steps < 0).any():
+        #valid_spawns_mask = state.board.valid_spawns_mask
+        s, w, m = agents[state.next_player[0]].early_setup(step, state, valid_spawns_mask)
+        
+        spawn[:, state.next_player] = s
+        water[:, state.next_player] = w
+        metal[:, state.next_player] = m
+
+        x = s[:, 0]
+        y = s[:, 1]
+        #The valid spawns mask in Jux is slow, so we make our own fast one
+        valid_spawns_mask[ np.clip(x-6, a_min = 0, a_max = None) : np.clip(x+6+1, a_min = None, a_max = config["map_size"]),
+                           np.clip(y-6, a_min = 0, a_max = None) : np.clip(y+6+1, a_min = None, a_max = config["map_size"])] = False
+
         step += 1
-        state, rewards, dones, infos = env.step(a)
+        state, (observations, rewards, dones, infos) = env.step_factory_placement(state, spawn, water, metal)
 
     return state
 
 
-def train(env, agent, config):
-    assert env.collect_stats
+def train_jux(env, agents, config):
+    for _ in range(config["max_episodes"]//config["print_freq"]):
+        for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
+            state = do_early_phase(env, agents, config)
 
-    stat_collector = StatCollector("player_0")
+            #TODO: The states can be stacked if the agent uses the same network
+            #for agent in agents:
+            #    action = agent.act(state)
+
+def train(env, agent, config):
+
     # Set all used variables
     start_time = time.time()
     time_step = 0
@@ -43,7 +81,6 @@ def train(env, agent, config):
         for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
             current_ep_reward = 0
             state = do_early_phase(env, agent)
-            ep_losses = []
             ep_timesteps = 0
             agent.reset()
             while True:
@@ -70,7 +107,6 @@ def train(env, agent, config):
                 if done:
                     break
 
-            stat_collector.update(env.state.stats)
             print_running_reward += current_ep_reward
             print_running_episodes += 1
 
@@ -94,30 +130,13 @@ def train(env, agent, config):
             agent.PPO.save(config["save_path"])
 
 
-        log_dict = {}
-
-        log_dict["Main/Average reward"] = print_avg_reward
-        log_dict["Main/Average episode length"] = step_counter/config["print_freq"]
-        log_dict["Main/Average steps per second"] = steps_per_second
-        log_dict["Main/Average loss"] = np.mean(losses).item()
-
         if config["log_to_wb"]:
+            log_dict = {}
+
+            log_dict["Main/Average reward"] = print_avg_reward
+            log_dict["Main/Average episode length"] = step_counter/config["print_freq"]
+            log_dict["Main/Average steps per second"] = steps_per_second
+            log_dict["Main/Average loss"] = np.mean(losses).item()
+
             # Update wandb with average for last x eps
-            categories = stat_collector.get_last_x(config["print_freq"])
-            for category_name, category in categories.items():
-                for name, value in category.items():
-
-                    if name == "unit_action_distribution":
-                        
-                        value = [[l, v] for l, v in zip(MOVE_NAMES, value)]
-                        table = wbtable(["label", "value"], value)
-                        log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for units as a bar plot")
-
-                    elif name == "factory_action_distribution":
-                        value = [[l, v] for l, v in zip(["Build light", "Build heavy", "Grow lichen"], value)]
-                        table = wbtable(["label", "value"], value)
-                        log_dict[f"{category_name}/{name}"] = bar(table,"label", "value", "Action distribution for factories as a bar plot")
-                    else:
-                        log_dict[f"{category_name}/{name}"] = np.mean(value)
-        
             wb.log(log_dict)
