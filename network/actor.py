@@ -8,7 +8,7 @@ from .blocks import ResSEBlock, ConvBlock, GlobalBlock
 
 class actor(nn.Module):
     def __init__(self, intput_channels, unit_action_space:int, factory_action_space:int,  n_blocks:int, n_blocks_factories_units:int,
-                  intermediate_channels:int, layer_type = "conv") -> None:
+                  intermediate_channels:int, config, layer_type = "conv") -> None:
         super(actor, self).__init__()
         
         if layer_type == "SE":
@@ -39,7 +39,7 @@ class actor(nn.Module):
         blocks_factory.append(nn.Conv2d(intermediate_channels, factory_action_space, 1))
 
         #Make global features part
-        self.global_block =  GlobalBlock()
+        self.global_block =  GlobalBlock(config['map_size'])
 
         self.shared_conv = nn.Sequential(*blocks)
         self.unit_conv = nn.Sequential(*blocks_units)

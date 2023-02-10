@@ -13,6 +13,7 @@ class Agent():
         self.opp_player = "player_1" if self.player == "player_0" else "player_0"
         self.env_cfg: EnvConfig = env_cfg
         self.device = config["device"]
+        self.map_size = config['map_size']
 
         self.unit_actions_per_cell = UNIT_ACTION_IDXS
         self.factory_actions_per_cell = FACTORY_ACTION_IDXS
@@ -47,7 +48,7 @@ class Agent():
                 potential_spawns = np.array(
                     list(zip(*np.where(obs["board"]["valid_spawns_mask"] == 1))))
 
-                map = np.zeros((48, 48, 3))
+                map = np.zeros((self.map_size, self.map_size, 3))
                 map[:, :, 0] = np.array(
                     obs["board"]["rubble"])/np.linalg.norm(np.array(obs["board"]["rubble"]))
                 map[:, :, 1] = np.array(
@@ -64,7 +65,7 @@ class Agent():
                     window[i+1:10-i, i+1:10-i, 0] = -i*np.ones((9-2*i, 9-2*i))
                 window[5:8, 5:8, 1:] = np.zeros((3, 3, 2))
 
-                final = np.zeros((48, 48, 3))
+                final = np.zeros((self.map_size, self.map_size, 3))
                 for i in range(3):
                     final[:, :, i] = scipy.ndimage.convolve(
                         map[:, :, i], window[:, :, i], mode='constant')

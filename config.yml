@@ -13,7 +13,7 @@ lmbda: 0.95
 mini_batch_size: 256
 
 #Environment
-map_size: 48
+map_size: 24
 
 #Architecture - Actor
 actor_n_blocks: 6
@@ -25,11 +25,11 @@ critic_n_blocks: 6
 critic_intermediate_channels: 16
 
 #Other 
-device: cuda #, cpu, mps
-path:  model.t 
+device: mps #, cpu, mps
+path:  None #model.t 
 save_path: model.t
 video_save_rate: 100000 #How often to save a video, in episodes
-log_to_wb: True
+log_to_wb: False
 
 #Reward
 unit_lost_scale: 0.1

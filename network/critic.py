@@ -7,7 +7,7 @@ from .blocks import ResSEBlock, ConvBlock, GlobalBlock
 
 
 class critic(nn.Module):
-    def __init__(self, intput_channels, n_blocks, intermediate_channels, layer_type = "conv") -> None:
+    def __init__(self, intput_channels, n_blocks, intermediate_channels, config, layer_type = "conv") -> None:
         super(critic, self).__init__()
 
 
@@ -25,11 +25,11 @@ class critic(nn.Module):
         blocks.append(layer(intermediate_channels, intermediate_channels))
         blocks.append(nn.Conv2d(intermediate_channels, 5, 1))
 
-        self.global_block = GlobalBlock()
+        self.global_block = GlobalBlock(config['map_size'])
 
         self.conv = nn.Sequential(*blocks)
         
-        self.linear = nn.Sequential(nn.Linear((48**2)*5, 1))
+        self.linear = nn.Sequential(nn.Linear((config['map_size']**2)*5, 1))
 
     def forward(self, image_features: torch.Tensor, global_features: torch.Tensor):
         if type(image_features) == np.ndarray:
@@ -47,14 +47,3 @@ class critic(nn.Module):
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
-
-if __name__ == "__main__":
-    net = critic(23, 10)
-    print("Number of parameters in network", net.count_parameters())
-    tens = torch.ones((5, 23, 48, 48))
-
-    print(torch.sum(tens))
-
-    print(torch.sum(net(tens)))
-
-    print(net(tens).shape)

@@ -12,7 +12,7 @@ os.environ['PYTORCH_ENABLE_MPS_FALLBACK']='1'
 
 config = load_config()
 
-env = LuxAI_S2(verbose=0, collect_stats=True, map_size = config["map_size"])
+env = LuxAI_S2(verbose=0, collect_stats=True, map_size = config["map_size"], MAX_FACTORIES = 3 if config["map_size"] < 48 else 5)
 env = StateSpaceVol1(env, config)
 env = SinglePlayerEnv(env)
 env = IceRewardWrapper(env, config)

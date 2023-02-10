@@ -1,9 +1,10 @@
 from .idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from math import floor
 import torch
-
+from utils.utils import load_config
 MASK_EPS = 1e-7
 
+map_size = load_config()["map_size"]
 
 def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
     if dir == "right":
@@ -119,7 +120,7 @@ def single_factory_action_mask(factory, obs, device):
 def unit_action_mask(obs, device, player = "player_0"):
     #NOTE: Needs to take in a player for the factory stuff?
     obs = obs[player]
-    action_mask = torch.ones((48, 48, UNIT_ACTION_IDXS), device=device, dtype=torch.uint8)
+    action_mask = torch.ones((map_size, map_size, UNIT_ACTION_IDXS), device=device, dtype=torch.uint8)
 
     #Get factory position
     factories = obs["factories"][player]
@@ -138,7 +139,7 @@ def unit_action_mask(obs, device, player = "player_0"):
 
 def factory_action_mask(obs, device, player = "player_0"):
     #note: Needs to take in a player for the factory stuff?
-    action_mask = torch.ones((48, 48, FACTORY_ACTION_IDXS), device=device, dtype=torch.uint8)
+    action_mask = torch.ones((map_size, map_size, FACTORY_ACTION_IDXS), device=device, dtype=torch.uint8)
     obs = obs[player]
     factories = obs["factories"][player]
     for factory in factories.values():

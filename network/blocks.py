@@ -48,12 +48,13 @@ class ResSEBlock(nn.Module):
 
 class GlobalBlock(nn.Module):
 
-    def __init__(self) -> None:
+    def __init__(self, map_size) -> None:
         super().__init__()
 
         self.activation = nn.ReLU()
         self.fc1 = nn.Linear(16, 16)
         self.fc2 = nn.Linear(16, 12)
+        self.map_size = map_size
         
     def forward(self, x):
         x = self.activation(self.fc1(x))
@@ -61,7 +62,7 @@ class GlobalBlock(nn.Module):
         # Batch_size x 12 --> Batch_size x 12 x 1 x 1 --> Batch_size x 12 x 48 x 48
 
         x = x.unsqueeze(dim = -1).unsqueeze(dim = -1)
-        x = x.repeat(1,1,48,48)
+        x = x.repeat(1,1,self.map_size,self.map_size)
         return x
 
 

@@ -12,9 +12,9 @@ class ActorCritic(nn.Module):
 
         channels = 32
 
-        self.actor = actor(channels, unit_action_dim, factory_action_dim, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"]).to(self.device)
+        self.actor = actor(channels, unit_action_dim, factory_action_dim, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"], config).to(self.device)
         # critic
-        self.critic = critic(channels, config["critic_n_blocks"], config["critic_intermediate_channels"]).to(self.device)
+        self.critic = critic(channels, config["critic_n_blocks"], config["critic_intermediate_channels"], config).to(self.device)
 
 
         print("Actor has:", self.actor.count_parameters(), "parameters")
