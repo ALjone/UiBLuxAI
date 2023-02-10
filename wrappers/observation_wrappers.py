@@ -63,7 +63,7 @@ class StateSpaceVol1(gym.ObservationWrapper):
                     act = unit["action_queue"][0]
                     if act[0] == 0:
                         dir = dirs[act[1]] #Get the direction we're moving
-                        if x+dir[0] < 0 or x+dir[0] > 47 or y+dir[1] < 0 or y+dir[1] > 47: continue
+                        if x+dir[0] < 0 or x+dir[0] > self.config['map_size']-1 or y+dir[1] < 0 or y+dir[1] > self.config['map_size']-1: continue
                         next_step[i, x+dir[0], y+dir[1]] = 1
                 pass
         

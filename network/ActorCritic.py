@@ -31,27 +31,30 @@ class ActorCritic(nn.Module):
         factory_mask = factory_action_mask(obs, self.device)
 
 
-        action_type_probs, action_direction_probs, action_values_probs, action_probs_factories = self.actor(image_features, global_features)
+        action_type_probs, action_direction_probs, action_values_probs, action_resource_probs, action_probs_factories = self.actor(image_features, global_features)
         #assert action_probs_unit.shape == unit_mask.shape
         assert action_probs_factories.shape == factory_mask.shape
 
         #action_probs_unit *= unit_mask
         action_probs_factories *= factory_mask
-        type_dist, direction_dist, value_dist, factory_dist = Categorical(action_type_probs), Categorical(action_direction_probs), Categorical(action_values_probs), Categorical(action_probs_factories)
+        type_dist, direction_dist, value_dist, resource_dist, factory_dist = Categorical(action_type_probs), Categorical(action_direction_probs), Categorical(action_values_probs), Categorical(action_resource_probs), Categorical(action_probs_factories)
 
         action_type = type_dist.sample()
         action_direction = direction_dist.sample()
         action_value = value_dist.sample()
+        action_resource = resource_dist.sample()
 
-        action_unit = torch.stack([action_type, action_direction, action_value], dim = -1)
+        action_unit = torch.stack([action_type, action_direction, action_value, action_resource], dim = -1)
 
         unit_mask = (image_features[0] == 1)
         action_type_logprob = type_dist.log_prob(action_type)*unit_mask
         action_direction_logprob = direction_dist.log_prob(action_direction)*unit_mask
         action_value_logprob = value_dist.log_prob(action_value)*unit_mask
+        action_resource_logprob = resource_dist.log_prob(action_resource)*unit_mask
+        
 
         # Current problem: How do we handle logprobs when we are sampling 3 values from 3 different (not independent) distributions
-        action_logprob_unit = torch.sum(action_type_logprob.detach()) * torch.sum(action_direction_logprob.detach()) * torch.sum(action_value_logprob.detach())
+        action_logprob_unit = torch.sum(action_type_logprob.detach()) * torch.sum(action_direction_logprob.detach()) * torch.sum(action_value_logprob.detach() * torch.sum(action_resource_logprob.detach()))
 
         action_factory = factory_dist.sample()
         action_logprob_factory = factory_dist.log_prob(action_factory)*(image_features[1] == 1)
@@ -66,17 +69,19 @@ class ActorCritic(nn.Module):
 
         #NOTE: Assumes first channel is unit mask for our agent
         #NOTE: Assumes second channel is factory mask for our agent
-        action_type_probs, action_dir_probs, action_value_probs, action_probs_factories = self.actor(image_features, global_features)
+        action_type_probs, action_dir_probs, action_value_probs, action_resource_probs, action_probs_factories = self.actor(image_features, global_features)
 
         #unit_dist = Categorical(action_probs_unit)
         type_dist = Categorical(action_type_probs)
         dir_dist = Categorical(action_dir_probs)
         val_dist = Categorical(action_value_probs)
+        resource_dist = Categorical(action_resource_probs)
 
         unit_mask = (image_features[:,0] == 1)
         action_type_logprob = type_dist.log_prob(unit_action[:,:,:,0])*unit_mask
         action_direction_logprob = dir_dist.log_prob(unit_action[:,:,:,1])*unit_mask
         action_value_logprob = val_dist.log_prob(unit_action[:,:,:,2])*unit_mask
+        action_resource_logprob = resource_dist.log_prob(unit_action[:,:,:,3])*unit_mask
 
         # Current problem: How do we handle logprobs when we are sampling 3 values from 3 different (not independent) distributions
         action_logprobs_unit = action_type_logprob.detach() * torch.sum(action_direction_logprob.detach()) * torch.sum(action_value_logprob.detach())

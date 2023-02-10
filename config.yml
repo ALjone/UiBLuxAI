@@ -7,7 +7,7 @@ batch_size: 2000
 actor_lr: 0.0003
 critic_lr: 0.0003
 gamma: 0.99
-epochs_per_batch: 16
+epochs_per_batch: 8
 eps_clip: 0.1
 lmbda: 0.95
 mini_batch_size: 512
@@ -28,7 +28,7 @@ critic_intermediate_channels: 16
 device: cuda #, cpu, mps
 path:  None #model.t 
 save_path: model.t
-video_save_rate: 100000 #How often to save a video, in episodes
+video_save_rate: 500 #How often to save a video, in episodes
 log_to_wb: True
 
 #Reward

@@ -1,11 +1,8 @@
 import numpy as np
-from .action_queues import move_north, move_south, move_east, move_west, move_single
-from .action_queues import pickup, self_destruct, dig
-from .action_queues import move_to_closest_factory_and_transport, move_to_closest_res, res_mining_loop
-from .action_queues import transfer_single, self_destruct
 
+from .single_move_actions import move, dig, recharge, self_destruct, transfer, pickup
 
-UNIT_ACTION_IDXS = 14
+UNIT_ACTION_IDXS = 18 # 5 types, 5 directions, 4 values, 4 resources
 FACTORY_ACTION_IDXS = 4
 MOVE_NAMES = ['Move', 'Transfer', 'Pickup', 'Dig', 'Self Destruct']
 
@@ -25,42 +22,32 @@ MOVE_NAMES = ['Move', 'Transfer', 'Pickup', 'Dig', 'Self Destruct']
 # a[5] = n, number of times to execute this action before exhausting it and removing it from the front of the action queue. Minimum is 1.
 
 
-def _unit_idx_to_action(type_idx, direction_idx, amount_idx, unit):
+def _unit_idx_to_action(type_idx, direction_idx, amount_idx, resource_idx, unit):
     """Translates an index-action (from argmax) into a Lux-valid action for units"""
 
-    amount = [0.25, 0.5, 0.75, 1]
-    resources = ['power', 'ice', 'water', 'ore', 'metal']
+    amount = [0.25, 0.5, 0.75, 1][amount_idx]
+    res_name = ["ice", "ore", "water", "metal", "power"][resource_idx]
     if (type_idx == 0):  # Move
-        #print('Action 0:',  move_single(direction_idx, 1, 1))
-        return move_single(direction_idx, 1, 1)
+        return move(dir = direction_idx)
 
-    elif (type_idx == 1):
-        res = resources[direction_idx]
-        cargo = unit["power"]
-        #print('Action 1:', pickup(res, amount[amount_idx]*int(cargo)))
-        return pickup(res, int(amount[amount_idx]*int(cargo)))
+    elif (type_idx == 1): #Transfer
+        cargo = unit["cargo"][res_name]
+        return transfer(direction = direction_idx, res_type = resource_idx, amount = int(amount*int(cargo)))
 
-    elif (type_idx == 2):
-        #print('Action 2:', dig(unit, 1, 0))
-        return dig(unit, 1, 0)
+    elif (type_idx == 2): #Pickup
+        cargo = unit["cargo"][res_name]
+        return pickup(res_type = resource_idx, amount = int(amount*int(cargo)))
 
-    # Using amount idx to indicate direction of transferal, and will always transfer all.
-    elif (type_idx == 3):
-        res = resources[direction_idx]
-        #print('Action 3:', transfer_single(res, 1000, direction=amount_idx))
+    elif (type_idx == 3): #Dig
+        return dig()
 
-        return transfer_single(res, 1000, direction=amount_idx)
-
-    elif (type_idx == 4):
-        #print('Action 4:', self_destruct())
-        
+    elif (type_idx == 4): #Self destruct
         return self_destruct()
 
 
 def _factory_idx_to_action(idx):
     """Translates an index-action (from argmax) into a Lux-valid action for factories"""
-    assert 0 <= idx < (FACTORY_ACTION_IDXS -
-                       1)  # Minus 1 because action 3 is do nothing
+    assert 0 <= idx < (FACTORY_ACTION_IDXS - 1)  # Minus 1 because action 3 is do nothing
     assert isinstance(idx, int)
     # 0: Build light, 1: Build heavy, 2: Grow lichen
     return idx
@@ -74,29 +61,13 @@ def outputs_to_actions(unit_output, factory_output, units, factories, obs, facto
     return unit_actions
 
 
-def unit_id_to_action_idx(units, unit_output):
-    actions = {}
-    for unit in units:
-        x, y = unit["pos"][0], unit["pos"][1]
-        action_idx = unit_output[x, y].item()
-        if action_idx == 0:
-            continue  # The "Do nothing" action
-        actions[unit["unit_id"]] = action_idx
-
-    return actions
-
-
 def _unit_output_to_actions(unit_output, units, obs, factory_map):
     """Turns outputs from the model into action dicts for units"""
     actions = {}
     for unit in units:
         x, y = unit["pos"][0], unit["pos"][1]
         action = unit_output[x, y].detach()#.item()
-        if action[0] == 0:
-            continue  # The "Do nothing" action
         action = _unit_idx_to_action(*action, unit)
-        if action == []:  # If you stand on ice and move to ice...
-            continue
         actions[unit["unit_id"]] = action
 
     return actions
