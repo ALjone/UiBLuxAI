@@ -77,7 +77,8 @@ class IceRewardWrapper(gym.RewardWrapper):
             )
             # TODO: Check for correctness
             reward = self.config['scaling_win'] if rewards["player_0"] > rewards["player_1"] else -self.config['scaling_win'] if rewards["player_0"] < rewards["player_1"] else 0
-            reward += np.tanh(lichen/self.config["lichen_divide_value"])*self.config['scaling_lichen']
+            if self.env.state.real_env_steps > 998:
+                reward += np.tanh(lichen/self.config["lichen_divide_value"])*self.config['scaling_lichen']
             self.env.state.stats["player_0"]['rewards']['end_of_episode_reward'] += reward
             return reward
 

@@ -7,8 +7,7 @@ from .action_queues import transfer_single, self_destruct
 
 UNIT_ACTION_IDXS = 14
 FACTORY_ACTION_IDXS = 4
-MOVE_NAMES = moves = ["No action", "Stop", "Move north", "Move south", "Move east", "Move west", "Pickup power",
-                      "Closest factory ice", "Closest factory ore", "Closest ice", "Closest ore", "Digg"]
+MOVE_NAMES = ['Move', 'Transfer', 'Pickup', 'Dig', 'Self Destruct']
 
 # a[0] = action type
 # (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
