@@ -39,11 +39,16 @@ def do_early_phase(env, agents, config):
         water[:, state.next_player] = w
         metal[:, state.next_player] = m
 
-        x = s[:, 0]
-        y = s[:, 1]
+        x = np.expand_dims(s[:, 0], axis = -1)
+        y = np.expand_dims(s[:, 1], axis = -1)
+        print("Valid mask shape:", valid_spawns_mask.shape)
+        print("x shape", x.shape)
+        print("Clip shape:", np.clip(x-6, a_min = 0, a_max = None).shape)
+
+        valid_spawns_mask[:, np.array([1, 2]) : np.array([3, 4]), np.array([1, 2]) : np.array([3, 4])]
         #The valid spawns mask in Jux is slow, so we make our own fast one
-        valid_spawns_mask[ np.clip(x-6, a_min = 0, a_max = None) : np.clip(x+6+1, a_min = None, a_max = config["map_size"]),
-                           np.clip(y-6, a_min = 0, a_max = None) : np.clip(y+6+1, a_min = None, a_max = config["map_size"])] = False
+        valid_spawns_mask[:, np.clip(x-6, a_min = 0, a_max = None, dtype=np.int8) : np.clip(x+6+1, a_min = None, a_max = config["map_size"]-1, dtype=np.int8),
+                           np.clip(y-6, a_min = 0, a_max = None, dtype=np.int8) : np.clip(y+6+1, a_min = None, a_max = config["map_size"]-1, dtype=np.int8)] = False
 
         step += 1
         state, (observations, rewards, dones, infos) = env.step_factory_placement(state, spawn, water, metal)
