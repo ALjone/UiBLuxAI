@@ -7,21 +7,20 @@ from utils.wandb_logging import WAndB
 from wandb.plot import bar
 from wandb import Table as wbtable
 from actions.idx_to_lux_move import MOVE_NAMES
-
+from jux.torch import from_torch, to_torch
 
 def do_early_phase(env, agents, config):
     num_envs = config["parallel_envs"]
     state = env.reset(np.random.randint(0, 2**32-1, dtype=np.int64, size = num_envs))
-    
     #valid_factory_mask = np.array(state.board.valid_spawns_mask)
     #NOTE: The way below is 10-20% faster than the way above, and about 250% faster than using the built in state.board.valid_spawns all the way through
-    valid_spawns_mask = np.array(~state.board.map.ice & ~state.board.map.ore) 
-    valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, 1, axis=1)
-    valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, -1, axis=1)
-    valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, 1, axis=2)
-    valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, -1, axis=2)
-    valid_spawns_mask[:, [0, -1], :] = False
-    valid_spawns_mask[:, :, [0, -1]] = False
+    # valid_spawns_mask = np.array(~state.board.map.ice & ~state.board.map.ore) 
+    # valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, 1, axis=1)
+    # valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, -1, axis=1)
+    # valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, 1, axis=2)
+    # valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, -1, axis=2)
+    # valid_spawns_mask[:, [0, -1], :] = False
+    # valid_spawns_mask[:, :, [0, -1]] = False
     step = 1
 
     bid, faction = np.zeros((num_envs, 2)), np.zeros((num_envs, 2))
@@ -32,24 +31,21 @@ def do_early_phase(env, agents, config):
 
     #They should always have same real_env_steps
     while (state.real_env_steps < 0).any():
-        #valid_spawns_mask = state.board.valid_spawns_mask
-        s, w, m = agents[state.next_player[0]].early_setup(step, state, valid_spawns_mask)
+        valid_spawns_mask = to_torch(state.board.valid_spawns_mask)
+        torch_state  = state._replace(env_cfg=None).to_torch()
+        s, w, m = agents[state.next_player[0]].early_setup(step, torch_state, valid_spawns_mask)
         
         spawn[:, state.next_player] = s
         water[:, state.next_player] = w
         metal[:, state.next_player] = m
 
-        x = np.expand_dims(s[:, 0], axis = -1)
-        y = np.expand_dims(s[:, 1], axis = -1)
-        print("Valid mask shape:", valid_spawns_mask.shape)
-        print("x shape", x.shape)
-        print("Clip shape:", np.clip(x-6, a_min = 0, a_max = None).shape)
+        # x = np.expand_dims(s[:, 0], axis = -1)
+        # y = np.expand_dims(s[:, 1], axis = -1)
 
-        valid_spawns_mask[:, np.array([1, 2]) : np.array([3, 4]), np.array([1, 2]) : np.array([3, 4])]
-        #The valid spawns mask in Jux is slow, so we make our own fast one
-        valid_spawns_mask[:, np.clip(x-6, a_min = 0, a_max = None, dtype=np.int8) : np.clip(x+6+1, a_min = None, a_max = config["map_size"]-1, dtype=np.int8),
-                           np.clip(y-6, a_min = 0, a_max = None, dtype=np.int8) : np.clip(y+6+1, a_min = None, a_max = config["map_size"]-1, dtype=np.int8)] = False
-
+        # valid_spawns_mask[:, np.array([1, 2]) : np.array([3, 4]), np.array([1, 2]) : np.array([3, 4])]
+        # #The valid spawns mask in Jux is slow, so we make our own fast one
+        # valid_spawns_mask[:, np.clip(x-6, a_min = 0, a_max = None, dtype=np.int8) : np.clip(x+6+1, a_min = None, a_max = config["map_size"]-1, dtype=np.int8),
+        #                    np.clip(y-6, a_min = 0, a_max = None, dtype=np.int8) : np.clip(y+6+1, a_min = None, a_max = config["map_size"]-1, dtype=np.int8)] = False
         step += 1
         state, (observations, rewards, dones, infos) = env.step_factory_placement(state, spawn, water, metal)
 

@@ -1,12 +1,13 @@
 from lux.kit import obs_to_game_state, EnvConfig
 from lux.utils import my_turn_to_place_factory
 import numpy as np
-import scipy
+import jax.numpy as jnp
+from jax import scipy as jsp
+from jux.torch import from_torch
 from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, unit_id_to_action_idx
 from ppo import PPO
 import torch
-
-
+import torch.nn.functional as F
 class Agent():
     def __init__(self, player: str, env_cfg: EnvConfig, config) -> None:
         self.player = player
@@ -31,40 +32,28 @@ class Agent():
             # bid 0 to not waste resources bidding and declare as the default faction
             return dict(faction="AlphaStrike", bid=0)
         else:
-            # whether it is your turn to place a factory
-            # we will spawn our factory in a random location with 150 metal and water if it is our turn to place
-            potential_spawns = np.array(
-                list(zip(*np.where(valid_spawn_mask == 1))))
+            map = torch.zeros((num_envs, 3, valid_spawn_mask.shape[1], valid_spawn_mask.shape[2]), dtype=torch.float32)
+            map[:, 0, :, :] = (state.board.map.rubble/torch.linalg.norm(state.board.map.rubble.to(torch.float32), axis = (1, 2), keepdims=True))
+            map[:, 1, :, :] = (state.board.map.ore/torch.linalg.norm(state.board.map.ore.to(torch.float32), axis = (1, 2), keepdims=True))
+            map[:, 2, :, :] = (state.board.map.ice/torch.linalg.norm(state.board.map.ice.to(torch.float32), axis = (1, 2), keepdims=True))
 
-            map = np.zeros((num_envs, valid_spawn_mask.shape[1], valid_spawn_mask.shape[2], 3))
-            map[:, :, :, 0] = state.board.map.rubble/ np.linalg.norm(state.board.map.rubble, axis = (1, 2), keepdims=True)
-            map[:, :, :, 1] = state.board.map.ore/np.linalg.norm(state.board.map.ore, axis = (1, 2), keepdims=True)
-            map[:, :, :, 2] = state.board.map.ice/np.linalg.norm(state.board.map.ice, axis = (1, 2), keepdims=True)
-
-            #print(np.linalg.norm(np.array(state.board.map.ice), axis = (1, 2)).shape)
-
-            window = np.ones((num_envs, 11, 11, 3))
+            window = torch.ones((num_envs, 3, 11, 11))
             for i in range(0, 5):
-                window[:, i+1:10-i, i+1:10-i, 2] = 2*i * \
-                    np.ones((num_envs, 9-2*i, 9-2*i))
-                window[:, i+1:10-i, i+1:10-i, 1] = i * \
-                    np.ones((num_envs, 9-2*i, 9-2*i))
-                window[:, i+1:10-i, i+1:10-i, 0] = -i * \
-                    np.ones((num_envs, 9-2*i, 9-2*i))
-            window[:, 5:8, 5:8, 1:] = np.zeros((num_envs, 3, 3, 2))
+                window[:, 2, i+1:10-i, i+1:10-i] = (2*i * torch.ones((num_envs, 9-2*i, 9-2*i)))
+                window[:, 1, i+1:10-i, i+1:10-i] = (i * torch.ones((num_envs, 9-2*i, 9-2*i)))
+                window[:, 0, i+1:10-i, i+1:10-i] = (-i*torch.ones((num_envs, 9-2*i, 9-2*i)))
+            window[:, 1:, 5:8, 5:8] = (torch.zeros((num_envs, 2, 3, 3)))
 
-            #TODO: Herman plz fix, make this vectorized over num_envs
-            #final = np.zeros((num_envs, 48, 48, 3))
-            final = scipy.ndimage.convolve(
-                map, window, mode='constant')
-            final = np.sum(final, axis=3)
-            final[valid_spawn_mask == 0] = -np.infty
+            final = F.conv2d(
+                map, window, padding="same")
+            final = torch.sum(final, axis=1)
+            final[valid_spawn_mask == False] = -torch.inf
 
 
             idx = final.reshape(final.shape[0],-1).argmax(-1)
-            out = np.unravel_index(idx, final.shape[-2:])
+            out = jnp.unravel_index(from_torch(idx), final.shape[-2:])
 
-            return np.array(out).T, np.ones(valid_spawn_mask.shape[0])*150, np.ones(valid_spawn_mask.shape[0])*150
+            return jnp.array(out).T, jnp.ones(valid_spawn_mask.shape[0])*150, jnp.ones(valid_spawn_mask.shape[0])*150
     
     def act(self, state, remainingOverageTime: int = 60):
         features = state[0][self.player]
