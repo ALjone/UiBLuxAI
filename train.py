@@ -8,6 +8,7 @@ from wandb.plot import bar
 from wandb import Table as wbtable
 from actions.idx_to_lux_move import MOVE_NAMES
 from jux.torch import from_torch, to_torch
+from jux_wrappers import observation_wrapper
 
 def do_early_phase(env, agents, config):
     num_envs = config["parallel_envs"]
@@ -56,6 +57,9 @@ def train_jux(env, agents, config):
     for _ in range(config["max_episodes"]//config["print_freq"]):
         for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
             state = do_early_phase(env, agents, config)
+            #torch_state  = state._replace(env_cfg=None).to_torch()
+            observation_wrapper.observation(state, config)
+            
 
             #TODO: The states can be stacked if the agent uses the same network
             #for agent in agents:

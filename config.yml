@@ -13,7 +13,7 @@ lmbda: 0.95
 
 #Environment
 map_size: 48
-parallel_envs: 10
+parallel_envs: 3
 
 #Architecture - Actor
 actor_n_blocks: 6

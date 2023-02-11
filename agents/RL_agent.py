@@ -24,6 +24,14 @@ class Agent():
         if config["path"] is not None:
             self.PPO.load(config["path"])
             print("Successfully loaded model")
+        num_envs = config["parallel_envs"]
+        
+        self.window = torch.ones((num_envs, 3, 11, 11))
+        for i in range(0, 5):
+            self.window[:, 2, i+1:10-i, i+1:10-i] = (2*i * torch.ones((num_envs, 9-2*i, 9-2*i)))
+            self.window[:, 1, i+1:10-i, i+1:10-i] = (i * torch.ones((num_envs, 9-2*i, 9-2*i)))
+            self.window[:, 0, i+1:10-i, i+1:10-i] = (-i*torch.ones((num_envs, 9-2*i, 9-2*i)))
+        self.window[:, 1:, 5:8, 5:8] = (torch.zeros((num_envs, 2, 3, 3)))
 
     def early_setup(self, step: int, state, valid_spawn_mask, remainingOverageTime: int = 60):
         num_envs = valid_spawn_mask.shape[0]
@@ -37,15 +45,8 @@ class Agent():
             map[:, 1, :, :] = (state.board.map.ore/torch.linalg.norm(state.board.map.ore.to(torch.float32), axis = (1, 2), keepdims=True))
             map[:, 2, :, :] = (state.board.map.ice/torch.linalg.norm(state.board.map.ice.to(torch.float32), axis = (1, 2), keepdims=True))
 
-            window = torch.ones((num_envs, 3, 11, 11))
-            for i in range(0, 5):
-                window[:, 2, i+1:10-i, i+1:10-i] = (2*i * torch.ones((num_envs, 9-2*i, 9-2*i)))
-                window[:, 1, i+1:10-i, i+1:10-i] = (i * torch.ones((num_envs, 9-2*i, 9-2*i)))
-                window[:, 0, i+1:10-i, i+1:10-i] = (-i*torch.ones((num_envs, 9-2*i, 9-2*i)))
-            window[:, 1:, 5:8, 5:8] = (torch.zeros((num_envs, 2, 3, 3)))
-
             final = F.conv2d(
-                map, window, padding="same")
+                map, self.window, padding="same")
             final = torch.sum(final, axis=1)
             final[valid_spawn_mask == False] = -torch.inf
 

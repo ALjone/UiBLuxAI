@@ -11,7 +11,7 @@ os.environ['PYTORCH_ENABLE_MPS_FALLBACK']='1'
 config = load_config()
 
 env_cfg = EnvConfig(verbose=1, map_size = config["map_size"])
-buf_cfg=JuxBufferConfig(MAX_N_UNITS=200)
+buf_cfg = JuxBufferConfig(MAX_N_UNITS=200)
 
 jux_env = JuxEnv(
     env_cfg=env_cfg,
