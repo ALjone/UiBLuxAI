@@ -13,6 +13,13 @@ torch
 #TODO: Triple check this!!!
 dirs = [(0, 0), (0, -1), (1, 0), (0, 1), (-1, 0)]
 
+def create_mask_from_pos(array, x_pos, y_pos, value):
+    x = x_pos.flatten()
+    y = y_pos.flatten()
+    batch_idx = jnp.arange(0, array.shape[0]).repeat(x_pos.shape[-1])
+
+    return array.at[batch_idx, x, y].set(value, mode = "drop")
+
 
 def _image_features(state, config):
     torch_state = state.to_torch()
@@ -22,94 +29,110 @@ def _image_features(state, config):
     player_1_id = 1
     
     #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
-
-    unit_mask = torch.zeros((1, config["map_size"], config["map_size"]))
+    unit_mask_player_0 = jnp.zeros((batch_size, map_size, map_size))
+    unit_mask_player_1 = jnp.zeros((batch_size, map_size, map_size))
     #TODO: We also need a map for where factories are occupying space? Since they are 3x3
-    factory_mask = torch.zeros((1, config["map_size"], config["map_size"]))
+    factory_mask_player_0 = jnp.zeros((batch_size, map_size, map_size))
+    factory_mask_player_1 = jnp.zeros((batch_size, map_size, map_size))
+    #TODO: Add metal/water?
+    unit_power = jnp.zeros((batch_size, map_size, map_size))
+    unit_ice = jnp.zeros((batch_size, map_size, map_size))
+    unit_ore = jnp.zeros((batch_size, map_size, map_size))
+    unit_water = jnp.zeros((batch_size, map_size, map_size))
+    unit_metal = jnp.zeros((batch_size, map_size, map_size))
 
-    unit_cargo = torch.zeros((3, config["map_size"], config["map_size"])) #Power, Ice, Ore
+    factory_power = jnp.zeros((batch_size, map_size, map_size))
+    factory_ice = jnp.zeros((batch_size, map_size, map_size))
+    factory_ore = jnp.zeros((batch_size, map_size, map_size))
+    factory_water = jnp.zeros((batch_size, map_size, map_size))
+    factory_metal = jnp.zeros((batch_size, map_size, map_size))
+
     factory_cargo = torch.zeros((5, config["map_size"], config["map_size"]))
 
-    board = torch.zeros((4, config["map_size"], config["map_size"])) #Rubble, Ice, Ore, Lichen
-
-    lichen_mask = torch.zeros((1, config["map_size"], config["map_size"])) #1 for friendly, 0 for none, -1 for enemy
+    board_rubble = state.board.map.rubble
+    board_ice = state.board.map.ice 
+    board_ore = state.board.map.ore
+    board_lichen = state.board.lichen
+    
+    #TODO: No idea if this works
+    player_0_lichen_mask = jnp.isin(
+        state.board.lichen_strains, state.factories.team_id[:, player_0_id]
+    )
+    player_1_lichen_mask = jnp.isin(
+        state.board.lichen_strains, state.factories.team_id[:, player_1_id]
+    )
 
     unit_type = torch.zeros((2, config["map_size"], config["map_size"])) #LIGHT, HEAVY
 
-    #TODO: Move this to agent
-    action_queue_length = torch.zeros((1, config["map_size"], config["map_size"]))
-
-    next_step = torch.zeros((2, config["map_size"], config["map_size"]))
-    #units = jux.tree_util.map_to_aval(state.units)
+    #UNIT MASKS
     units = state.units
     
-    n_units_player_0 = state.n_units[:, player_0_id]
-    n_units_player_1 = state.n_units[:, player_1_id]
-    print("N units player 0:", n_units_player_0)
+    unit_pos_player_0 = units.pos.pos[..., player_0_id, :, :]
+    unit_pos_player_1 = units.pos.pos[..., player_1_id, :, :]
 
-    pos = units.pos.pos[:, player_0_id]
-    pos = pos.at[0, 0, 0].set(1)
-    pos = pos.at[0, 0, 1].set(1)
+    unit_mask_player_0 = create_mask_from_pos(unit_mask_player_0, unit_pos_player_0[..., 0], unit_pos_player_0[..., 1], True)
+    unit_mask_player_1 = create_mask_from_pos(unit_mask_player_1, unit_pos_player_1[..., 0], unit_pos_player_1[..., 1], True)
 
-    print(pos[..., 0])
-    print(pos[..., 0].shape)
+    #FACTORY MASKS
+    factories = state.factories
 
-    unit_mask_player_0 = np.zeros((batch_size, map_size, map_size))
-    unit_mask_player_0 = unit_mask_player_0.at[:, pos[..., 0], pos[..., 1]].set(1, mode = 'drop')
-    print(unit_mask_player_0)
-    print(unit_mask_player_0.shape)
-    #unit_mask_player_0[units.pos.pos[:, player_0_id, :n_units_player_0]] = 1
-    #unit_mask_player_1 = units.pos.pos[:, player_1_id, :n_units_player_1]
+    factory_pos_player_0 = factories.pos.pos[..., player_0_id, :, :]
+    factory_pos_player_1 = factories.pos.pos[..., player_1_id, :, :]
 
-    '''factories = state["factories"][player]
-    units = state["units"][player]
+    factory_mask_player_0 = create_mask_from_pos(factory_mask_player_0, factory_pos_player_0[..., 0], factory_pos_player_0[..., 1], True)
+    factory_mask_player_1 = create_mask_from_pos(factory_mask_player_1, factory_pos_player_1[..., 0], factory_pos_player_1[..., 1], True)
 
-    for _, unit in units.items():
-        x, y = unit["pos"]
-        unit_mask[0, x, y] = (1 if player == main_player else -1)
-        is_light = unit["unit_type"] == "LIGHT"
-        if is_light:
-            unit_type[0, x, y] = 1
-        else:
-            unit_type[1, x, y] = 1
-        unit_cargo[0, x, y] = unit["power"]/(150 if is_light else 3000)
-        unit_cargo[1, x, y] = unit["cargo"]["ice"]/(100 if is_light else 1000)
-        unit_cargo[2, x, y] = unit["cargo"]["ore"]/(100 if is_light else 1000)
-        
-        action_queue_length[0, x, y] = len(unit["action_queue"])/20
+    #UNIT CARGO INFO
+    #TODO: Test these
+    power = units.power
+    unit_power = create_mask_from_pos(unit_power, unit_pos_player_0[..., 0], unit_pos_player_0[..., 1], power[:, 0].flatten())
+    unit_power = create_mask_from_pos(unit_power, unit_pos_player_1[..., 0], unit_pos_player_1[..., 1], power[:, 1].flatten()) #Update it
 
-        #Predicting next cell for unit
-        if len(unit["action_queue"]) > 0:
-            act = unit["action_queue"][0]
-            if act[0] == 0:
-                dir = dirs[act[1]] #Get the direction we're moving
-                if x+dir[0] < 0 or x+dir[0] > 47 or y+dir[1] < 0 or y+dir[1] > 47: continue
-                next_step[i, x+dir[0], y+dir[1]] = 1
-        pass
+    ice = units.cargo.ice
+    unit_ice = create_mask_from_pos(unit_ice, unit_pos_player_0[..., 0], unit_pos_player_0[..., 1], ice[:, 0].flatten())
+    unit_ice = create_mask_from_pos(unit_ice, unit_pos_player_1[..., 0], unit_pos_player_1[..., 1], ice[:, 1].flatten()) #Update it
 
-    for _, factory in factories.items():
-        x, y = factory["pos"]
-        factory_mask[0, x, y] = (1 if player == main_player else -1)
-        #TODO: Look at tanh?
-        factory_cargo[0, x, y] = factory["power"]/1000              
-        factory_cargo[1, x, y] = factory["cargo"]["ice"]/1000
-        factory_cargo[2, x, y] = factory["cargo"]["ore"]/1000
-        factory_cargo[3, x, y] = factory["cargo"]["water"]/1000
-        factory_cargo[4, x, y] = factory["cargo"]["metal"]/1000
+    ore = units.cargo.ore
+    unit_ore = create_mask_from_pos(unit_ore, unit_pos_player_0[..., 0], unit_pos_player_0[..., 1], ore[:, 0].flatten())
+    unit_ore = create_mask_from_pos(unit_ore, unit_pos_player_1[..., 0], unit_pos_player_1[..., 1], ore[:, 1].flatten()) #Update it
 
-    #Get lichen mask for this player, and add it to the zeros
-    if player in state.teams.keys():
-        strain_ids = state.teams[player].factory_strains
-        agent_lichen_mask = torch.isin(
-            state.board.lichen_strains, strain_ids
-        )
-        lichen_mask += agent_lichen_mask * (1 if player == main_player else -1)'''
+    water = units.cargo.water
+    unit_water = create_mask_from_pos(unit_water, unit_pos_player_0[..., 0], unit_pos_player_0[..., 1], water[:, 0].flatten())
+    unit_water = create_mask_from_pos(unit_water, unit_pos_player_1[..., 0], unit_pos_player_1[..., 1], water[:, 1].flatten()) #Update it
 
-    board[0] = state["board"]["rubble"]/env.state.env_cfg.MAX_RUBBLE
-    board[1] = state["board"]["ice"]
-    board[2] = state["board"]["ore"]
-    board[3] = state["board"]["lichen"]/env.state.env_cfg.MAX_LICHEN_PER_TILE
-    
+    metal = units.cargo.metal
+    unit_metal = create_mask_from_pos(unit_metal, unit_pos_player_0[..., 0], unit_pos_player_0[..., 1], metal[:, 0].flatten())
+    unit_metal = create_mask_from_pos(unit_metal, unit_pos_player_1[..., 0], unit_pos_player_1[..., 1], metal[:, 1].flatten()) #Update it
+
+    #FACTORY CARGO INFO
+    #TODO: Test these
+    power = factories.power
+    factory_power = create_mask_from_pos(factory_power, factory_pos_player_0[..., 0], factory_pos_player_0[..., 1], power[:, 0].flatten())
+    factory_power = create_mask_from_pos(factory_power, factory_pos_player_1[..., 0], factory_pos_player_1[..., 1], power[:, 1].flatten()) #Update it
+
+    ice = factories.cargo.ice
+    factory_ice = create_mask_from_pos(factory_ice, factory_pos_player_0[..., 0], factory_pos_player_0[..., 1], ice[:, 0].flatten())
+    factory_ice = create_mask_from_pos(factory_ice, factory_pos_player_1[..., 0], factory_pos_player_1[..., 1], ice[:, 1].flatten()) #Update it
+
+    ore = factories.cargo.ore
+    factory_ore = create_mask_from_pos(factory_ore, factory_pos_player_0[..., 0], factory_pos_player_0[..., 1], ore[:, 0].flatten())
+    factory_ore = create_mask_from_pos(factory_ore, factory_pos_player_1[..., 0], factory_pos_player_1[..., 1], ore[:, 1].flatten()) #Update it
+
+    water = factories.cargo.water
+    factory_water = create_mask_from_pos(factory_water, factory_pos_player_0[..., 0], factory_pos_player_0[..., 1], water[:, 0].flatten())
+    factory_water = create_mask_from_pos(factory_water, factory_pos_player_1[..., 0], factory_pos_player_1[..., 1], water[:, 1].flatten()) #Update it
+
+    metal = factories.cargo.metal
+    factory_metal = create_mask_from_pos(factory_metal, factory_pos_player_0[..., 0], factory_pos_player_0[..., 1], metal[:, 0].flatten())
+    factory_metal = create_mask_from_pos(factory_metal, factory_pos_player_1[..., 0], factory_pos_player_1[..., 1], metal[:, 1].flatten()) #Update it
+
+    #LIGHT = 0, HEAVY = 1
+    unit_type = units.unit_type
+
+    print(unit_type.sum())
+    print(unit_type.shape)
+
+
     #TODO: Add action queue type in RL agent
     #Don't ask why this is torch to torch...
     image_features = torch.tensor(torch.concatenate([
