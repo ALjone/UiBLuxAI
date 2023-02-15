@@ -63,9 +63,49 @@ STILL NEEDS TO BE IMPLEMENTED!
 
 Flattend actionarray:
 
+0. Do Nothing
+1. Move north
+2. Move east
+3. Move south
+4. Move west
+5. Transfer Ice North
+6. Transfer Ice East
+7. Transfer Ice West
+8. Transfer Ice South
+9. Transfer Ore North
+10. Transfer Ore East
+11. Transfer Ore South
+12. Transfer Ore West
+13. Transfer Water North
+14. Transfer Water East
+15. Transfer Water South
+16. Transfer Water West
+17. Transfer Power North 25%
+18. Transfer Power North 50%
+19. Transwer Power North 75%
+20. Transwer Power North 100%
+21. Transfer Power East 25%
+22. Transfer Power East 50%
+23. Transwer Power East 75%
+24. Transwer Power East 100%
+25. Transwer Power South 25%
+26. Transwer Power South 50%
+27. Transwer Power South 75%
+28. Transwer Power South 100%
+29. Transwer Power West 25%
+30. Transwer Power West 50%
+31. Transwer Power West 75%
+32. Transwer Power West 100% 
+33. Pickup Power
+34. Pickup Ice
+35. Pickup Ore
+36. Pickup Water
+37. Digg
+38. Self Destruct
+
 1. Move x 5 - One for each dir
-2. Transfer Resource x 12 - [North, South, East, West] * 100% * [Water, Ice, Ore]  
-3. Transfer Power x 16 - [North, South, East, West] * [25%, 50%, 75%, 100%]
-4. Pickup x 4 - [Water, Ice, Ore, Power]
+2. Transfer Resource x 12 - [North, East, South, West] * 100% * [Water, Ice, Ore]  
+3. Transfer Power x 16 - [North, East, South, West] * [25%, 50%, 75%, 100%]
+4. Pickup x 4 - [Power, Ice, Ore, Water]
 5. Digg x 1
 6. Self Destruct x 1
