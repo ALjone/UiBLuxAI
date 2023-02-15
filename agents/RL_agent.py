@@ -6,7 +6,7 @@ from jax import scipy as jsp
 from jux.torch import from_torch
 from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, unit_id_to_action_idx
 from ppo import PPO
-import torch
+import jax
 import torch.nn.functional as F
 class Agent():
     def __init__(self, player: str, env_cfg: EnvConfig, config) -> None:
@@ -25,36 +25,32 @@ class Agent():
             self.PPO.load(config["path"])
             print("Successfully loaded model")
         num_envs = config["parallel_envs"]
-        
-        self.window = torch.ones((num_envs, 3, 11, 11))
+        self.window = self.make_window(num_envs)
+    def make_window(self, num_envs):
+        window = jnp.ones((num_envs, 3, 11, 11))
         for i in range(0, 5):
-            self.window[:, 2, i+1:10-i, i+1:10-i] = (2*i * torch.ones((num_envs, 9-2*i, 9-2*i)))
-            self.window[:, 1, i+1:10-i, i+1:10-i] = (i * torch.ones((num_envs, 9-2*i, 9-2*i)))
-            self.window[:, 0, i+1:10-i, i+1:10-i] = (-i*torch.ones((num_envs, 9-2*i, 9-2*i)))
-        self.window[:, 1:, 5:8, 5:8] = (torch.zeros((num_envs, 2, 3, 3)))
+            window = window.at[:, 2, i+1:10-i, i+1:10-i].set(2*i * jnp.ones((num_envs, 9-2*i, 9-2*i)))
+            window = window.at[:, 1, i+1:10-i, i+1:10-i].set(i * jnp.ones((num_envs, 9-2*i, 9-2*i)))
+            window = window.at[:, 0, i+1:10-i, i+1:10-i].set(-i*jnp.ones((num_envs, 9-2*i, 9-2*i)))
+        return window.at[:, 1:, 5:8, 5:8].set(jnp.zeros((num_envs, 2, 3, 3)))
 
     def early_setup(self, step: int, state, valid_spawn_mask, remainingOverageTime: int = 60):
-        num_envs = valid_spawn_mask.shape[0]
-        if step == 0:
-            raise ValueError("You're supposed to handle bidding outside of this...")
-            # bid 0 to not waste resources bidding and declare as the default faction
-            return dict(faction="AlphaStrike", bid=0)
-        else:
-            map = torch.zeros((num_envs, 3, valid_spawn_mask.shape[1], valid_spawn_mask.shape[2]), dtype=torch.float32)
-            map[:, 0, :, :] = (state.board.map.rubble/torch.linalg.norm(state.board.map.rubble.to(torch.float32), axis = (1, 2), keepdims=True))
-            map[:, 1, :, :] = (state.board.map.ore/torch.linalg.norm(state.board.map.ore.to(torch.float32), axis = (1, 2), keepdims=True))
-            map[:, 2, :, :] = (state.board.map.ice/torch.linalg.norm(state.board.map.ice.to(torch.float32), axis = (1, 2), keepdims=True))
-
-            final = F.conv2d(
-                map, self.window, padding="same")
-            final = torch.sum(final, axis=1)
-            final[valid_spawn_mask == False] = -torch.inf
+        num_envs = 50
+        map = jnp.zeros((num_envs, 3, 48, 48))
+        map.at[:, 0, :, :].set(state.board.map.rubble/jnp.linalg.norm(state.board.map.rubble, axis = (1, 2), keepdims=True))
+        map.at[:, 1, :, :].set(state.board.map.ore/jnp.linalg.norm(state.board.map.ore, axis = (1, 2), keepdims=True))
+        map.at[:, 2, :, :].set(state.board.map.ice/jnp.linalg.norm(state.board.map.ice, axis = (1, 2), keepdims=True))
+        
+        final = jax.lax.conv_general_dilated(
+            map, self.window, (1, 1), padding = "same")
+        final = jnp.sum(final, axis=1)
+        final = jnp.where(valid_spawn_mask, final, -jnp.inf)
 
 
-            idx = final.reshape(final.shape[0],-1).argmax(-1)
-            out = jnp.unravel_index(from_torch(idx), final.shape[-2:])
+        idx = final.reshape(final.shape[0],-1).argmax(-1)
+        out = jnp.unravel_index(idx, final.shape[-2:])
 
-            return jnp.array(out).T, jnp.ones(valid_spawn_mask.shape[0])*150, jnp.ones(valid_spawn_mask.shape[0])*150
+        return jnp.array(out).T, jnp.ones(valid_spawn_mask.shape[0])*150, jnp.ones(valid_spawn_mask.shape[0])*150
     
     def act(self, state, remainingOverageTime: int = 60):
         features = state[0][self.player]

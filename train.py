@@ -32,9 +32,9 @@ def do_early_phase(env, agents, config):
 
     #They should always have same real_env_steps
     while (state.real_env_steps < 0).any():
-        valid_spawns_mask = to_torch(state.board.valid_spawns_mask)
-        torch_state  = state._replace(env_cfg=None).to_torch()
-        s, w, m = agents[state.next_player[0]].early_setup(step, torch_state, valid_spawns_mask)
+        valid_spawns_mask = state.board.valid_spawns_mask
+        #torch_state  = state._replace(env_cfg=None).to_torch()
+        s, w, m = agents[state.next_player[0]].early_setup(step, state, valid_spawns_mask)
         
         spawn[:, state.next_player] = s
         water[:, state.next_player] = w
@@ -58,7 +58,8 @@ def train_jux(env, agents, config):
         for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
             state = do_early_phase(env, agents, config)
             #torch_state  = state._replace(env_cfg=None).to_torch()
-            observation_wrapper.observation(state, config)
+            for i in range(1000):
+                observation_wrapper.observation(state, config)
             
 
             #TODO: The states can be stacked if the agent uses the same network
