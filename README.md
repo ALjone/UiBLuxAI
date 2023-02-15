@@ -82,20 +82,20 @@ Flattend actionarray:
 16. Transfer Water West
 17. Transfer Power North 25%
 18. Transfer Power North 50%
-19. Transwer Power North 75%
-20. Transwer Power North 100%
+19. Transfer Power North 75%
+20. Transfer Power North 100%
 21. Transfer Power East 25%
 22. Transfer Power East 50%
-23. Transwer Power East 75%
-24. Transwer Power East 100%
-25. Transwer Power South 25%
-26. Transwer Power South 50%
-27. Transwer Power South 75%
-28. Transwer Power South 100%
-29. Transwer Power West 25%
-30. Transwer Power West 50%
-31. Transwer Power West 75%
-32. Transwer Power West 100% 
+23. Transfer Power East 75%
+24. Transfer Power East 100%
+25. Transfer Power South 25%
+26. Transfer Power South 50%
+27. Transfer Power South 75%
+28. Transfer Power South 100%
+29. Transfer Power West 25%
+30. Transfer Power West 50%
+31. Transfer Power West 75%
+32. Transfer Power West 100% 
 33. Pickup Power
 34. Pickup Ice
 35. Pickup Ore
