@@ -103,6 +103,8 @@ Flattend actionarray:
 37. Digg
 38. Self Destruct
 
+
+# Summary
 1. Move x 5 - One for each dir
 2. Transfer Resource x 12 - [North, East, South, West] * 100% * [Water, Ice, Ore]  
 3. Transfer Power x 16 - [North, East, South, West] * [25%, 50%, 75%, 100%]
