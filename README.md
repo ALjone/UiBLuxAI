@@ -57,10 +57,15 @@ Every feature here has a 48x48 channel containing the information in every tile.
 13. `float` Entropy of Rubble  -  Statistical entropy of the rubble on the map
 
 
-## Action Space
+## NEW Action Space
 
-1. First collumn - Action Types:  Move, Dig, Transfer, Pickup, Self-Destruct
-2. Second collumn - Directions:   North, East, South, West, Center
-3. Third Collumn - Values:        25%, 50%, 75%, 100%
+STILL NEEDS TO BE IMPLEMENTED!
 
-Final vector 1x13.
+Flattend actionarray:
+
+1. Move x 5 - One for each dir
+2. Transfer Resource x 12 - [North, South, East, West] * 100% * [Water, Ice, Ore]  
+3. Transfer Power x 16 - [North, South, East, West] * [25%, 50%, 75%, 100%]
+4. Pickup x 4 - [Water, Ice, Ore, Power]
+5. Digg x 1
+6. Self Destruct x 1
