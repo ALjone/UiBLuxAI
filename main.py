@@ -1,23 +1,32 @@
-from train import train
-from ppo import PPO
-from luxai_s2.env import LuxAI_S2
+from train import train_jux
+
+from jux.env import JuxEnv, JuxEnvBatch
+from jux.config import JuxBufferConfig, EnvConfig
 from agents.RL_agent import Agent
-from wrappers.observation_wrappers import ImageWithUnitsWrapper, StateSpaceVol1
-from wrappers.other_wrappers import SinglePlayerEnv
-from wrappers.reward_wrappers import IceRewardWrapper
+import numpy as np
 from utils.utils import load_config
-from gym.wrappers import RecordVideo
 import os
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK']='1'
 
 config = load_config()
 
-env = LuxAI_S2(verbose=0, collect_stats=True, map_size = config["map_size"], MAX_FACTORIES = 1 if config["map_size"] < 48 else 5, MIN_FACTORIES = 1 if config["map_size"] < 48 else 2)
-env = StateSpaceVol1(env, config)
-env = SinglePlayerEnv(env)
-env = IceRewardWrapper(env, config)
-env = RecordVideo(env, "videos", episode_trigger= lambda x : x % config["video_save_rate"] == 0 and x != 0)
-env.reset()
-agent = Agent("player_0", env.state.env_cfg, config)
+env_cfg = EnvConfig(verbose=1, map_size = config["map_size"])
+buf_cfg = JuxBufferConfig(MAX_N_UNITS=200)
 
-train(env, agent, config)
+jux_env = JuxEnv(
+    env_cfg=env_cfg,
+    buf_cfg=buf_cfg,
+)
+
+jux_env_batch = JuxEnvBatch(
+    env_cfg=env_cfg,
+    buf_cfg=buf_cfg,
+)
+
+seeds = np.random.randint(0, 2**32-1, dtype=np.int64, size = config["parallel_envs"])
+
+jux_env_batch.reset(seeds)
+
+agents = [Agent(player, jux_env_batch.env_cfg, config) for player in [0, 1]]
+
+train_jux(jux_env_batch, agents, config)
