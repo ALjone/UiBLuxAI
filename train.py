@@ -59,12 +59,10 @@ def train_jux(env, agents, config):
             state = do_early_phase(env, agents, config)
             #torch_state  = state._replace(env_cfg=None).to_torch()
             for i in range(1000):
-                observation_wrapper.observation(state)
-            
-
+                obs = observation_wrapper.observation(state)
+                for agent in agents:
+                    action = agent.act(state)
             #TODO: The states can be stacked if the agent uses the same network
-            #for agent in agents:
-            #    action = agent.act(state)
 
 def train(env, agent, config):
 

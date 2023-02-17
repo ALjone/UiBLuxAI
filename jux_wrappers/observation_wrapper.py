@@ -136,8 +136,6 @@ def _image_features(state):
     friendly_heavy_unit_mask = units.unit_type[:, player_0_id, :]
     enemy_heavy_unit_mask = units.unit_type[:, player_1_id, :]
 
-    print(friendly_heavy_unit_mask)
-
     heavy_pos_player_0 = jit_create_mask_from_pos(
         jnp.zeros(shape = (batch_size, map_size, map_size)),
         unit_pos_player_0[..., 0].at[~friendly_heavy_unit_mask].set(127),
