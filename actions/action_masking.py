@@ -2,9 +2,16 @@ from .idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from math import floor
 import torch
 from utils.utils import load_config
+from jax import numpy as jnp
+from .jux_wrappers.observation_space import jit_create_mask_from_pos
+from jux.utils import INT32_MAX, imax
+
 MASK_EPS = 1e-7
 
-map_size = load_config()["map_size"]
+config = load_config()
+map_size = config["map_size"]
+batch_size = config["batch_size"]
+
 
 def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
     if dir == "right":
@@ -148,3 +155,60 @@ def factory_action_mask(obs, device, player = "player_0"):
         action_mask[x, y] = mask
 
     return action_mask
+
+
+def get_factories(state, player_idx):
+    factory_x = state.factories.pos.x[:, player_idx]
+    factory_y = state.factories.pos.y[:, player_idx]
+
+    friendly_factory_mask = jit_create_mask_from_pos(jnp.zeros((batch_size, map_size, map_size)), factory_x, factory_y, 1)
+
+    friendly_factory_mask = friendly_factory_mask & jnp.roll(friendly_factory_mask, 1, axis=1)
+    friendly_factory_mask = friendly_factory_mask & jnp.roll(friendly_factory_mask, -1, axis=1)
+    friendly_factory_mask = friendly_factory_mask & jnp.roll(friendly_factory_mask, 1, axis=2)
+    friendly_factory_mask = friendly_factory_mask & jnp.roll(friendly_factory_mask, -1, axis=2)
+
+    return friendly_factory_mask, state.board.factory_occupancy_mask - friendly_factory_mask
+
+#NORTH, EAST, SOUTH, WEST
+def batched_action_mask(state, player_idx, opponent_idx):
+    mask = torch.ones((batch_size, UNIT_ACTION_IDXS, map_size, map_size))
+    # TODO: Check the dimensions, think x,y and i,j is being mixed up
+
+    #FIX THIS
+    friendly_factory_pos, enemy_factory_pos = get_factories(state, player_idx)
+    
+
+    #TODO: Assumes matrix indexing, plz check
+    # Also assumes x valiue before y value
+    # y - 1
+    #TODO: Also convert to jnp and jit
+    factory_north = torch.roll(enemy_factory_pos, 1, dims=2)
+    factory_north[:, 1, :, 0] = 1
+
+    factory_east = torch.roll(enemy_factory_pos, -1, dims=1)
+    factory_east[:, 2, -1, :] = 1
+
+    factory_south = torch.roll(enemy_factory_pos, -1, dims=2)
+    factory_south[:, 3, :, -1] = 1
+
+    factory_west = torch.roll(enemy_factory_pos, 1, dims=1)
+    factory_west[:, 4, 1, :] = 1
+
+    mask[:, 1] *= ~factory_north
+    mask[:, 2] *= ~factory_east
+    mask[:, 3] *= ~factory_south
+    mask[:, 4] *= ~factory_west
+
+
+    # Transfer mask
+    mask[:, [5, 9, 13, 17, 18, 19, 20]] *= ~factory_north
+    mask[:, [6, 10, 14, 21, 22, 23, 24]] *= ~factory_east
+    mask[:, [7, 11, 15, 25, 26, 27, 28]] *= ~factory_south
+    mask[:, [8, 12, 16, 29, 30, 31, 32]] *= ~factory_west
+
+    # Pickup and dig
+    mask[:, 33:38] *= ~friendly_factory_pos
+
+    #Flip to return illegal moves
+    return ~mask

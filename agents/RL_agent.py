@@ -1,3 +1,4 @@
+from email.mime import image
 from lux.kit import obs_to_game_state, EnvConfig
 from lux.utils import my_turn_to_place_factory
 import numpy as np
@@ -8,6 +9,9 @@ from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTOR
 from ppo import PPO
 import jax
 import torch.nn.functional as F
+from jux_wrappers.observation_wrapper import _image_features, observation
+from TD import TD
+
 class Agent():
     def __init__(self, player: str, env_cfg: EnvConfig, config) -> None:
         self.player = player
@@ -19,8 +23,7 @@ class Agent():
         self.unit_actions_per_cell = UNIT_ACTION_IDXS
         self.factory_actions_per_cell = FACTORY_ACTION_IDXS
 
-
-        self.PPO = PPO(self.unit_actions_per_cell, self.factory_actions_per_cell, config)
+        self.TD = TD()
 
         if config["path"] is not None:
             self.PPO.load(config["path"])
@@ -53,30 +56,15 @@ class Agent():
 
         return jnp.array(out).T, jnp.ones(valid_spawn_mask.shape[0])*150, jnp.ones(valid_spawn_mask.shape[0])*150
     
-    def act(self, state, remainingOverageTime: int = 60):
-        features = state[0][self.player]
-        obs = state[1]
-        units = obs[self.player]["units"][self.player].values()
-        factories = obs[self.player]["factories"][self.player].values()
+    def act(self, state, image_features, global_features, remainingOverageTime: int = 60):
+        
+        # Batch_size x action_space x map_size x map_size
+        pred_units, pred_factories = self.TD.predict(state, image_features, global_features)
 
-        image_features = features["image_features"].to(self.device)
-        #action_queue_type = torch.zeros((UNIT_ACTION_IDXS-1, 48, 48), device = self.device) #-1 because of the do nothing action
-
-
-
-        #First in cat is first in output, so unit/factory mask is kept!!
-        #image_features = torch.cat((image_features, action_queue_type), dim=0)
-
-        global_features = features["global_features"].to(self.device)
-
-        unit_output, factory_output = self.PPO.select_action(image_features, global_features, obs)
-
-        #action_idx_dict = unit_id_to_action_idx(units, unit_output)
-
-        #for unit_id, action in action_idx_dict.items():
-        #    self.action_queue[unit_id] = action
+        # TODO: new model_output to action_format functions
+        jux_actions = actions_to_jux(pred_units, pred_factories)
+        return jux_actions
 
 
 
-        action = outputs_to_actions(unit_output.detach().cpu(), factory_output.detach().cpu(), units, factories, obs, factory_map = image_features[1].detach().cpu().numpy()) #Second channel is always factory_map
-        return action
+
