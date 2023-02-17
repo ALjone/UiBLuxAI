@@ -6,10 +6,10 @@ import numpy as np
 from .blocks import ResSEBlock, ConvBlock, GlobalBlock
 
 
-class actor(nn.Module):
+class Actor(nn.Module):
     def __init__(self, intput_channels, unit_action_space:int, factory_action_space:int,  n_blocks:int, n_blocks_factories_units:int,
                   intermediate_channels:int, config, layer_type = "conv") -> None:
-        super(actor, self).__init__()
+        super(Actor, self).__init__()
         
         if layer_type == "SE":
             layer = ResSEBlock

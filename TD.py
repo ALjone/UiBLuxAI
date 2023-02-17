@@ -1,11 +1,11 @@
 import torch
-from .network import actor
-from .actions.idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
-from .actions.action_masking import batched_action_mask, unit_action_mask
+from network.actor import Actor
+from actions.idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from actions.action_masking import batched_action_mask, unit_action_mask
 class TD:
     def __init__(self, config) -> None:
         self.device = config["device"]
-        self.model  = actor(32, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"], config).to(self.device)
+        self.model  = Actor(32, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"], config).to(self.device)
 
         self.gamma = config["gamma"]
         self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=config["learning_rate"], weight_decay=config["regularization"])

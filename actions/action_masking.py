@@ -3,7 +3,7 @@ from math import floor
 import torch
 from utils.utils import load_config
 from jax import numpy as jnp
-from .jux_wrappers.observation_space import jit_create_mask_from_pos
+from jux_wrappers.observation_wrapper import jit_create_mask_from_pos
 from jux.utils import INT32_MAX, imax
 
 MASK_EPS = 1e-7

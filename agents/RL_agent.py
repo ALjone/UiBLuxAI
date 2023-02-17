@@ -5,8 +5,7 @@ import numpy as np
 import jax.numpy as jnp
 from jax import scipy as jsp
 from jux.torch import from_torch
-from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, unit_id_to_action_idx
-from ppo import PPO
+from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS#, unit_id_to_action_idx
 import jax
 import torch.nn.functional as F
 from jux_wrappers.observation_wrapper import _image_features, observation
@@ -23,7 +22,7 @@ class Agent():
         self.unit_actions_per_cell = UNIT_ACTION_IDXS
         self.factory_actions_per_cell = FACTORY_ACTION_IDXS
 
-        self.TD = TD()
+        self.TD = TD(config)
 
         if config["path"] is not None:
             self.PPO.load(config["path"])

@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import jux
 import jax
 from jux.torch import from_torch, to_torch
-import jax.scipy.special.entr as jentropy
+import jax.scipy.special as js
 
 torch
 #Delta change, idx to mapping
@@ -133,29 +133,35 @@ def _image_features(state):
 
     #LIGHT = 0, HEAVY = 1
     # TODO: Check inplace modification problems with unit_pos_player_X
-    friendly_heavy_unit_mask = units.unit_type[:, player_0_id, :] == 1
-    enemy_heavy_unit_mask = units.unit_type[:, player_1_id, :] == 1
+    friendly_heavy_unit_mask = units.unit_type[:, player_0_id, :]
+    enemy_heavy_unit_mask = units.unit_type[:, player_1_id, :]
+
+    print(friendly_heavy_unit_mask)
 
     heavy_pos_player_0 = jit_create_mask_from_pos(
-        jnp.zeros(batch_size, map_size, map_size),
+        jnp.zeros(shape = (batch_size, map_size, map_size)),
         unit_pos_player_0[..., 0].at[~friendly_heavy_unit_mask].set(127),
-        unit_pos_player_0[..., 1].at[~friendly_heavy_unit_mask].set(127)
+        unit_pos_player_0[..., 1].at[~friendly_heavy_unit_mask].set(127),
+        value = 1
         )
     light_pos_player_0 = jit_create_mask_from_pos(
-        jnp.zeros(batch_size, map_size, map_size),
+        jnp.zeros(shape = (batch_size, map_size, map_size)),
         unit_pos_player_0[..., 0].at[friendly_heavy_unit_mask].set(127),
         unit_pos_player_0[..., 1].at[friendly_heavy_unit_mask].set(127),
+        value = 1
         )
 
     heavy_pos_player_1 = jit_create_mask_from_pos(
-        jnp.zeros(batch_size, map_size, map_size),
+        jnp.zeros(shape = (batch_size, map_size, map_size)),
         unit_pos_player_1[..., 0].at[~enemy_heavy_unit_mask].set(127),
         unit_pos_player_1[..., 1].at[~enemy_heavy_unit_mask].set(127),
+        value = 1
         )
     light_pos_player_1 = jit_create_mask_from_pos(
-        jnp.zeros(batch_size, map_size, map_size),
+        jnp.zeros(shape = (batch_size, map_size, map_size)),
         unit_pos_player_1[..., 0].at[enemy_heavy_unit_mask].set(127),
         unit_pos_player_1[..., 1].at[enemy_heavy_unit_mask].set(127),
+        value = 1
         )
 
     return 1, 2
@@ -196,9 +202,9 @@ def _global_features(state):
     day_night = state.real_env_steps % 50 < 30
     ice_on_map = jnp.sum(state.board.map.ice, (1, 2))
     ore_on_map = jnp.sum(state.board.map.ore, (1, 2))
-    ice_entropy = jentropy(state.board.map.ice)
-    ore_entropy = jentropy(state.board.map.ore)
-    rubble_entropy = jentropy(state.board.map.rubble)
+    ice_entropy = js.entr(state.board.map.ice)
+    ore_entropy = js.entr(state.board.map.ore)
+    rubble_entropy = js.entr(state.board.map.rubble)
     print(state.n_units)
     print(state.n_units.shape)
 
