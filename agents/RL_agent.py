@@ -3,13 +3,14 @@ from lux.kit import obs_to_game_state, EnvConfig
 from lux.utils import my_turn_to_place_factory
 import numpy as np
 import jax.numpy as jnp
-from jax import scipy as jsp
+from jux.torch import to_torch
 from jux.torch import from_torch
 from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS#, unit_id_to_action_idx
 import jax
 import torch.nn.functional as F
 from jux_wrappers.observation_wrapper import _image_features, observation
 from TD import TD
+import torch
 
 class Agent():
     def __init__(self, player: str, env_cfg: EnvConfig, config) -> None:
@@ -27,8 +28,8 @@ class Agent():
         if config["path"] is not None:
             self.PPO.load(config["path"])
             print("Successfully loaded model")
-        num_envs = config["parallel_envs"]
-        self.window = self.make_window(num_envs)
+        self.num_envs = config["parallel_envs"]
+        self.window = self.make_window(self.num_envs)
     def make_window(self, num_envs):
         window = jnp.ones((num_envs, 3, 11, 11))
         for i in range(0, 5):
@@ -38,8 +39,7 @@ class Agent():
         return window.at[:, 1:, 5:8, 5:8].set(jnp.zeros((num_envs, 2, 3, 3)))
 
     def early_setup(self, step: int, state, valid_spawn_mask, remainingOverageTime: int = 60):
-        num_envs = 50
-        map = jnp.zeros((num_envs, 3, 48, 48))
+        map = jnp.zeros((self.num_envs, 3, 48, 48))
         map.at[:, 0, :, :].set(state.board.map.rubble/jnp.linalg.norm(state.board.map.rubble, axis = (1, 2), keepdims=True))
         map.at[:, 1, :, :].set(state.board.map.ore/jnp.linalg.norm(state.board.map.ore, axis = (1, 2), keepdims=True))
         map.at[:, 2, :, :].set(state.board.map.ice/jnp.linalg.norm(state.board.map.ice, axis = (1, 2), keepdims=True))
@@ -56,10 +56,13 @@ class Agent():
         return jnp.array(out).T, jnp.ones(valid_spawn_mask.shape[0])*150, jnp.ones(valid_spawn_mask.shape[0])*150
     
     def act(self, state, image_features, global_features, remainingOverageTime: int = 60):
+
+        image_features = to_torch(image_features)
+        global_features = to_torch(global_features)
         
         # Batch_size x action_space x map_size x map_size
-        pred_units, pred_factories = self.TD.predict(state, image_features, global_features)
-
+        pred_units, pred_factories = self.TD.predict(state, image_features, global_features, self.player)
+        return
         # TODO: new model_output to action_format functions
         jux_actions = actions_to_jux(pred_units, pred_factories)
         return jux_actions

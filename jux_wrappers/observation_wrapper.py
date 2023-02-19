@@ -10,6 +10,12 @@ import jux
 import jax
 from jux.torch import from_torch, to_torch
 import jax.scipy.special as js
+from utils.utils import load_config
+
+config = load_config()
+
+num_envs = config["parallel_envs"]
+map_size = config["map_size"]
 
 torch
 #Delta change, idx to mapping
@@ -28,31 +34,27 @@ jit_create_mask_from_pos = jax.jit(create_mask_from_pos)
 
 
 def _image_features(state):
-    map_size = 48
-    batch_size = 50
     player_0_id = 0
     player_1_id = 1
     
     #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
-    unit_mask_player_0 = jnp.zeros((batch_size, map_size, map_size))
-    unit_mask_player_1 = jnp.zeros((batch_size, map_size, map_size))
+    unit_mask_player_0 = jnp.zeros((num_envs, map_size, map_size))
+    unit_mask_player_1 = jnp.zeros((num_envs, map_size, map_size))
     #TODO: We also need a map for where factories are occupying space? Since they are 3x3
-    factory_mask_player_0 = jnp.zeros((batch_size, map_size, map_size))
-    factory_mask_player_1 = jnp.zeros((batch_size, map_size, map_size))
+    factory_mask_player_0 = jnp.zeros((num_envs, map_size, map_size))
+    factory_mask_player_1 = jnp.zeros((num_envs, map_size, map_size))
     #TODO: Add metal/water?
-    unit_power = jnp.zeros((batch_size, map_size, map_size))
-    unit_ice = jnp.zeros((batch_size, map_size, map_size))
-    unit_ore = jnp.zeros((batch_size, map_size, map_size))
-    unit_water = jnp.zeros((batch_size, map_size, map_size))
-    unit_metal = jnp.zeros((batch_size, map_size, map_size))
+    unit_power = jnp.zeros((num_envs, map_size, map_size))
+    unit_ice = jnp.zeros((num_envs, map_size, map_size))
+    unit_ore = jnp.zeros((num_envs, map_size, map_size))
+    unit_water = jnp.zeros((num_envs, map_size, map_size))
+    unit_metal = jnp.zeros((num_envs, map_size, map_size))
 
-    factory_power = jnp.zeros((batch_size, map_size, map_size))
-    factory_ice = jnp.zeros((batch_size, map_size, map_size))
-    factory_ore = jnp.zeros((batch_size, map_size, map_size))
-    factory_water = jnp.zeros((batch_size, map_size, map_size))
-    factory_metal = jnp.zeros((batch_size, map_size, map_size))
-
-    factory_cargo = jnp.zeros((5, map_size, map_size))
+    factory_power = jnp.zeros((num_envs, map_size, map_size))
+    factory_ice = jnp.zeros((num_envs, map_size, map_size))
+    factory_ore = jnp.zeros((num_envs, map_size, map_size))
+    factory_water = jnp.zeros((num_envs, map_size, map_size))
+    factory_metal = jnp.zeros((num_envs, map_size, map_size))
 
     board_rubble = state.board.map.rubble
     board_ice = state.board.map.ice 
@@ -66,8 +68,6 @@ def _image_features(state):
     player_1_lichen_mask = jnp.isin(
         state.board.lichen_strains, state.factories.team_id[:, player_1_id]
     )
-
-    unit_type = jnp.zeros((2, map_size, map_size)) #LIGHT, HEAVY
 
     #UNIT MASKS
     units = state.units
@@ -137,59 +137,96 @@ def _image_features(state):
     enemy_heavy_unit_mask = units.unit_type[:, player_1_id, :]
 
     heavy_pos_player_0 = jit_create_mask_from_pos(
-        jnp.zeros(shape = (batch_size, map_size, map_size)),
+        jnp.zeros(shape = (num_envs, map_size, map_size)),
         unit_pos_player_0[..., 0].at[~friendly_heavy_unit_mask].set(127),
         unit_pos_player_0[..., 1].at[~friendly_heavy_unit_mask].set(127),
         value = 1
         )
+    p0_num_heavy = heavy_pos_player_0.sum((1, 2))
     light_pos_player_0 = jit_create_mask_from_pos(
-        jnp.zeros(shape = (batch_size, map_size, map_size)),
+        jnp.zeros(shape = (num_envs, map_size, map_size)),
         unit_pos_player_0[..., 0].at[friendly_heavy_unit_mask].set(127),
         unit_pos_player_0[..., 1].at[friendly_heavy_unit_mask].set(127),
         value = 1
         )
-
+    p0_num_light = light_pos_player_0.sum((1, 2))
     heavy_pos_player_1 = jit_create_mask_from_pos(
-        jnp.zeros(shape = (batch_size, map_size, map_size)),
+        jnp.zeros(shape = (num_envs, map_size, map_size)),
         unit_pos_player_1[..., 0].at[~enemy_heavy_unit_mask].set(127),
         unit_pos_player_1[..., 1].at[~enemy_heavy_unit_mask].set(127),
         value = 1
         )
+    p1_num_heavy = heavy_pos_player_1.sum((1, 2))
     light_pos_player_1 = jit_create_mask_from_pos(
-        jnp.zeros(shape = (batch_size, map_size, map_size)),
+        jnp.zeros(shape = (num_envs, map_size, map_size)),
         unit_pos_player_1[..., 0].at[enemy_heavy_unit_mask].set(127),
         unit_pos_player_1[..., 1].at[enemy_heavy_unit_mask].set(127),
         value = 1
         )
+    p1_num_light = light_pos_player_1.sum((1, 2))
 
-    return 1, 2
+    
+    #TODO: Double check this
+    p0_image_features = jnp.stack((unit_mask_player_0,
+                                     unit_mask_player_1,
+                                     factory_mask_player_0,
+                                     factory_mask_player_1,
+                                     unit_power,
+                                     unit_ice,
+                                     unit_ore,
+                                     unit_water,
+                                     unit_metal,
+                                     factory_power,
+                                     factory_ice,
+                                     factory_ore,
+                                     factory_water,
+                                     factory_metal,
+                                     board_rubble,
+                                     board_ore,
+                                     board_ice,
+                                     board_lichen,
+                                     player_0_lichen_mask,
+                                     player_1_lichen_mask,
+                                     heavy_pos_player_0,
+                                     heavy_pos_player_1,
+                                     light_pos_player_0,
+                                     light_pos_player_1), 
+                                     axis = 1
+                                     )
+    
+    p1_image_features = jnp.stack((unit_mask_player_1,
+                                     unit_mask_player_0,
+                                     factory_mask_player_1,
+                                     factory_mask_player_0,
+                                     unit_power,
+                                     unit_ice,
+                                     unit_ore,
+                                     unit_water,
+                                     unit_metal,
+                                     factory_power,
+                                     factory_ice,
+                                     factory_ore,
+                                     factory_water,
+                                     factory_metal,
+                                     board_rubble,
+                                     board_ore,
+                                     board_ice,
+                                     board_lichen,
+                                     player_1_lichen_mask,
+                                     player_0_lichen_mask,
+                                     heavy_pos_player_1,
+                                     heavy_pos_player_0,
+                                     light_pos_player_1,
+                                     light_pos_player_0),
+                                     axis = 1
+                                     )
+
+
+    return p0_image_features, p1_image_features, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy
 
 jit_image_features = jax.jit(_image_features)
-print("Jitted")
-"""
-    print(unit_type.sum())
-    print(unit_type.shape)
 
-
-    #Don't ask why this is torch to torch...
-    image_features = torch.tensor(torch.concatenate([
-        unit_mask,
-        factory_mask,
-        unit_cargo,
-        factory_cargo,
-        board,
-        lichen_mask,
-        unit_type,
-        action_queue_length,
-        next_step,
-    ]))
-
-    image_features_flipped = image_features.clone()
-    image_features_flipped[(0, 1, 14)] *= -1
-
-    return image_features.to(torch.float32), image_features_flipped.to(torch.float32)
-"""
-def _global_features(state):
+def _global_features(state, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy):
     player_0_id = 0
     player_1_id = 1
 
@@ -200,19 +237,18 @@ def _global_features(state):
     day_night = state.real_env_steps % 50 < 30
     ice_on_map = jnp.sum(state.board.map.ice, (1, 2))
     ore_on_map = jnp.sum(state.board.map.ore, (1, 2))
-    ice_entropy = js.entr(state.board.map.ice)
-    ore_entropy = js.entr(state.board.map.ore)
-    rubble_entropy = js.entr(state.board.map.rubble)
-    print(state.n_units)
-    print(state.n_units.shape)
+    ice_entropy = js.entr(state.board.map.ice).mean((1, 2))
+    ore_entropy = js.entr(state.board.map.ore).mean((1, 2))
+    rubble_entropy = js.entr(state.board.map.rubble).mean((1, 2))
 
     #All these must be flipped
     friendly_factories = state.n_factories[:, player_0_id]
     enemy_factories = state.n_factories[:, player_1_id]
-    friendly_light = state.n_units[:, player_0_id, 0]
-    friendly_heavy = state.n_units[:, player_0_id, 1]
-    enemy_light = state.n_units[:, player_1_id, 0]
-    enemy_heavy = state.n_units[:, player_1_id, 1]
+
+    friendly_light = p0_num_light
+    friendly_heavy = p0_num_heavy
+    enemy_light = p1_num_light
+    enemy_heavy = p1_num_heavy
     
     #Player 1 lichen
     player_0_lichen_mask = jnp.isin(
@@ -222,15 +258,14 @@ def _global_features(state):
         state.board.lichen_strains, state.factories.team_id[:, player_0_id]
     )
 
-    friendly_lichen_amount =  jnp.sum(jnp.where(player_0_lichen_mask, state.board.lichen, 0))
-    enemy_lichen_amount =  jnp.sum(jnp.where(player_1_lichen_mask, state.board.lichen, 0))
+    friendly_lichen_amount =  jnp.sum(jnp.where(player_0_lichen_mask, state.board.lichen, 0), (1, 2))
+    enemy_lichen_amount =  jnp.sum(jnp.where(player_1_lichen_mask, state.board.lichen, 0), (1, 2))
     
 
-    lichen_distribution = (friendly_lichen_amount-enemy_lichen_amount)/max(1, friendly_lichen_amount+enemy_lichen_amount)
+    lichen_distribution = (friendly_lichen_amount-enemy_lichen_amount)/jnp.clip(friendly_lichen_amount+enemy_lichen_amount, a_min = 1, a_max = None)
 
-    return 1, 2
-    #TODO: Double check
-    main_player_vars = torch.tensor((day, 
+
+    p0_global_features = jnp.stack((day, 
                         night, 
                         timestep, 
                         day_night, 
@@ -245,10 +280,11 @@ def _global_features(state):
                         enemy_factories, 
                         enemy_light, 
                         enemy_heavy, 
-                        lichen_distribution)
+                        lichen_distribution), 
+                        axis = 1
                         )
     
-    other_player_vars = torch.tensor((day, 
+    p1_global_features = jnp.stack((day, 
                         night, 
                         timestep, 
                         day_night, 
@@ -263,36 +299,18 @@ def _global_features(state):
                         friendly_factories, 
                         friendly_light, 
                         friendly_heavy, 
-                        lichen_distribution * -1)
+                        lichen_distribution * -1), 
+                        axis = 1
                         )
 
 
-    return main_player_vars.to(torch.float32), other_player_vars.to(torch.float32)
+    return p0_global_features, p1_global_features
 
 jit_global_features = jax.jit(_global_features)
 
 
 def observation(state):
-    
-    
-
-    main_player_image_features, other_player_image_features = jit_image_features(state)
-    return
-    main_player_global_features, other_player_global_features = jit_global_features(state)
-    return 
-
-    #TODO: Add global features
-    image_state = {
-                    main_player: 
-                        {
-                            "image_features": main_player_image_features,
-                            "global_features": main_player_global_features
-                        },
-                    other_player: 
-                        {
-                            "image_features": other_player_image_features,
-                            "global_features": other_player_global_features
-                        }
-                }
-
-    return image_state, obs
+    #We get the number of light/heavy so we don't have to do it twice
+    p0_image_features, p1_image_features, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy = jit_image_features(state)
+    p0_global_features, p1_global_features = jit_global_features(state, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy)
+    return (p0_image_features, p0_global_features), (p1_image_features, p1_global_features)

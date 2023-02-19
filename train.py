@@ -39,14 +39,7 @@ def do_early_phase(env, agents, config):
         spawn[:, state.next_player] = s
         water[:, state.next_player] = w
         metal[:, state.next_player] = m
-
-        # x = np.expand_dims(s[:, 0], axis = -1)
-        # y = np.expand_dims(s[:, 1], axis = -1)
-
-        # valid_spawns_mask[:, np.array([1, 2]) : np.array([3, 4]), np.array([1, 2]) : np.array([3, 4])]
-        # #The valid spawns mask in Jux is slow, so we make our own fast one
-        # valid_spawns_mask[:, np.clip(x-6, a_min = 0, a_max = None, dtype=np.int8) : np.clip(x+6+1, a_min = None, a_max = config["map_size"]-1, dtype=np.int8),
-        #                    np.clip(y-6, a_min = 0, a_max = None, dtype=np.int8) : np.clip(y+6+1, a_min = None, a_max = config["map_size"]-1, dtype=np.int8)] = False
+        
         step += 1
         state, (observations, rewards, dones, infos) = env.step_factory_placement(state, spawn, water, metal)
 
@@ -57,11 +50,10 @@ def train_jux(env, agents, config):
     for _ in range(config["max_episodes"]//config["print_freq"]):
         for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
             state = do_early_phase(env, agents, config)
-            #torch_state  = state._replace(env_cfg=None).to_torch()
-            for i in range(1000):
+            for i in tqdm(range(1000), leave = False, desc = "Single game"):
                 obs = observation_wrapper.observation(state)
-                for agent in agents:
-                    action = agent.act(state)
+                for agent, (image_features, global_features) in zip(agents, obs):
+                    action = agent.act(state, image_features, global_features)
             #TODO: The states can be stacked if the agent uses the same network
 
 def train(env, agent, config):

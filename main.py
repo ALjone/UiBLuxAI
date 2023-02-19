@@ -7,6 +7,7 @@ import numpy as np
 from utils.utils import load_config
 import os
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK']='1'
+os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = "0.1"
 
 config = load_config()
 
