@@ -15,7 +15,7 @@ regularization: 0.0001
 
 #Environment
 map_size: 48
-parallel_envs: 64
+parallel_envs: 16
 
 #Architecture - Actor
 actor_n_blocks: 6

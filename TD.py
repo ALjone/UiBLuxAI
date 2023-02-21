@@ -6,7 +6,7 @@ class TD:
     def __init__(self, config) -> None:
         self.device = config["device"]
         self.model  = Actor(36, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"], config).to(self.device)
-
+        
         self.gamma = config["gamma"]
         self.optim: torch.optim.Adam = torch.optim.Adam(self.model.parameters(), lr=config["learning_rate"], weight_decay=config["regularization"])
 

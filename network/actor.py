@@ -46,6 +46,7 @@ class Actor(nn.Module):
         self.factory_conv = nn.Sequential(*blocks_factory)
 
     def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+
         if len(image_features.shape) == 3:
             image_features = image_features.unsqueeze(0)
             global_features = global_features.unsqueeze(0)

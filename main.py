@@ -6,8 +6,12 @@ from agents.RL_agent import Agent
 import numpy as np
 from utils.utils import load_config
 import os
+import jax
+
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK']='1'
 os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = "0.1"
+jax.config.update("jax_default_device", jax.devices('cuda')[1])
+
 
 config = load_config()
 

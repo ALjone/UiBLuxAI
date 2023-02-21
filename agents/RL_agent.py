@@ -11,6 +11,7 @@ import torch.nn.functional as F
 from jux_wrappers.observation_wrapper import _image_features, observation
 from TD import TD
 import torch
+from actions.tensor_to_jux_action import jux_action
 
 class Agent():
     def __init__(self, player: str, env_cfg: EnvConfig, config) -> None:
@@ -62,9 +63,8 @@ class Agent():
         
         # Batch_size x action_space x map_size x map_size
         pred_units, pred_factories = self.TD.predict(state, image_features, global_features, self.player)
-        return
         # TODO: new model_output to action_format functions
-        jux_actions = actions_to_jux(pred_units, pred_factories)
+        jux_actions = jux_action(pred_units, state, self.player)
         return jux_actions
 
 
