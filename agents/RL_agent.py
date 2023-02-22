@@ -62,9 +62,8 @@ class Agent():
         global_features = to_torch(global_features)
         
         # Batch_size x action_space x map_size x map_size
-        pred_units, pred_factories = self.TD.predict(state, image_features, global_features, self.player)
+        return list(self.TD.predict(state, image_features, global_features, self.player))
         # TODO: new model_output to action_format functions
-        jux_actions = jux_action(pred_units, state, self.player)
         return jux_actions
 
 

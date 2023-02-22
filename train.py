@@ -9,6 +9,8 @@ from wandb import Table as wbtable
 from actions.idx_to_lux_move import MOVE_NAMES
 from jux.torch import from_torch, to_torch
 from jux_wrappers import observation_wrapper
+from actions.tensor_to_jux_action import jux_action
+
 
 def do_early_phase(env, agents, config):
     num_envs = config["parallel_envs"]
@@ -52,8 +54,11 @@ def train_jux(env, agents, config):
             state = do_early_phase(env, agents, config)
             for i in tqdm(range(1000), leave = False, desc = "Single game"):
                 obs = observation_wrapper.observation(state)
+                actions = []
                 for agent, (image_features, global_features) in zip(agents, obs):
-                    action = agent.act(state, image_features, global_features)
+                    actions += agent.act(state, image_features, global_features)
+                action = jux_action(*actions, state)
+                state, _ = env.step_late_game(state, action)
             #TODO: The states can be stacked if the agent uses the same network
 
 def train(env, agent, config):
