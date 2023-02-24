@@ -40,19 +40,18 @@ class Agent():
         return window.at[:, 1:, 5:8, 5:8].set(jnp.zeros((num_envs, 2, 3, 3)))
 
     def early_setup(self, step: int, state, valid_spawn_mask, remainingOverageTime: int = 60):
-        map = jnp.zeros((self.num_envs, 3, 48, 48))
-        map.at[:, 0, :, :].set(state.board.map.rubble/jnp.linalg.norm(state.board.map.rubble, axis = (1, 2), keepdims=True))
-        map.at[:, 1, :, :].set(state.board.map.ore/jnp.linalg.norm(state.board.map.ore, axis = (1, 2), keepdims=True))
-        map.at[:, 2, :, :].set(state.board.map.ice/jnp.linalg.norm(state.board.map.ice, axis = (1, 2), keepdims=True))
+        board = jnp.zeros((self.num_envs, 3, 48, 48))
+        board.at[:, 0, :, :].set(state.board.map.rubble/jnp.linalg.norm(state.board.map.rubble, axis = (1, 2), keepdims=True))
+        board.at[:, 1, :, :].set(state.board.map.ore/jnp.linalg.norm(state.board.map.ore, axis = (1, 2), keepdims=True))
+        board.at[:, 2, :, :].set(state.board.map.ice/jnp.linalg.norm(state.board.map.ice, axis = (1, 2), keepdims=True))
         
         final = jax.lax.conv_general_dilated(
-            map, self.window, (1, 1), padding = "same")
+            board, self.window, (1, 1), padding = "same")
         final = jnp.sum(final, axis=1)
         final = jnp.where(valid_spawn_mask, final, -jnp.inf)
-
-
         idx = final.reshape(final.shape[0],-1).argmax(-1)
         out = jnp.unravel_index(idx, final.shape[-2:])
+
 
         return jnp.array(out).T, jnp.ones(valid_spawn_mask.shape[0])*150, jnp.ones(valid_spawn_mask.shape[0])*150
     

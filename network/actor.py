@@ -62,8 +62,8 @@ class Actor(nn.Module):
         x_robot = self.unit_conv(image_features)
         x_factory = self.factory_conv(image_features)
 
-        x_robot = x_robot.permute(0, 2, 3, 1)
-        x_factory = x_factory.permute(0, 2, 3, 1)
+        #x_robot = x_robot.permute(0, 2, 3, 1)
+        #x_factory = x_factory.permute(0, 2, 3, 1)
         return x_robot, x_factory
 
     def count_parameters(self):

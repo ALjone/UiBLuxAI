@@ -10,6 +10,7 @@ from actions.idx_to_lux_move import MOVE_NAMES
 from jux.torch import from_torch, to_torch
 from jux_wrappers import observation_wrapper
 from actions.tensor_to_jux_action import jux_action
+import jax.numpy as jnp
 
 
 def do_early_phase(env, agents, config):
@@ -26,25 +27,24 @@ def do_early_phase(env, agents, config):
     # valid_spawns_mask[:, :, [0, -1]] = False
     step = 1
 
-    bid, faction = np.zeros((num_envs, 2)), np.zeros((num_envs, 2))
+    bid, faction = np.zeros((num_envs, 2)), jnp.zeros((num_envs, 2))
     state, _ = env.step_bid(state, bid, faction)
-    spawn = np.zeros((num_envs, 2, 2), dtype=np.int8)
-    water = np.zeros((num_envs, 2), dtype=np.int8)
-    metal = np.zeros((num_envs, 2), dtype=np.int8)
+    spawn = np.zeros((num_envs, 2, 2), dtype=jnp.int8)
+    water = np.zeros((num_envs, 2), dtype=jnp.int8)
+    metal = np.zeros((num_envs, 2), dtype=jnp.int8)
 
     #They should always have same real_env_steps
     while (state.real_env_steps < 0).any():
         valid_spawns_mask = state.board.valid_spawns_mask
         #torch_state  = state._replace(env_cfg=None).to_torch()
         s, w, m = agents[state.next_player[0]].early_setup(step, state, valid_spawns_mask)
-        
-        spawn[:, state.next_player] = s
+
+        # TODO: fix
+        spawn[:, state.next_player] = np.random.randint(low =0, high = 47, size = s.shape)#s
         water[:, state.next_player] = w
         metal[:, state.next_player] = m
-        
         step += 1
         state, (observations, rewards, dones, infos) = env.step_factory_placement(state, spawn, water, metal)
-
     return state
 
 
@@ -52,14 +52,20 @@ def train_jux(env, agents, config):
     for _ in range(config["max_episodes"]//config["print_freq"]):
         for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
             state = do_early_phase(env, agents, config)
-            for i in tqdm(range(1000), leave = False, desc = "Single game"):
+            #TODO: Add pbar
+            s = 0
+            while True:
                 obs = observation_wrapper.observation(state)
+                s += 1
                 actions = []
                 for agent, (image_features, global_features) in zip(agents, obs):
                     actions += agent.act(state, image_features, global_features)
+                actions = [from_torch(action) for action in actions]
                 action = jux_action(*actions, state)
-                state, _ = env.step_late_game(state, action)
-            #TODO: The states can be stacked if the agent uses the same network
+                state, (_, rewards, dones, _) = env.step_late_game(state, action)
+                if dones.all():
+                    print(f"Played {s} steps")
+                    break
 
 def train(env, agent, config):
 

@@ -129,7 +129,7 @@ def single_factory_action_mask(factory, obs, device):
 def unit_action_mask(obs, device, player = "player_0"):
     #NOTE: Needs to take in a player for the factory stuff?
     obs = obs[player]
-    action_mask = torch.ones((map_size, map_size, UNIT_ACTION_IDXS), device=device, dtype=torch.uint8)
+    action_mask = torch.ones((UNIT_ACTION_IDXS, map_size, map_size), device=device, dtype=torch.uint8)
 
     #Get factory position
     factories = obs["factories"][player]
@@ -148,7 +148,7 @@ def unit_action_mask(obs, device, player = "player_0"):
 
 def factory_action_mask(obs, device, player = "player_0"):
     #note: Needs to take in a player for the factory stuff?
-    action_mask = torch.ones((map_size, map_size, FACTORY_ACTION_IDXS), device=device, dtype=torch.uint8)
+    action_mask = torch.ones((FACTORY_ACTION_IDXS, map_size, map_size), device=device, dtype=torch.uint8)
     obs = obs[player]
     factories = obs["factories"][player]
     for factory in factories.values():
@@ -218,4 +218,4 @@ def batched_action_mask(state, player_idx):
     #mask[:, 33:38] *= ~friendly_factory_pos
 
     #Flip to return illegal moves TODO: Fix this at the top so we don't have to permute here
-    return ~mask.permute(0, 2, 3, 1)
+    return ~mask
