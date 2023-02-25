@@ -303,7 +303,6 @@ def _global_features(state, p0_num_light, p0_num_heavy, p1_num_light, p1_num_hea
                         axis = 1
                         )
 
-
     return p0_global_features, p1_global_features
 
 jit_global_features = jax.jit(_global_features)

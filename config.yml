@@ -6,7 +6,7 @@ print_freq: 100 # print avg reward in the interval (in episodes)
 batch_size: 512
 actor_lr: 0.0003
 critic_lr: 0.0003
-gamma: 0.99
+gamma: 1
 epochs_per_batch: 6
 eps_clip: 0.1
 lmbda: 0.95
@@ -15,12 +15,12 @@ regularization: 0.0001
 
 #Environment
 map_size: 48
-parallel_envs: 2
+parallel_envs: 16
 
 #Architecture - Actor
 actor_n_blocks: 6
 actor_n_blocks_after_split: 2
-actor_intermediate_channels: 32
+actor_intermediate_channels: 16
 
 #Architecture - Critic
 critic_n_blocks: 6

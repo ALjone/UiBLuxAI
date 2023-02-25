@@ -1,3 +1,4 @@
+import torch
 import time
 import numpy as np
 from utils.utils import formate_time
@@ -11,27 +12,22 @@ from jux.torch import from_torch, to_torch
 from jux_wrappers import observation_wrapper
 from actions.tensor_to_jux_action import jux_action
 import jax.numpy as jnp
+from jux.env import JuxEnvBatch
+import timeit
+import time
+from agents.RL_agent import Agent
 
 
-def do_early_phase(env, agents, config):
+def do_early_phase(env: JuxEnvBatch, agents, config):
     num_envs = config["parallel_envs"]
     state = env.reset(np.random.randint(0, 2**32-1, dtype=np.int64, size = num_envs))
-    #valid_factory_mask = np.array(state.board.valid_spawns_mask)
-    #NOTE: The way below is 10-20% faster than the way above, and about 250% faster than using the built in state.board.valid_spawns all the way through
-    # valid_spawns_mask = np.array(~state.board.map.ice & ~state.board.map.ore) 
-    # valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, 1, axis=1)
-    # valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, -1, axis=1)
-    # valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, 1, axis=2)
-    # valid_spawns_mask = valid_spawns_mask & np.roll(valid_spawns_mask, -1, axis=2)
-    # valid_spawns_mask[:, [0, -1], :] = False
-    # valid_spawns_mask[:, :, [0, -1]] = False
     step = 1
 
     bid, faction = np.zeros((num_envs, 2)), jnp.zeros((num_envs, 2))
     state, _ = env.step_bid(state, bid, faction)
     spawn = np.zeros((num_envs, 2, 2), dtype=jnp.int8)
-    water = np.zeros((num_envs, 2), dtype=jnp.int8)
-    metal = np.zeros((num_envs, 2), dtype=jnp.int8)
+    water = np.zeros((num_envs, 2), dtype=jnp.int16)
+    metal = np.zeros((num_envs, 2), dtype=jnp.int16)
 
     #They should always have same real_env_steps
     while (state.real_env_steps < 0).any():
@@ -40,32 +36,47 @@ def do_early_phase(env, agents, config):
         s, w, m = agents[state.next_player[0]].early_setup(step, state, valid_spawns_mask)
 
         # TODO: fix
-        spawn[:, state.next_player] = np.random.randint(low =0, high = 47, size = s.shape)#s
+        spawn[:, state.next_player, :] = s
         water[:, state.next_player] = w
         metal[:, state.next_player] = m
         step += 1
         state, (observations, rewards, dones, infos) = env.step_factory_placement(state, spawn, water, metal)
+
     return state
 
 
-def train_jux(env, agents, config):
+def train_jux(env, agents: list[Agent], config):
     for _ in range(config["max_episodes"]//config["print_freq"]):
-        for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
-            state = do_early_phase(env, agents, config)
-            #TODO: Add pbar
-            s = 0
+        with tqdm(total = 100, desc = "Games played", leave = False) as pbar_outer:
             while True:
+                state = do_early_phase(env, agents, config)
                 obs = observation_wrapper.observation(state)
-                s += 1
-                actions = []
-                for agent, (image_features, global_features) in zip(agents, obs):
-                    actions += agent.act(state, image_features, global_features)
-                actions = [from_torch(action) for action in actions]
-                action = jux_action(*actions, state)
-                state, (_, rewards, dones, _) = env.step_late_game(state, action)
-                if dones.all():
-                    print(f"Played {s} steps")
-                    break
+                s = 0
+                with tqdm(total=1000, desc = "Stepping", leave = False) as pbar_inner:
+                    while True:
+                        s += 1
+                        actions = []
+                        for i, (agent, (image_features, global_features)) in enumerate(zip(agents, obs)):
+                            actions += agent.act(state, image_features, global_features, i)
+
+                        action = jux_action(*[from_torch(action) for action in actions], state)
+
+                        state, (_, rewards, dones, _) = env.step_late_game(state, action)
+                        pbar_inner.update(1)
+                        old_obs = obs
+                        obs = observation_wrapper.observation(state)
+                        #TODO: Add in masking of games that end prematurely
+                        for i, (new_obs, old_obs) in enumerate(zip(old_obs, obs)):
+                            agents[0].TD.train(new_obs[0], new_obs[1], actions[i*2+0], actions[i*2+1], rewards[:, i], old_obs[0], old_obs[1], dones[:, i], state, i)
+                        del actions
+                        del new_obs
+                        del old_obs
+                        del rewards
+                        if dones.all():
+                            print(f"Played {s} steps")
+                            break
+                        del dones
+                pbar_outer.update(config["parallel_envs"])
 
 def train(env, agent, config):
 

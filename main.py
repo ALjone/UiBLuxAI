@@ -10,7 +10,7 @@ import jax
 
 os.environ['PYTORCH_ENABLE_MPS_FALLBACK']='1'
 os.environ['XLA_PYTHON_CLIENT_MEM_FRACTION'] = "0.1"
-jax.config.update("jax_default_device", jax.devices('cuda')[1])
+#jax.config.update("jax_default_device", jax.devices('cuda')[1])
 
 
 config = load_config()
@@ -31,7 +31,7 @@ jux_env_batch = JuxEnvBatch(
 seeds = np.random.randint(0, 2**32-1, dtype=np.int64, size = config["parallel_envs"])
 
 jux_env_batch.reset(seeds)
-
-agents = [Agent(player, jux_env_batch.env_cfg, config) for player in [0, 1]]
+agent = Agent(jux_env_batch.env_cfg, config)
+agents = [agent, agent]
 
 train_jux(jux_env_batch, agents, config)

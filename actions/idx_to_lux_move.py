@@ -2,7 +2,7 @@ import numpy as np
 
 from .single_move_actions import move, dig, recharge, self_destruct, transfer, pickup
 
-UNIT_ACTION_IDXS = 18 # 5 types, 5 directions, 4 values, 4 resources
+UNIT_ACTION_IDXS = 39 # 5 types, 5 directions, 4 values, 4 resources
 FACTORY_ACTION_IDXS = 4
 MOVE_NAMES = ['Move', 'Transfer', 'Pickup', 'Dig', 'Self Destruct']
 

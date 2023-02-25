@@ -45,6 +45,10 @@ class Actor(nn.Module):
         self.unit_conv = nn.Sequential(*blocks_units)
         self.factory_conv = nn.Sequential(*blocks_factory)
 
+        del blocks
+        del blocks_factory
+        del blocks_units
+
     def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 
         if len(image_features.shape) == 3:
@@ -62,8 +66,6 @@ class Actor(nn.Module):
         x_robot = self.unit_conv(image_features)
         x_factory = self.factory_conv(image_features)
 
-        #x_robot = x_robot.permute(0, 2, 3, 1)
-        #x_factory = x_factory.permute(0, 2, 3, 1)
         return x_robot, x_factory
 
     def count_parameters(self):

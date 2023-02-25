@@ -1,22 +1,15 @@
 from email.mime import image
-from lux.kit import obs_to_game_state, EnvConfig
-from lux.utils import my_turn_to_place_factory
+from lux.kit import EnvConfig
 import numpy as np
 import jax.numpy as jnp
 from jux.torch import to_torch
-from jux.torch import from_torch
-from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS#, unit_id_to_action_idx
+from actions.idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 import jax
 import torch.nn.functional as F
-from jux_wrappers.observation_wrapper import _image_features, observation
 from TD import TD
-import torch
-from actions.tensor_to_jux_action import jux_action
 
 class Agent():
-    def __init__(self, player: str, env_cfg: EnvConfig, config) -> None:
-        self.player = player
-        self.opp_player = 1 if self.player == 0 else 1
+    def __init__(self, env_cfg: EnvConfig, config) -> None:
         self.env_cfg: EnvConfig = env_cfg
         self.device = config["device"]
         self.map_size = config['map_size']
@@ -31,12 +24,14 @@ class Agent():
             print("Successfully loaded model")
         self.num_envs = config["parallel_envs"]
         self.window = self.make_window(self.num_envs)
+
+
     def make_window(self, num_envs):
         window = jnp.ones((num_envs, 3, 11, 11))
         for i in range(0, 5):
             window = window.at[:, 2, i+1:10-i, i+1:10-i].set(2*i * jnp.ones((num_envs, 9-2*i, 9-2*i)))
             window = window.at[:, 1, i+1:10-i, i+1:10-i].set(i * jnp.ones((num_envs, 9-2*i, 9-2*i)))
-            window = window.at[:, 0, i+1:10-i, i+1:10-i].set(-i*jnp.ones((num_envs, 9-2*i, 9-2*i)))
+            window = window.at[:, 0, i+1:10-i, i+1:10-i].set(-i * jnp.ones((num_envs, 9-2*i, 9-2*i)))
         return window.at[:, 1:, 5:8, 5:8].set(jnp.zeros((num_envs, 2, 3, 3)))
 
     def early_setup(self, step: int, state, valid_spawn_mask, remainingOverageTime: int = 60):
@@ -48,20 +43,20 @@ class Agent():
         final = jax.lax.conv_general_dilated(
             board, self.window, (1, 1), padding = "same")
         final = jnp.sum(final, axis=1)
+        final = np.random.randint(0, 100, size = final.shape) #TODO: Remove and fix convs
         final = jnp.where(valid_spawn_mask, final, -jnp.inf)
         idx = final.reshape(final.shape[0],-1).argmax(-1)
         out = jnp.unravel_index(idx, final.shape[-2:])
 
-
         return jnp.array(out).T, jnp.ones(valid_spawn_mask.shape[0])*150, jnp.ones(valid_spawn_mask.shape[0])*150
     
-    def act(self, state, image_features, global_features, remainingOverageTime: int = 60):
+    def act(self, state, image_features, global_features, player, remainingOverageTime: int = 60):
 
         image_features = to_torch(image_features)
         global_features = to_torch(global_features)
         
         # Batch_size x action_space x map_size x map_size
-        return list(self.TD.predict(state, image_features, global_features, self.player))
+        return list(self.TD.predict(state, image_features, global_features, player))
         # TODO: new model_output to action_format functions
         return jux_actions
 
