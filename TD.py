@@ -59,10 +59,10 @@ class TD:
         Q_target_factories = rewards.unsqueeze(1).unsqueeze(1) + (self.gamma * (1 - dones)).unsqueeze(1).unsqueeze(1) * Q_next_factories
 
         Q = self.model(image_states, global_states)
-        Q_units = torch.gather(Q[0], dim = 1, index=unit_actions.unsqueeze(1))
-        Q_factories = torch.gather(Q[1], dim = 1, index=factory_actions.unsqueeze(1))
+        Q_units = torch.gather(Q[0], dim = 1, index=unit_actions.unsqueeze(1)).squeeze()
+        Q_factories = torch.gather(Q[1], dim = 1, index=factory_actions.unsqueeze(1)).squeeze()
 
-        loss = torch.mean((Q_units - Q_target_units)**2)+torch.mean((Q_factories - Q_target_factories)**2)
+        loss = torch.mean(torch.square(Q_units - Q_target_units))+torch.mean(torch.square(Q_factories - Q_target_factories))
 
         loss.backward()
         self.optim.step()

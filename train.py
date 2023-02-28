@@ -73,7 +73,6 @@ def train_jux(env, agents: list[Agent], config):
                         del old_obs
                         del rewards
                         if dones.all():
-                            print(f"Played {s} steps")
                             break
                         del dones
                 pbar_outer.update(config["parallel_envs"])
