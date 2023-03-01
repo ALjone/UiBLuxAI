@@ -1,19 +1,14 @@
-import torch
 import time
 import numpy as np
 from utils.utils import formate_time
 from tqdm import tqdm
-from utils.stat_collector import StatCollector
 from utils.wandb_logging import WAndB
-from wandb.plot import bar
-from wandb import Table as wbtable
 from actions.idx_to_lux_move import MOVE_NAMES
-from jux.torch import from_torch, to_torch
-from jux_wrappers import observation_wrapper
+from jux.torch import from_torch
+from jux_wrappers.observation_wrapper import StateProcessor
 from actions.tensor_to_jux_action import jux_action
 import jax.numpy as jnp
 from jux.env import JuxEnvBatch
-import timeit
 import time
 from agents.RL_agent import Agent
 
@@ -46,37 +41,49 @@ def do_early_phase(env: JuxEnvBatch, agents, config):
 
 
 def train_jux(env, agents: list[Agent], config):
+    state_processor = StateProcessor(config)
+
+    if (config["log_to_wb"]):
+        wb = WAndB(config=config, run_name='Testing run')
+
     for _ in range(config["max_episodes"]//config["print_freq"]):
         with tqdm(total = 100, desc = "Games played", leave = False) as pbar_outer:
             while True:
                 state = do_early_phase(env, agents, config)
-                obs = observation_wrapper.observation(state)
+                obs = state_processor.process_state(state)
                 s = 0
                 with tqdm(total=1000, desc = "Stepping", leave = False) as pbar_inner:
+                    reward = 0
+                    state_processor.reset()
                     while True:
                         s += 1
                         actions = []
-                        for i, (agent, (image_features, global_features)) in enumerate(zip(agents, obs)):
+                        for i, (agent, (image_features, global_features, rewards)) in enumerate(zip(agents, obs)):
                             actions += agent.act(state, image_features, global_features, i)
 
                         action = jux_action(*[from_torch(action) for action in actions], state)
 
-                        state, (_, rewards, dones, _) = env.step_late_game(state, action)
+                        state, (_, _, dones, _) = env.step_late_game(state, action)
                         pbar_inner.update(1)
                         old_obs = obs
-                        obs = observation_wrapper.observation(state)
+                        obs = state_processor.process_state(state)
                         #TODO: Add in masking of games that end prematurely
+                        #TODO: All stack these, so it's truly on policy?
                         for i, (new_obs, old_obs) in enumerate(zip(old_obs, obs)):
-                            agents[0].TD.train(new_obs[0], new_obs[1], actions[i*2+0], actions[i*2+1], rewards[:, i], old_obs[0], old_obs[1], dones[:, i], state, i)
-                        del actions
-                        del new_obs
-                        del old_obs
-                        del rewards
-                        if dones.all():
-                            break
-                        del dones
-                pbar_outer.update(config["parallel_envs"])
+                            agents[0].TD.train(new_obs[0], new_obs[1], actions[i*2+0], actions[i*2+1], new_obs[2], old_obs[0], old_obs[1], dones[:, i], state, i)
 
+                        reward += jnp.mean(obs[0][2] + obs[1][2])
+
+                        if dones.all(): 
+                            break
+                pbar_outer.update(config["parallel_envs"])
+                pbar_outer.set_description(f"Avg reward per game: {round(reward.item(), 3)} , Games played")
+                if config["log_to_wb"]:
+                    log_dict = {}
+
+                    log_dict["Main/Average reward"] = reward.item()
+                    log_dict["Main/Max episode length in batch"] = s
+                    wb.log(log_dict)
 def train(env, agent, config):
 
     # Set all used variables

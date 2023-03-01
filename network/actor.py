@@ -39,7 +39,7 @@ class Actor(nn.Module):
         blocks_factory.append(nn.Conv2d(intermediate_channels, factory_action_space, 1))
 
         #Make global features part
-        self.global_block =  GlobalBlock(config['map_size'])
+        self.global_block =  GlobalBlock(config['map_size'], config)
 
         self.shared_conv = nn.Sequential(*blocks)
         self.unit_conv = nn.Sequential(*blocks_units)
@@ -49,14 +49,12 @@ class Actor(nn.Module):
         del blocks_factory
         del blocks_units
 
+        self.forward = torch.jit.trace(self.forward, example_inputs=(torch.ones(config["parallel_envs"], 24, 48, 48), torch.ones((config["parallel_envs"], 16))))
+
     def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 
-        if len(image_features.shape) == 3:
-            image_features = image_features.unsqueeze(0)
-            global_features = global_features.unsqueeze(0)
-
-        global_features = global_features.float()
-        image_features = image_features.float()
+        global_features[:] = global_features.float()
+        image_features[:] = image_features.float()
 
         global_image_channels = self.global_block(global_features)
         image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48

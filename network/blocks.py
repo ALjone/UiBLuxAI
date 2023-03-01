@@ -48,14 +48,16 @@ class ResSEBlock(nn.Module):
 
 class GlobalBlock(nn.Module):
 
-    def __init__(self, map_size) -> None:
+    def __init__(self, map_size, config) -> None:
         super().__init__()
 
         self.activation = nn.ReLU()
         self.fc1 = nn.Linear(16, 16)
         self.fc2 = nn.Linear(16, 12)
         self.map_size = map_size
-        
+
+        #self.forward = torch.jit.trace(self.forward, example_inputs=torch.ones((config["parallel_envs"], 16)))
+
     def forward(self, x):
         x = self.activation(self.fc1(x))
         x = self.activation(self.fc2(x))
@@ -74,13 +76,14 @@ class RotationInvariantConv2d(nn.Module):
         self.kernel_size = kernel_size
         self.stride = stride
         self.padding = padding
+        device = torch.device("cuda")
 
-        self.bias = nn.Parameter(torch.rand(out_channels), requires_grad=True).to(devise)
+        self.bias = nn.Parameter(torch.rand(out_channels), requires_grad=True).to(device)
         # create a parameter for each symmetric group
-        self.weights = nn.ParameterList([nn.Parameter(torch.Tensor(1, 1, 1, 1)).to(devise) for i in range(6*out_channels)]).to(device=devise)
+        self.weights = nn.ParameterList([nn.Parameter(torch.Tensor(1, 1, 1, 1)).to(device) for i in range(6*out_channels)]).to(device=device)
         self.reset_parameters()
 
-        self.weight = torch.zeros(self.out_channels, self.in_channels, self.kernel_size, self.kernel_size, device=devise)
+        self.weight = torch.zeros(self.out_channels, self.in_channels, self.kernel_size, self.kernel_size, device=device)
         for i in range(self.out_channels):
             self.weight[i,0,0,0] = self.weights[0 + 6*i]
             self.weight[i,0,-1,0] = self.weights[0+ 6*i]

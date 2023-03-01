@@ -13,8 +13,6 @@ from jux.config import JuxBufferConfig, EnvConfig
 from agents.RL_agent import Agent
 import numpy as np
 from utils.utils import load_config
-import jax
-
 
 
 

@@ -14,6 +14,8 @@ class TD:
         self.action_space = UNIT_ACTION_IDXS
 
         self.batch_size = config["batch_size"]
+        map_size = config["map_size"]
+        self.mask = torch.ones((config["parallel_envs"], map_size, map_size))
         print("Actor has:", self.model.count_parameters(), "parameters")
 
     def _unit_mask_actions(self, outputs, state, player_id):
@@ -40,6 +42,7 @@ class TD:
 
     def train(self, image_states, global_states, unit_actions, factory_actions, rewards, next_image_states, next_global_states, dones, state, player_id):
         #TODO: Mixed precision
+        #TODO: Time different parts of training
         image_states = to_torch(image_states)
         global_states = to_torch(global_states)
         next_image_states = to_torch(next_image_states)
