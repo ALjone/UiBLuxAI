@@ -1,5 +1,5 @@
 from luxai_s2.env import LuxAI_S2
-from agents.RL_agent import Agent
+from agents.jux_agent import Agent
 from utils.visualization import animate
 from wrappers.observation_wrappers import ImageWithUnitsWrapper, StateSpaceVol1
 from wrappers.other_wrappers import SinglePlayerEnv

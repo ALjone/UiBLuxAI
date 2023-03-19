@@ -2,7 +2,6 @@ from audioop import reverse
 import torch
 import torch.nn as nn
 from tqdm import tqdm
-import numpy as np
 from network.ActorCritic import ActorCritic
 
 ################################## PPO Policy ##################################
@@ -36,7 +35,6 @@ class PPO:
         self.gamma = config["gamma"]
         self.eps_clip = config["eps_clip"]
         self.K_epochs = config["epochs_per_batch"]
-        self.mini_batch_size = config["mini_batch_size"]
         
         self.buffer = RolloutBuffer()
 
@@ -46,16 +44,16 @@ class PPO:
                         {'params': self.policy.critic.parameters(), 'lr': config["critic_lr"]}
                     ])
 
-        #self.policy_old = ActorCritic(unit_action_dim, factory_action_dim, config).to(config["device"])
-        #self.policy_old.load_state_dict(self.policy.state_dict())
+        self.policy_old = ActorCritic(unit_action_dim, factory_action_dim, config).to(config["device"])
+        self.policy_old.load_state_dict(self.policy.state_dict())
         
         self.MseLoss = nn.MSELoss()
 
-    def select_action(self, image_features, global_features, obs):
+    def select_action(self, image_features, global_features, obs, player):
 
         with torch.no_grad():
             image_features = image_features.float().to(self.device)
-            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy.act(image_features, global_features, obs)
+            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(image_features, global_features, obs, player)
         
         self.buffer.image_features.append(image_features)
         self.buffer.global_features.append(global_features)
@@ -99,28 +97,27 @@ class PPO:
         for _ in tqdm(range(self.K_epochs), leave = False, desc = "Training"):
 
             # Evaluating old actions and values
-            mini_batch_indices = np.random.choice(list(range(len(old_image_features))), self.mini_batch_size)
-            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_image_features[mini_batch_indices], 
-                                    old_global_features[mini_batch_indices], old_actions_unit[mini_batch_indices], old_actions_factory[mini_batch_indices])
-        
+            action_logprobs_unit, action_probs_factories, state_values, unit_dist_entropy, factory_dist_entropy = self.policy.evaluate(old_image_features, old_global_features, old_actions_unit, old_actions_factory)
+
             loss = 0
+
             for logprobs, dist_entropy, old_logprobs in [(action_logprobs_unit, unit_dist_entropy, old_logprobs_unit),
                                                           (action_probs_factories, factory_dist_entropy, old_logprobs_factory)]:
                 
                 # Finding the ratio (pi_theta / pi_theta__old)
 
-                ratios = torch.exp(logprobs - old_logprobs.detach()[mini_batch_indices])
+                ratios = torch.exp(logprobs - old_logprobs.detach())
 
                 # Finding Surrogate Loss  
-                surr1 = advantages[mini_batch_indices]*ratios#ratios @ advantages
-                surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages[mini_batch_indices]
+                surr1 = advantages*ratios#ratios @ advantages
+                surr2 = torch.clamp(ratios, 1-self.eps_clip, 1+self.eps_clip) * advantages
 
                 # final loss of clipped objective PPO
                 loss += -torch.min(surr1, surr2) - 0.01 * dist_entropy
                 
             # match state_values tensor dimensions with rewards tensor
             state_values = torch.squeeze(state_values)
-            loss += 0.5 * self.MseLoss(state_values, rewards[mini_batch_indices])
+            loss += 0.5 * self.MseLoss(state_values, rewards)
 
             # take gradient step
             self.optimizer.zero_grad()
@@ -130,7 +127,7 @@ class PPO:
             cum_loss += loss.item()
             
         # Copy new weights into old policy
-        #self.policy_old.load_state_dict(self.policy.state_dict())
+        self.policy_old.load_state_dict(self.policy.state_dict())
 
         # clear buffer
         self.buffer.clear()
@@ -138,10 +135,10 @@ class PPO:
         return cum_loss/self.K_epochs
     
     def save(self, checkpoint_path):
-        torch.save(self.policy.state_dict(), checkpoint_path)
+        torch.save(self.policy_old.state_dict(), checkpoint_path)
    
     def load(self, checkpoint_path):
-        #self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
+        self.policy_old.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         self.policy.load_state_dict(torch.load(checkpoint_path, map_location=lambda storage, loc: storage))
         
         

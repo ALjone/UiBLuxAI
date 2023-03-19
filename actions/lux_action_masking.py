@@ -1,11 +1,7 @@
-from .idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from .old.idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from math import floor
 import torch
 from utils.utils import load_config
-from jax import numpy as jnp
-from jux_wrappers.observation_wrapper import jit_create_mask_from_pos
-from jux.torch import to_torch
-import jax
 
 MASK_EPS = 1e-7
 
@@ -43,6 +39,10 @@ def can_transfer_to_tile(x, y, unit_pos, factory_pos):
 
 def single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player = "player_0"):
     """Calculates the action mask for one specific unit"""
+    #TODO: Not implemented
+    action_mask = torch.zeros(UNIT_ACTION_IDXS, device=device, dtype=torch.uint8)
+    action_mask[[(0, 1, 2, 3, 4, 5, 6, 7, 8, UNIT_ACTION_IDXS-2)]] = 1
+    return action_mask
 
     action_mask = torch.ones(UNIT_ACTION_IDXS, device=device, dtype=torch.uint8)
     #(x, y) coordinates of unit
@@ -141,9 +141,9 @@ def unit_action_mask(obs, device, player = "player_0"):
 
     for unit in units.values():
         x, y = unit["pos"]
-        action_mask[x, y] = single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player)
+        action_mask[:, x, y] = single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player)
 
-    return action_mask
+    return action_mask.unsqueeze(0).to(torch.bool)
 
 
 def factory_action_mask(obs, device, player = "player_0"):
@@ -154,68 +154,6 @@ def factory_action_mask(obs, device, player = "player_0"):
     for factory in factories.values():
         x, y = factory["pos"]
         mask = single_factory_action_mask(factory, obs, device)
-        action_mask[x, y] = mask
+        action_mask[:, x, y] = mask
 
-    return action_mask
-
-
-def get_factories(state, player_idx):
-    factory_x = state.factories.pos.x[:, player_idx]
-    factory_y = state.factories.pos.y[:, player_idx]
-
-    friendly_factory_mask = jit_create_mask_from_pos(jnp.zeros((num_envs, map_size, map_size), dtype=jnp.bool_), factory_x, factory_y, True)
-
-    friendly_factory_mask = friendly_factory_mask & jnp.roll(friendly_factory_mask, 1, axis=1)
-    friendly_factory_mask = friendly_factory_mask & jnp.roll(friendly_factory_mask, -1, axis=1)
-    friendly_factory_mask = friendly_factory_mask & jnp.roll(friendly_factory_mask, 1, axis=2)
-    friendly_factory_mask = friendly_factory_mask & jnp.roll(friendly_factory_mask, -1, axis=2)
-
-    return friendly_factory_mask, state.board.factory_occupancy_map - friendly_factory_mask
-
-jit_get_factories = jax.jit(get_factories)
-#NORTH, EAST, SOUTH, WEST
-def batched_action_mask(state, player_idx):
-    mask = torch.ones((num_envs, UNIT_ACTION_IDXS, map_size, map_size), dtype = torch.bool).to(device)
-    # TODO: Check the dimensions, think x,y and i,j is being mixed up
-
-    #FIX THIS
-    friendly_factory_pos, enemy_factory_pos = jit_get_factories(state, player_idx)
-    friendly_factory_pos = to_torch(friendly_factory_pos).to(torch.bool)
-    enemy_factory_pos = to_torch(enemy_factory_pos).to(torch.bool)
-
-    #TODO: Assumes matrix indexing, plz check
-    # Also assumes x valiue before y value
-    # y - 1
-    #TODO: Also convert to jnp and jit
-    #TODO: This was rewritten without checking how it works, so this needs to be
-    #double checked
-    factory_north = torch.roll(enemy_factory_pos, 1, dims=2)
-    factory_north[:, :, 0] = True
-
-    factory_east = torch.roll(enemy_factory_pos, -1, dims=1)
-    factory_east[:, -1, :] = True
-
-    factory_south = torch.roll(enemy_factory_pos, -1, dims=2)
-    factory_south[:, :, -1] = True
-
-    factory_west = torch.roll(enemy_factory_pos, 1, dims=1)
-    factory_west[:, 0, :] = True
-
-    mask[:, 1] *= ~factory_north
-    mask[:, 2] *= ~factory_east
-    mask[:, 3] *= ~factory_south
-    mask[:, 4] *= ~factory_west
-
-
-    # Transfer mask
-    #TODO: Fix
-    #mask[:, [5, 9, 13, 17, 18, 19, 20]] *= ~factory_north
-    #mask[:, [6, 10, 14, 21, 22, 23, 24]] *= ~factory_east
-    #mask[:, [7, 11, 15, 25, 26, 27, 28]] *= ~factory_south
-    #mask[:, [8, 12, 16, 29, 30, 31, 32]] *= ~factory_west
-
-    # Pickup and dig
-    #mask[:, 33:38] *= ~friendly_factory_pos
-
-    #Flip to return illegal moves TODO: Fix this at the top so we don't have to permute here
-    return ~mask
+    return action_mask.unsqueeze(0).to(torch.bool)

@@ -49,12 +49,12 @@ class Actor(nn.Module):
         del blocks_factory
         del blocks_units
 
-        self.forward = torch.jit.trace(self.forward, example_inputs=(torch.ones(config["parallel_envs"], 24, 48, 48), torch.ones((config["parallel_envs"], 16))))
+        #self.forward = torch.jit.trace(self.forward, example_inputs=(torch.ones(config["parallel_envs"], 24, 48, 48), torch.ones((config["parallel_envs"], 16))))
 
     def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 
-        global_features[:] = global_features.float()
-        image_features[:] = image_features.float()
+        #global_features[:] = global_features.float()
+        #image_features[:] = image_features.float()
 
         global_image_channels = self.global_block(global_features)
         image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48
@@ -67,4 +67,4 @@ class Actor(nn.Module):
         return x_robot, x_factory
 
     def count_parameters(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+        return sum(p.numel() for p in self.parameters())# if p.requires_grad

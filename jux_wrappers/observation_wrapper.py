@@ -1,10 +1,8 @@
-import numpy as np
+import time
 import jax.numpy as jnp
-import jux
 import jax
-from jux.torch import from_torch, to_torch
 import jax.scipy.special as js
-from utils.utils import load_config
+from functools import partial
 
 
 def create_mask_from_pos(array, x_pos, y_pos, value):
@@ -25,22 +23,26 @@ class StateProcessor:
         self.map_size = config["map_size"]
 
         self.create_mask_from_pos = jax.jit(create_mask_from_pos)
-        self._global_features = jax.jit(self._global_features)
-        self._image_features = jax.jit(self._image_features)
+        #self._global_features = jax.jit(self._global_features)
+        #self._image_features = jax.jit(self._image_features)
         #self.reward = jax.jit(self.reward)
+        #self.process_state = jax.jit(self.process_state)
 
         self.reset()
 
     def reset(self):
-        self.previous_unit_ore = [jnp.ones((self.num_envs, self.map_size, self.map_size)), jnp.ones((self.num_envs, self.map_size, self.map_size))]
-        self.previous_factory_ore = [jnp.ones((self.num_envs, self.map_size, self.map_size)), jnp.ones((self.num_envs, self.map_size, self.map_size))]
-        self.previous_unit_ice = [jnp.ones((self.num_envs, self.map_size, self.map_size)), jnp.ones((self.num_envs, self.map_size, self.map_size))]
-        self.previous_factory_ice = [jnp.ones((self.num_envs, self.map_size, self.map_size)), jnp.ones((self.num_envs, self.map_size, self.map_size))]
+        #TODO: Make this in init and reset it here
+        self.previous_unit_ore = jnp.zeros((self.num_envs, self.map_size, self.map_size))
+        self.previous_factory_ore = jnp.zeros((self.num_envs, self.map_size, self.map_size))
+        self.previous_unit_ice = jnp.zeros((self.num_envs, self.map_size, self.map_size))
+        self.previous_factory_ice = jnp.zeros((self.num_envs, self.map_size, self.map_size))
 
-        self.previous_light_units = [0, 0]
-        self.previous_heavy_units = [0, 0]
+        self.previous_light_units = jnp.zeros(self.num_envs)
+        self.previous_heavy_units = jnp.zeros(self.num_envs)
 
+        self.previous_units = jnp.zeros(self.num_envs)
 
+    @partial(jax.jit, static_argnums=(0, ))
     def _image_features(self, state):
         player_0_id = 0
         player_1_id = 1
@@ -234,7 +236,7 @@ class StateProcessor:
 
         return p0_image_features, p1_image_features, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy
 
-
+    @partial(jax.jit, static_argnums=(0, ))
     def _global_features(self, state, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy):
         player_0_id = 0
         player_1_id = 1
@@ -315,8 +317,13 @@ class StateProcessor:
         return p0_global_features, p1_global_features
 
     
-
-    def reward(self, image_features, global_features, played_id):
+    @partial(jax.jit, static_argnums=(0, ))
+    def reward(self, image_features, global_features, state):
+        units = jnp.clip(state.n_units[:, 0]-self.previous_units, 0, None)
+        self.previous_units = jnp.copy(state.n_units[:, 0])
+        return units
+    
+        """#Player_id is always 0 since we only calculate reward for one player        
         #Cargo times mask. Because we take in the corrected features here, the indexing is the same regardless of player
         own_unit_ice = image_features[:, 6]*image_features[:, 0]
         own_unit_ore = image_features[:, 7]*image_features[:, 0]
@@ -324,30 +331,31 @@ class StateProcessor:
         own_factory_ice = image_features[:, 11]*image_features[:, 2]
         own_factory_ore = image_features[:, 12]*image_features[:, 2]
 
-        unit_ice_reward = jnp.clip(own_unit_ice - self.previous_unit_ice[played_id], 0, None).mean((1, 2))
-        unit_ore_reward = jnp.clip(own_unit_ore - self.previous_unit_ore[played_id], 0, None).mean((1, 2))
-        factory_ice_reward = jnp.clip((own_factory_ice - self.previous_factory_ice[played_id]), 0, None).mean((1, 2))*2
-        factory_ore_reward = jnp.clip((own_factory_ore - self.previous_factory_ore[played_id]), 0, None).mean((1, 2))*2
+        #TODO: Uhh, doesn't this mess up if a unit moves?
+        unit_ice_reward = jnp.clip(own_unit_ice - self.previous_unit_ice, 0, None).mean((1, 2))
+        unit_ore_reward = jnp.clip(own_unit_ore - self.previous_unit_ore, 0, None).mean((1, 2))
+        factory_ice_reward = jnp.clip((own_factory_ice - self.previous_factory_ice), 0, None).mean((1, 2))*2
+        factory_ore_reward = jnp.clip((own_factory_ore - self.previous_factory_ore), 0, None).mean((1, 2))*2
         
-        light_reward = global_features[:, 10] - self.previous_light_units[played_id]
-        heavy_reward = global_features[:, 11] - self.previous_heavy_units[played_id]
+        light_reward = global_features[:, 10] - self.previous_light_units
+        heavy_reward = global_features[:, 11] - self.previous_heavy_units
+        light_reward = jnp.clip(light_reward, 0, None)
+        heavy_reward = jnp.clip(heavy_reward, 0, None)
         
-        self.previous_unit_ice[played_id] = own_unit_ice
-        self.previous_unit_ore[played_id] = own_unit_ore
-        self.previous_factory_ice[played_id] = own_factory_ice
-        self.previous_factory_ore[played_id] = own_factory_ore
-        self.previous_light_units[played_id] = global_features[:, 10]
-        self.previous_heavy_units[played_id] = global_features[:, 10]
+        self.previous_unit_ice = own_unit_ice
+        self.previous_unit_ore = own_unit_ore
+        self.previous_factory_ice = own_factory_ice
+        self.previous_factory_ore = own_factory_ore
+        self.previous_light_units = global_features[:, 10]
+        self.previous_heavy_units = global_features[:, 10]
 
-        return unit_ice_reward+unit_ore_reward+factory_ice_reward+factory_ore_reward+light_reward+heavy_reward
+        return light_reward + heavy_reward +unit_ice_reward+unit_ore_reward+factory_ice_reward+factory_ore_reward+light_reward+heavy_reward"""
 
-
+    @partial(jax.jit, static_argnums=(0, ))
     def process_state(self, state):
         #We get the number of light/heavy so we don't have to do it twice
         p0_image_features, p1_image_features, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy = self._image_features(state)
         p0_global_features, p1_global_features = self._global_features(state, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy)
-        p0_reward = self.reward(p0_image_features, p0_global_features, 0)
-        p1_reward = self.reward(p1_image_features, p1_global_features, 1)
-        
-        
-        return (p0_image_features, p0_global_features, p0_reward), (p1_image_features, p1_global_features, p1_reward)
+        p0_reward = self.reward(p0_image_features, p0_global_features, state)
+        #p1_reward = self.reward(p1_image_features, p1_global_features, 1)
+        return (p0_image_features, p0_global_features, p0_reward), (p1_image_features, p1_global_features, 0)
