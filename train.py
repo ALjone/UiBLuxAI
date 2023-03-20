@@ -38,7 +38,8 @@ def train(env, agent, config):
     # training loop
     for _ in range(config["max_episodes"]//config["print_freq"]):
 
-        losses = []
+        policy_losses = []
+        value_losses = []
         step_counter = 0
         for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
             current_ep_reward = 0
@@ -62,9 +63,11 @@ def train(env, agent, config):
                 current_ep_reward += reward
 
                 # update PPO agent
-                if time_step % config["batch_size"] == 0:
-                    loss = agent.PPO.update()
-                    losses.append(loss)
+                #TODO: Should this "Or done" be here? Also we don't train unless the ep is at least 10 timesteps long
+                if (time_step % config["batch_size"] == 0 or done and ep_timesteps > 10) and len(agent.PPO.buffer.rewards) > 10:
+                    policy_loss, value_loss = agent.PPO.update()
+                    policy_losses.append(policy_loss)
+                    value_losses.append(value_loss)
 
                 # break; if the episode is over
                 if done:
@@ -82,7 +85,7 @@ def train(env, agent, config):
 
         steps_per_second = step_counter/(time.time()-last_x_ep_time)
         print(f"Episode : {i_episode:>6} \tTimestep : {time_step:>8} \tAverage Reward : {round(print_avg_reward, 3):>7} \t Average episode length: {round(step_counter/config['print_freq'], 3):>7}",
-              f"\tAverage loss : {round(np.mean(losses).item(), 3):>6} \tSteps per second last {config['print_freq']:>5} eps: {int(steps_per_second):>4} \tTime used total: {formate_time(int(time.time()-start_time))}")
+              f"\tAverage policy loss : {round(np.mean(policy_losses).item(), 3):>6} \tAverage value loss : {round(np.mean(value_losses).item(), 3):>6} \tSteps per second last {config['print_freq']:>5} eps: {int(steps_per_second):>4} \tTime used total: {formate_time(int(time.time()-start_time))}")
 
         print_running_reward = 0
         print_running_episodes = 0
@@ -99,7 +102,8 @@ def train(env, agent, config):
         log_dict["Main/Average reward"] = print_avg_reward
         log_dict["Main/Average episode length"] = step_counter/config["print_freq"]
         log_dict["Main/Average steps per second"] = steps_per_second
-        log_dict["Main/Average loss"] = np.mean(losses).item()
+        log_dict["Main/Average policy loss"] = np.mean(policy_losses).item()
+        log_dict["Main/Average value loss"] = np.mean(value_losses).item()
 
         if config["log_to_wb"]:
             # Update wandb with average for last x eps

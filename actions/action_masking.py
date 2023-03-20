@@ -1,8 +1,12 @@
-from .idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from actions.idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from math import floor
 import torch
+from utils.utils import load_config
 
 MASK_EPS = 1e-7
+
+config = load_config()
+device = config["device"]
 
 
 def calculate_move_cost(x, y, base_cost, modifier, rubble, dir):
@@ -33,6 +37,9 @@ def can_transfer_to_tile(x, y, unit_pos, factory_pos):
 
 def single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player = "player_0"):
     """Calculates the action mask for one specific unit"""
+    #TODO: Not implemented
+    action_mask = torch.ones(UNIT_ACTION_IDXS, device=device, dtype=torch.uint8)
+    return action_mask
 
     action_mask = torch.ones(UNIT_ACTION_IDXS, device=device, dtype=torch.uint8)
     #(x, y) coordinates of unit
@@ -133,7 +140,7 @@ def unit_action_mask(obs, device, player = "player_0"):
         x, y = unit["pos"]
         action_mask[x, y] = single_unit_action_mask(unit, factory_pos, unit_pos, obs, device, player)
 
-    return action_mask
+    return action_mask.to(torch.bool)
 
 
 def factory_action_mask(obs, device, player = "player_0"):
@@ -146,4 +153,4 @@ def factory_action_mask(obs, device, player = "player_0"):
         mask = single_factory_action_mask(factory, obs, device)
         action_mask[x, y] = mask
 
-    return action_mask
+    return action_mask.to(torch.bool)

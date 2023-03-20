@@ -3,11 +3,11 @@ max_episodes: 10000000
 print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
-batch_size: 512
+batch_size: 256
 actor_lr: 0.0003
 critic_lr: 0.0003
 gamma: 0.99
-epochs_per_batch: 6
+epochs_per_batch: 2
 eps_clip: 0.1
 lmbda: 0.95
 
@@ -15,30 +15,30 @@ lmbda: 0.95
 map_size: 48
 
 #Architecture - Actor
-actor_n_blocks: 6
+actor_n_blocks: 16
 actor_n_blocks_after_split: 2
 actor_intermediate_channels: 32
 
 #Architecture - Critic
-critic_n_blocks: 6
+critic_n_blocks: 8
 critic_intermediate_channels: 16
 
 #Other 
-device: mps #cuda, cpu, mps
+device: cuda #cuda, cpu, mps
 path:  None #model.t 
 save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes
-log_to_wb: False
+log_to_wb: True
 
 #Reward
-unit_lost_scale: 0.1
-birth_kill_relation: 0.5
+unit_lost_scale: 0 #0.01
+birth_kill_relation: 0.25
 units_killed_scale: 1
 factory_lost_scale: 10
 
 lichen_divide_value: 20000
 scaling_lichen: 5
-scaling_ice: 0.1 #Value of ice
-scaling_ore: 0.05
+scaling_ice: 1 #Value of ice
+scaling_ore: 0.5
 scaling_delivery_extra: 2 #How much more delivery is worth compared to gathering
 scaling_win: 0

@@ -2,7 +2,7 @@ from lux.kit import obs_to_game_state, EnvConfig
 from lux.utils import my_turn_to_place_factory
 import numpy as np
 import scipy
-from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, unit_id_to_action_idx
+from actions.idx_to_lux_move import outputs_to_actions, UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 from ppo import PPO
 import torch
 
@@ -91,25 +91,10 @@ class Agent():
         factories = obs[self.player]["factories"][self.player].values()
 
         image_features = features["image_features"].to(self.device)
-        #action_queue_type = torch.zeros((UNIT_ACTION_IDXS-1, 48, 48), device = self.device) #-1 because of the do nothing action
-
-        '''for unit_id, action in self.action_queue.items():
-            if not unit_id in obs[self.player]["units"][self.player].keys(): continue
-            pos = obs[self.player]["units"][self.player][unit_id]["pos"]
-            action_queue_type[action-1, pos[0], pos[1]] = 1'''
-
-        #First in cat is first in output, so unit/factory mask is kept!!
-        #image_features = torch.cat((image_features, action_queue_type), dim=0)
 
         global_features = features["global_features"].to(self.device)
 
         unit_output, factory_output = self.PPO.select_action(image_features, global_features, obs)
-
-        #action_idx_dict = unit_id_to_action_idx(units, unit_output)
-
-        #for unit_id, action in action_idx_dict.items():
-        #    self.action_queue[unit_id] = action
-
 
 
         action = outputs_to_actions(unit_output.detach().cpu(), factory_output.detach().cpu(), units, factories, obs, factory_map = image_features[1].detach().cpu().numpy()) #Second channel is always factory_map

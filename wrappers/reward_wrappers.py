@@ -30,17 +30,13 @@ class IceRewardWrapper(gym.RewardWrapper):
         # TODO: Differentiate between light and heavy robots
         # NOTE: Does not currently work for factories
         # TODO: Differantiate between killing and dying in the future
-        #self_destructs = 0
         units = 0
         factories = 0
         units_made = 0
         if player in self.prev_actions.keys() and self.state.real_env_steps > 0:
             for unit_id, action in self.prev_actions[player].items():
-                #print(unit_id)
                 if "unit" in unit_id:
                     units += 1
-                    #if action[0] == 4:
-                    #    self_destructs += 1  # Idx 4 is self destruct
                 elif "factory" in unit_id:
                     factories += 1
                     if action in [0, 1]: #NOTE: Only works if action masking
@@ -93,9 +89,9 @@ class IceRewardWrapper(gym.RewardWrapper):
         units_lost, factories_lost = self.get_died_units_and_factories()
         units_killed, _ = self.get_died_units_and_factories("player_1")
 
+        #TODO: Should this be max?
         unit_lost_reward = units_lost*-self.config["unit_lost_scale"] if units_lost < 0 else units_lost*-self.config["unit_lost_scale"]*self.config['birth_kill_relation']
-        factories_lost_reward = factories_lost*- \
-            self.config["factory_lost_scale"]
+        factories_lost_reward = factories_lost * -self.config["factory_lost_scale"]
         # TODO: Implement this
         units_killed_reward = 0 #units_killed*self.config["units_killed_scale"]
 

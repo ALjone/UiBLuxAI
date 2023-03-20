@@ -7,13 +7,9 @@ import numpy.typing as npt
 from gym import spaces
 
 
-#Delta change, idx to mapping
-#TODO: Triple check this!!!
-dirs = [(0, 0), (0, -1), (1, 0), (0, 1), (-1, 0)]
-
 class StateSpaceVol1(gym.ObservationWrapper):
     def __init__(self, env: gym.Env, config) -> None:
-        self.config = config#["map_size"]
+        self.config = config
         super().__init__(env)
 
     def image_features(self, obs):
@@ -35,8 +31,6 @@ class StateSpaceVol1(gym.ObservationWrapper):
 
         unit_type = np.zeros((2, self.config["map_size"], self.config["map_size"])) #LIGHT, HEAVY
 
-        #TODO: Move this to agent
-        action_queue_length = np.zeros((1, self.config["map_size"], self.config["map_size"]))
 
         next_step = np.zeros((2, self.config["map_size"], self.config["map_size"]))
         
@@ -56,16 +50,7 @@ class StateSpaceVol1(gym.ObservationWrapper):
                 unit_cargo[1, x, y] = unit["cargo"]["ice"]/(100 if is_light else 1000)
                 unit_cargo[2, x, y] = unit["cargo"]["ore"]/(100 if is_light else 1000)
                 
-                action_queue_length[0, x, y] = len(unit["action_queue"])/20
 
-                #Predicting next cell for unit
-                if len(unit["action_queue"]) > 0:
-                    act = unit["action_queue"][0]
-                    if act[0] == 0:
-                        dir = dirs[act[1]] #Get the direction we're moving
-                        if x+dir[0] < 0 or x+dir[0] > 47 or y+dir[1] < 0 or y+dir[1] > 47: continue
-                        next_step[i, x+dir[0], y+dir[1]] = 1
-                pass
         
             for _, factory in factories.items():
                 x, y = factory["pos"]
@@ -90,7 +75,6 @@ class StateSpaceVol1(gym.ObservationWrapper):
         board[2] = shared_obs["board"]["ore"]
         board[3] = shared_obs["board"]["lichen"]/self.env.state.env_cfg.MAX_LICHEN_PER_TILE
         
-        #TODO: Add action queue type in RL agent
         #Don't ask why this is np to torch...
         image_features = torch.tensor(np.concatenate([
             unit_mask,
@@ -100,7 +84,6 @@ class StateSpaceVol1(gym.ObservationWrapper):
             board,
             lichen_mask,
             unit_type,
-            action_queue_length,
             next_step,
         ]))
 
@@ -198,7 +181,7 @@ class StateSpaceVol1(gym.ObservationWrapper):
     def observation(self, obs):
         #If we're still in early phase
         if len(self.agents) == 0:
-            return "", obs
+            return None, obs
         main_player = self.agents[0]
         other_player = self.agents[1]
 

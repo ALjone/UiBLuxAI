@@ -2,8 +2,7 @@ from lux.kit import obs_to_game_state
 from lux.utils import my_turn_to_place_factory
 import gym
 import numpy as np
-from actions.idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
-
+from actions.idx_to_lux_move import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, index_map
 
 class SinglePlayerEnv(gym.Wrapper):
     def __init__(self, env: gym.Env) -> None:
@@ -57,10 +56,11 @@ class SinglePlayerEnv(gym.Wrapper):
         for unit_id, act in action[agent].items():
             if "unit" in unit_id:
                 act = act[0] #Because of action queue
-                #if len(act) == 0: continue #Because we have a "Non" action #TODO: Might be removed
-                self.env.state.stats[agent]["actions"]["units"][act[0]] += 1
+                #TODO: This is stupid
+                idx = np.argmax(np.where(index_map == act, 1, 0).mean(1))
+                self.env.state.stats[agent]["actions"]["units"][idx] += 1
                 #Recharge action if the first element in the action array is 5
-                if act[0] == 5 and unit_id in units.keys(): #No idea why this check is needed??? Maybe it died
+                if idx == 0 and unit_id in units.keys(): #No idea why this check is needed??? Maybe it died
                     self.env.state.stats[agent]["actions"]["average_power_when_recharge"].append(units[unit_id].power)
             elif "factory" in unit_id:
                 self.env.state.stats[agent]["actions"]["factories"][act] += 1

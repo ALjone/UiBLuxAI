@@ -1,67 +1,78 @@
 import numpy as np
-from .action_queues import move_north, move_south, move_east, move_west, move_single
-from .action_queues import pickup, self_destruct, dig
-from .action_queues import move_to_closest_factory_and_transport, move_to_closest_res, res_mining_loop
-from .action_queues import transfer_single, self_destruct
+
+index_map = np.array(( (0,0,0,0,0,1),
+                      
+                        (0,1,0,0,0,1),
+                        (0,2,0,0,0,1),
+                        (0,3,0,0,0,1),
+                        (0,4,0,0,0,1),
+
+                        (1,1,0,0,0,1),
+                        (1,2,0,0,0,1),
+                        (1,3,0,0,0,1),
+                        (1,4,0,0,0,1),
+
+                        (1,1,1,1,0,1),
+                        (1,2,1,1,0,1),
+                        (1,3,1,1,0,1),
+                        (1,4,1,1,0,1),
+
+                        (1,1,2,1,0,1),
+                        (1,2,2,1,0,1),
+                        (1,3,2,1,0,1),
+                        (1,4,2,1,0,1),
+
+                        (1,1,4,0,0,1),
+                        (1,1,4,1,0,1),
+                        (1,1,4,2,0,1),
+                        (1,1,4,3,0,1),
+
+                        (1,2,4,0,0,1),
+                        (1,2,4,1,0,1),
+                        (1,2,4,2,0,1),
+                        (1,2,4,3,0,1),
+
+                        (1,3,4,0,0,1),
+                        (1,3,4,1,0,1),
+                        (1,3,4,2,0,1),
+                        (1,3,4,3,0,1),
+
+                        (1,4,4,0,0,1),
+                        (1,4,4,1,0,1),
+                        (1,4,4,2,0,1),
+                        (1,4,4,3,0,1),
+                        
+                        (2,0,4,1,0,1),
+                        (2,0,0,0,0,1),
+                        (2,0,1,0,0,1),
+                        (2,0,2,0,0,1),
+                        (3,0,0,0,0,1),
+                        (4,0,0,0,0,1)), dtype = np.int8)
 
 
-UNIT_ACTION_IDXS = 14
-FACTORY_ACTION_IDXS = 4
-MOVE_NAMES = moves = ["No action", "Stop", "Move north", "Move south", "Move east", "Move west", "Pickup power",
-                      "Closest factory ice", "Closest factory ore", "Closest ice", "Closest ore", "Digg"]
+index_map = np.array((  (0,0,0,0,0,1),
+                        (0,1,0,0,0,1),
+                        (0,2,0,0,0,1),
+                        (0,3,0,0,0,1),
+                        (0,4,0,0,0,1),
+                        
+                        (1,1,0,1000,0,1),
+                        (1,2,0,1000,0,1),
+                        (1,3,0,1000,0,1),
+                        (1,4,0,1000,0,1),
 
-# a[0] = action type
-# (0 = move, 1 = transfer X amount of R, 2 = pickup X amount of R, 3 = dig, 4 = self destruct, 5 = recharge X)
-
-# a[1] = direction (0 = center, 1 = up, 2 = right, 3 = down, 4 = left)
-
-# a[2] = R = resource type (0 = ice, 1 = ore, 2 = water, 3 = metal, 4 power)
-
-# a[3] = X, amount of resources transferred or picked up if action is transfer or pickup.
-# If action is recharge, it is how much energy to store before executing the next action in queue
-
-# a[4] = repeat. If repeat == 0, then action is not recycled and removed once we have executed it a[5] = n times.
-# Otherwise if repeat > 0 we recycle this action to the back of the action queue and set n = repeat.
-
-# a[5] = n, number of times to execute this action before exhausting it and removing it from the front of the action queue. Minimum is 1.
+                        (2,0,4,1000,0,1),
+                        (3,0,0,0,0,1)), dtype = np.int16)
 
 
-def _unit_idx_to_action(type_idx, direction_idx, amount_idx, unit):
-    """Translates an index-action (from argmax) into a Lux-valid action for units"""
-
-    amount = [0.25, 0.5, 0.75, 1]
-    resources = ['power', 'ice', 'water', 'ore', 'metal']
-    if (type_idx == 0):  # Move
-        #print('Action 0:',  move_single(direction_idx, 1, 1))
-        return move_single(direction_idx, 1, 1)
-
-    elif (type_idx == 1):
-        res = resources[direction_idx]
-        cargo = unit["power"]
-        #print('Action 1:', pickup(res, amount[amount_idx]*int(cargo)))
-        return pickup(res, int(amount[amount_idx]*int(cargo)))
-
-    elif (type_idx == 2):
-        #print('Action 2:', dig(unit, 1, 0))
-        return dig(unit, 1, 0)
-
-    # Using amount idx to indicate direction of transferal, and will always transfer all.
-    elif (type_idx == 3):
-        res = resources[direction_idx]
-        #print('Action 3:', transfer_single(res, 1000, direction=amount_idx))
-
-        return transfer_single(res, 1000, direction=amount_idx)
-
-    elif (type_idx == 4):
-        #print('Action 4:', self_destruct())
-        
-        return self_destruct()
+MOVE_NAMES = moves = ["No action", "Move north", "Move east", "Move south", "Move west", "Transport north", "Transport east", "Transport south", "Transport west", "Pickup power", "Dig"]
+UNIT_ACTION_IDXS = len(index_map)
+FACTORY_ACTION_IDXS = 4 #Light, heavy, water, nothing
 
 
 def _factory_idx_to_action(idx):
     """Translates an index-action (from argmax) into a Lux-valid action for factories"""
-    assert 0 <= idx < (FACTORY_ACTION_IDXS -
-                       1)  # Minus 1 because action 3 is do nothing
+    assert 0 <= idx < (FACTORY_ACTION_IDXS - 1)  # Minus 1 because action 3 is do nothing
     assert isinstance(idx, int)
     # 0: Build light, 1: Build heavy, 2: Grow lichen
     return idx
@@ -75,30 +86,17 @@ def outputs_to_actions(unit_output, factory_output, units, factories, obs, facto
     return unit_actions
 
 
-def unit_id_to_action_idx(units, unit_output):
-    actions = {}
-    for unit in units:
-        x, y = unit["pos"][0], unit["pos"][1]
-        action_idx = unit_output[x, y].item()
-        if action_idx == 0:
-            continue  # The "Do nothing" action
-        actions[unit["unit_id"]] = action_idx
-
-    return actions
-
-
 def _unit_output_to_actions(unit_output, units, obs, factory_map):
     """Turns outputs from the model into action dicts for units"""
     actions = {}
     for unit in units:
         x, y = unit["pos"][0], unit["pos"][1]
-        action = unit_output[x, y].detach()#.item()
-        if action[0] == 0:
-            continue  # The "Do nothing" action
-        action = _unit_idx_to_action(*action, unit)
-        if action == []:  # If you stand on ice and move to ice...
+        action_idx = unit_output[x, y].detach()
+        if action_idx == 0: #Do nothing
             continue
-        actions[unit["unit_id"]] = action
+        action = index_map[action_idx]
+        
+        actions[unit["unit_id"]] = [action]
 
     return actions
 
