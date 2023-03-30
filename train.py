@@ -6,18 +6,8 @@ from utils.stat_collector import StatCollector
 from utils.wandb_logging import WAndB
 from wandb.plot import bar
 from wandb import Table as wbtable
-from actions.idx_to_lux_move import MOVE_NAMES
+from actions.actions import MOVES as MOVE_NAMES
 
-
-def do_early_phase(env, agent):
-    state = env.reset()
-    step = 0
-    while env.state.real_env_steps < 0:
-        a = agent.early_setup(step, state)
-        step += 1
-        state, rewards, dones, infos = env.step(a)
-
-    return state
 
 
 def train(env, agent, config):
@@ -43,7 +33,7 @@ def train(env, agent, config):
         step_counter = 0
         for _ in tqdm(range(config["print_freq"]), leave=False, desc="Experiencing"):
             current_ep_reward = 0
-            state = do_early_phase(env, agent)
+            state = env.reset()
             ep_losses = []
             ep_timesteps = 0
             agent.reset()

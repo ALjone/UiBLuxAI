@@ -28,7 +28,7 @@ class actor(nn.Module):
             blocks.append(layer(intermediate_channels, intermediate_channels))
         blocks.append(layer(intermediate_channels, intermediate_channels))
 
-        #Make robot part
+        #Make unit part
         for _ in range(n_blocks_factories_units):
             blocks_units.append(layer(intermediate_channels, intermediate_channels))
         blocks_units.append(nn.Conv2d(intermediate_channels, unit_action_space, 1))
@@ -45,28 +45,22 @@ class actor(nn.Module):
         self.unit_conv = nn.Sequential(*blocks_units)
         self.factory_conv = nn.Sequential(*blocks_factory)
 
-    def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        if type(image_features) == np.ndarray:
-            image_features = torch.from_numpy(image_features)
+    def forward(self, image_features: torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         if len(image_features.shape) == 3:
             image_features = image_features.unsqueeze(0)
+        if len(global_features.shape) == 1:
+            global_features = global_features.unsqueeze(0)
 
-        global_features = global_features.float()
-        image_features = image_features.float()
-
+            
         global_image_channels = self.global_block(global_features)
         image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48
 
         # TODO: 12 new dimensions for image_features input
         image_features = self.shared_conv(image_features)
-        x_robot = self.unit_conv(image_features)
+        x_unit = self.unit_conv(image_features)
         x_factory = self.factory_conv(image_features)
 
-        x_robot = x_robot.permute(0, 2, 3, 1)
-        x_factory = x_factory.permute(0, 2, 3, 1)
-
-        #TODO: Softmax should happen in categorical due to action masking
-        return F.softmax(x_robot, dim=3).squeeze(), F.softmax(x_factory, dim=3).squeeze()
+        return x_unit.permute(0, 2, 3, 1), x_factory.permute(0, 2, 3, 1)
 
     def count_parameters(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)

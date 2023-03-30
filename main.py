@@ -8,9 +8,10 @@ from wrappers.reward_wrappers import IceRewardWrapper
 from utils.utils import load_config
 
 
+
 config = load_config()
 
-env = LuxAI_S2(verbose=1, collect_stats=True, map_size = config["map_size"])
+env = LuxAI_S2(verbose=0, collect_stats=True, map_size = config["map_size"])
 env = StateSpaceVol1(env, config)
 env = SinglePlayerEnv(env)
 env = IceRewardWrapper(env, config)

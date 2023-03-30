@@ -33,11 +33,8 @@ class StatCollector:
         self.power_transfered = []
 
         #Rewards
-        self.unit_lost_reward = []
-        self.factories_lost_reward = []
-        self.units_killed_reward = []
+        self.heavy_unit_reward = []
         self.resources_reward = []
-        self.end_of_episode_reward = []
 
         #Action
         self.unit_action_distribution = []
@@ -46,7 +43,9 @@ class StatCollector:
 
     def update(self, stats):
         """Call this with the stats dict at the end of an episode"""
-        stats = stats[self.player]
+        #If we're already giving the stats for player0, we skip this part
+        if self.player in stats.keys():
+            stats = stats[self.player]
 
         #Consumption
         self.power_consumed.append(sum([val for val in stats["consumption"]["power"].values()])) #Loop over LIGHT, HEAVY, FACTORY
@@ -83,11 +82,8 @@ class StatCollector:
 
         #Rewards
         reward = stats['rewards']
-        self.unit_lost_reward.append(reward['unit_lost_reward'])
-        self.units_killed_reward.append(reward['units_killed_reward'])
+        self.heavy_unit_reward.append(reward['heavy_unit_reward'])
         self.resources_reward.append(reward['resource_reward'])
-        self.factories_lost_reward.append(reward['factories_lost_reward'])
-        self.end_of_episode_reward.append(reward['end_of_episode_reward'])
 
         #Action
         act = stats["actions"]
@@ -138,16 +134,13 @@ class StatCollector:
 
                 "rewards":
                     {
-                    "units_lost_reward": self.unit_lost_reward[-x:],
-                    "factories_lost_reward": self.factories_lost_reward[-x:],
-                    "units_killed_reward": self.units_killed_reward[-x:],
+                    "heavy_unit_reward": self.heavy_unit_reward[-x:],
                     "resources_reward": self.resources_reward[-x:],
-                    "end_of_episode_reward": self.end_of_episode_reward[-x:]
                     },
                 "actions":
                     {
-                    "unit_action_distribution": np.array(self.unit_action_distribution[-x:]).mean(0),
-                    "factory_action_distribution": np.array(self.factory_action_distribution[-x:]).mean(0),
+                    "unit_action_distribution": [elem for elem in np.array(self.unit_action_distribution[-x:]).mean(0)],
+                    "factory_action_distribution": [elem for elem in np.array(self.factory_action_distribution[-x:]).mean(0)],
                     "average_power_when_recharge": self.average_power_when_recharge[-x:]
                     }
                 }

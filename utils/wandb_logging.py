@@ -10,5 +10,5 @@ class WAndB():
         wandb.init(config=config, project=project, entity=entity)
         wandb.run.name = run_name if run_name != '' else f'Untitled run at: {current_time}'
 
-    def log(self, data: dict):
-        wandb.log(data)
+    def log(self, data: dict, step = None):
+        wandb.log(data, step = step)

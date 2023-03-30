@@ -1,27 +1,23 @@
 from luxai_s2.env import LuxAI_S2
 from agents.RL_agent import Agent
 from utils.visualization import animate
-from wrappers.observation_wrappers import ImageWithUnitsWrapper, StateSpaceVol1
+from wrappers.observation_wrapper import StateSpaceVol2
 from wrappers.other_wrappers import SinglePlayerEnv
 from wrappers.reward_wrappers import IceRewardWrapper
+from wrappers.action_wrapper import action_wrapper
 from utils.utils import load_config
+import torch
 
-def play_episode(agent, env, make_gif = True):
-    agent.reset()
+def play_episode(agent: Agent, env: LuxAI_S2, make_gif = True):
     obs = env.reset()
     step = 0
     imgs = []
-    while env.state.real_env_steps < 0:
-        a = agent.early_setup(step, obs)
-        step += 1
-        obs, rewards, dones, infos = env.step(a)
-        if make_gif:
-            imgs += [env.render("rgb_array", width=640, height=640)]
     done = False
     while not done:
-        actions = agent.act(obs)
+        i, g, um, fm = obs
+        actions = agent.get_action(i, g, um, fm, testing = True)
         step += 1
-        obs, rewards, done, infos = env.step(actions)
+        obs, _, done, _ = env.step(actions)
         if make_gif:
             imgs += [env.render("rgb_array", width=640, height=640)]
     if make_gif:
@@ -29,11 +25,17 @@ def play_episode(agent, env, make_gif = True):
         animate(imgs)
 
 def run(config):
-    env = LuxAI_S2(verbose=0, collect_stats=True)
-    env = StateSpaceVol1(env)
+    #Always run visualization on CPU
+    config["device"] = torch.device("cpu")
+    env = LuxAI_S2(verbose=1, collect_stats=True, MIN_FACTORIES = config["n_factories"], MAX_FACTORIES = config["n_factories"], validate_action_space = True)
+    env.reset() #NOTE: Reset here to initialize stats
     env = SinglePlayerEnv(env)
+    env = StateSpaceVol2(env, config)
     env = IceRewardWrapper(env, config)
-    agent = Agent("player_0", env.state.env_cfg, config)
+    env.reset()
+    env = action_wrapper(env)
+    env.reset()
+    agent = Agent("player_0", config)
     
     play_episode(agent, env, True)
 
