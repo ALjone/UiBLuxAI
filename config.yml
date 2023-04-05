@@ -3,8 +3,8 @@ max_episodes: 10000000000000
 print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
-num_steps_per_env: 64
-num_minibatches: 4
+num_steps_per_env: 128
+num_minibatches: 8
 lr: 0.00025
 gamma: 0.999
 epochs_per_batch: 2
@@ -15,10 +15,10 @@ vf_coef: 0.5
 max_grad_norm: 0.5
 use_target_kl: True
 target_kl_max: 0.03
-target_kl_min : 0.000001
+target_kl_min : 0
 anneal_lr: True
 norm_adv: True
-clip_loss_value: False #According to 37 PPO implementation details, this should be false
+clip_loss_value: True #According to 37 PPO implementation details, this should be false
 mode_or_sample: sample #sample
 
 #Environment

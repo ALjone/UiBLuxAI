@@ -8,7 +8,7 @@ class ActorCritic(nn.Module):
         super(ActorCritic, self).__init__()
         self.device = config["device"]
 
-        self.channels = 30
+        self.channels = 33
         self.actor = actor(self.channels, unit_action_dim, config["actor_n_blocks"], config["actor_intermediate_channels"]).to(self.device)
         # critic
         self.critic = critic(self.channels, config["critic_n_blocks"], config["critic_intermediate_channels"]).to(self.device)

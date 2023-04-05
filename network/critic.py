@@ -13,9 +13,10 @@ class critic(nn.Module):
         for _ in range(n_blocks-2):
             blocks.append(nn.Conv2d(intermediate_channels, intermediate_channels, kernel_size=5))
             blocks.append(activation)
-        blocks.append(activation)
 
         self.conv = nn.Sequential(*blocks)
+
+        self.global_block =  GlobalBlock()
         
         self.linear = nn.Sequential(nn.Linear(512, 128),
                                     nn.ReLU(),
@@ -27,7 +28,7 @@ class critic(nn.Module):
         if len(image_features.shape) == 3:
             image_features = image_features.unsqueeze(0)
         
-        global_image_channels = global_features.unsqueeze(dim = -1).unsqueeze(dim = -1).repeat(1,1,48,48)
+        global_image_channels = self.global_block(global_features)
         image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48
 
         image_features = self.conv(image_features)

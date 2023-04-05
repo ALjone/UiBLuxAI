@@ -19,11 +19,14 @@ class actor(nn.Module):
 
         #Make shared part
         blocks.append(nn.Conv2d(intput_channels, intermediate_channels, kernel_size=5, padding = 2))
-        blocks.append(activation)
+        blocks.append(nn.LeakyReLU())
         for _ in range(n_blocks-2):
             blocks.append(layer(intermediate_channels, intermediate_channels, kernel_size=5))
 
         blocks.append(nn.Conv2d(intermediate_channels, unit_action_space, 1))
+
+        #Make global features part
+        self.global_block =  GlobalBlock()
 
         self.conv = nn.Sequential(*blocks)
 
@@ -33,7 +36,8 @@ class actor(nn.Module):
         if len(global_features.shape) == 1:
             global_features = global_features.unsqueeze(0)
 
-        global_image_channels = global_features.unsqueeze(dim = -1).unsqueeze(dim = -1).repeat(1,1,48,48)
+            
+        global_image_channels = self.global_block(global_features)
         image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48
 
         # TODO: 12 new dimensions for image_features input
