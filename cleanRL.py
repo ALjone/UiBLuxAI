@@ -21,8 +21,8 @@ from wrappers.action_wrapper import action_wrapper
 from utils.wandb_logging import WAndB
 import os
 os.environ["WANDB_SILENT"] = "true"
-torch.backends.cudnn.benchmark = True
-torch.backends.cuda.matmul.allow_tf32 = True
+#torch.backends.cudnn.benchmark = True
+#torch.backends.cuda.matmul.allow_tf32 = True
 
 
 def make_env(config):
@@ -240,7 +240,7 @@ if __name__ == "__main__":
                 log_dict = {}
                 log_dict["Main/Average reward per step"] = np.mean(episode_rewards).item()
                 log_dict["Main/Average episode length"] = np.mean(episode_lengths)
-                log_dict["Main/Max episode length"] = np.max(episode_lengths)
+                #log_dict["Main/Max episode length"] = np.max(episode_lengths)
                 log_dict["Losses/value_loss"] = v_loss.item()
                 log_dict["Losses/policy_loss"] = (pg_unit_loss).item()
                 log_dict["Losses/entropy"] = entropy_loss.item()

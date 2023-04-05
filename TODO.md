@@ -14,6 +14,8 @@ Se på speedup (I sampling f.eks)
 Logic for 1 isbot per factory?
 
 
-Fikse bugs:
+Fikse bugs: 
+
+Sigurd: Lage flere filter størrelser
 
 Warnings

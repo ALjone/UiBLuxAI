@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from .blocks import ResSEBlock, ConvBlock, GlobalBlock
+from .blocks import ResSEBlock, ConvBlock, GlobalBlock, RotationInvariantConv2d
 
 
 class critic(nn.Module):
@@ -8,11 +8,13 @@ class critic(nn.Module):
         super(critic, self).__init__()
         
         blocks = []
-        blocks.append(nn.Conv2d(intput_channels, intermediate_channels, kernel_size = 5))
+        blocks.append(RotationInvariantConv2d(intput_channels, intermediate_channels, kernel_size = 5, padding = 1))
         blocks.append(activation)
-        for _ in range(n_blocks-2):
-            blocks.append(nn.Conv2d(intermediate_channels, intermediate_channels, kernel_size=5))
+        for _ in range(10):
+            blocks.append(RotationInvariantConv2d(intermediate_channels, intermediate_channels, kernel_size=5))
             blocks.append(activation)
+        blocks.append(RotationInvariantConv2d(intermediate_channels, 512, kernel_size=5, stride = 2))
+        blocks.append(activation)
 
         self.conv = nn.Sequential(*blocks)
 

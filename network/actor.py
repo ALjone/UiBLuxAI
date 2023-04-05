@@ -1,7 +1,7 @@
 from typing import Tuple
 import torch
 from torch import nn
-from .blocks import ResSEBlock, ConvBlock, GlobalBlock
+from .blocks import ResSEBlock, ConvBlock, GlobalBlock, RotationInvariantConv2d
 
 
 class actor(nn.Module):
@@ -18,7 +18,7 @@ class actor(nn.Module):
         blocks = []
 
         #Make shared part
-        blocks.append(nn.Conv2d(intput_channels, intermediate_channels, kernel_size=5, padding = 2))
+        blocks.append(RotationInvariantConv2d(intput_channels, intermediate_channels, kernel_size=5, padding = 2))
         blocks.append(nn.LeakyReLU())
         for _ in range(n_blocks-2):
             blocks.append(layer(intermediate_channels, intermediate_channels, kernel_size=5))

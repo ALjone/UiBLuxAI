@@ -4,7 +4,7 @@ print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
 num_steps_per_env: 128
-num_minibatches: 8
+num_minibatches: 2
 lr: 0.00025
 gamma: 0.999
 epochs_per_batch: 2
@@ -20,6 +20,10 @@ anneal_lr: True
 norm_adv: True
 clip_loss_value: True #According to 37 PPO implementation details, this should be false
 mode_or_sample: sample #sample
+
+#Parallelization
+parallel_envs: 16
+
 
 #Environment
 map_size: 48
@@ -43,10 +47,8 @@ path: None #model.t
 save_path: bigger_model.t #model.t
 video_save_rate: 1000 #How often to save a video, in episodes
 log_to_wb: True
-log_rate: 100000 #Log every 100k steps ish
+log_rate: 2000 #Log every 100k steps ish
 
-#Parallelization
-parallel_envs: 16
 
 #Reward
 unit_punishment: 0.2 #0.05
