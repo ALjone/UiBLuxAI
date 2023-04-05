@@ -83,9 +83,9 @@ def _move_to_tile(loc_x, loc_y, unit_x, unit_y, rubble):
     y_dir_amount = loc_y-unit_y
 
     #TODO: Double check if this should be + or - 1
-    if y_dir_amount > 0 and rubble[unit_x, unit_y+1] < best_move[1]:
+    if y_dir_amount > 0 and (best_move[0] != "Center" or rubble[unit_x, unit_y+1] < best_move[1]):
         best_move = ["South", rubble[unit_x, unit_y+1]]
-    elif y_dir_amount < 0 and rubble[unit_x, unit_y-1] < best_move[1]:
+    elif y_dir_amount < 0 and (best_move[0] != "Center" or rubble[unit_x, unit_y-1] < best_move[1]):
         best_move = ["North", rubble[unit_x, unit_y-1]]
 
     return best_move[0]
@@ -102,6 +102,9 @@ def find_dir_to_closest(res_map, unit_x, unit_y, rubble):
 def move_to_closest_thing(res_map, unit_x, unit_y, rubble):  
 
     dir = find_dir_to_closest(res_map, unit_x, unit_y, rubble)
+
+    if dir.lower() == "center":
+        return dig()
     
     return move(dir, 0, 1)
    
@@ -110,4 +113,4 @@ def transfer_to_closest_thing(res_map, unit_x, unit_y, res_idx, rubble):
     dir = find_dir_to_closest(res_map, unit_x, unit_y, rubble)
     dir = ["Center", "North", "East", "South", "West"].index(dir)
     
-    return transfer(res_idx, 1000, dir, 1)
+    return transfer(res_idx, 2000, dir, 1)

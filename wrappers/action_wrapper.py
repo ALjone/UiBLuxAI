@@ -1,23 +1,63 @@
 import gym
 import numpy.typing as npt
 from gym import spaces
-from actions.actions import outputs_to_actions
+from actions.actions import unit_output_to_actions
 
 class action_wrapper(gym.ActionWrapper):
     def __init__(self, env: gym.Env) -> None:
         super().__init__(env)
         self.action_space = spaces.Tuple((spaces.Box(0, 31, shape = (48, 48)), spaces.Box(0, 4, shape = (48, 48))))#spaces.Dict({"player_0" : spaces.Tuple((spaces.Box(0, 31, shape = (48, 48)), spaces.Box(0, 4, shape = (48, 48))))})
 
-    def transform_action(self, action, player):
-        unit_output = action[0]
-        factory_output = action[1]
-        obs = self.last_obs["player_0"]
+    #0: LIGHT, 1: HEAVY, 2: LICHEN, 3: NOTHING
+    def get_single_factory_action(self, factory, lights, heavies):
+        metal = factory["cargo"]["metal"]
+        water = factory["cargo"]["water"]
+        power = factory["power"]
+        num_factories = self.env.state.board.factories_per_team
+
+        target_num_heavies = 1
+
+        target_num_lights = 5
+
+        if metal > 100 and power > 500 and heavies/num_factories < target_num_heavies:
+            return 1
+
+        if metal > 10 and power > 50 and lights/num_factories < target_num_lights:# and heavies/num_factories >= target_num_heavies:
+            return 0
+        
+        if metal > 100 and power > 500:
+            return 1
+
+        if water > 200 and self.env.state.real_env_steps > 200:
+            return 2
+
+        return 3
+
+
+    def get_factory_actions(self, obs):
+        actions = {}
+        factories = obs["factories"]["player_0"]
+        lights = 0
+        heavies = 0
+        for unit in obs["units"]["player_0"].values():
+            if unit["unit_type"] == "LIGHT":
+                lights += 1
+            else:
+                heavies += 1
+        
+        for id, fac in factories.items():
+            action = self.get_single_factory_action(fac, lights, heavies)
+            if action == 3: continue
+            actions[id] = action
+        return actions
+
+
+    def transform_action(self, action, player, obs):
         units = obs["units"][player].values()
-        factories = obs["factories"][player].values()
 
         state = self.last_state_p0 if player == "player_0" else self.last_state_p1
 
-        action = outputs_to_actions(unit_output, factory_output, units, factories, state, obs) #Second channel is always factory_map
+        action = unit_output_to_actions(action, units, state, obs["board"]["rubble"]) #Second channel is always factory_map
 
         return action  
     
@@ -27,9 +67,14 @@ class action_wrapper(gym.ActionWrapper):
 
         # here, for each agent in the game we translate their action into a Lux S2 action
         lux_action = dict()
+        obs = self.last_obs["player_0"]
+
         for player in self.env.agents:
             if player == "player_0":
-                lux_action[player] = self.transform_action(action, player)
+                unit_action = self.transform_action(action, player, obs)
+                factory_acttion = self.get_factory_actions(obs)
+                unit_action.update(factory_acttion)
+                lux_action[player] = unit_action
             else:
                 lux_action[player] = dict()
 

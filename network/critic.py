@@ -1,36 +1,23 @@
 import torch
 from torch import nn
-from torchvision.ops import SqueezeExcitation
-import numpy as np
-from torch.distributions.categorical import Categorical
 from .blocks import ResSEBlock, ConvBlock, GlobalBlock
 
 
 class critic(nn.Module):
-    def __init__(self, intput_channels, n_blocks, intermediate_channels, layer_type = "conv") -> None:
+    def __init__(self, intput_channels, n_blocks, intermediate_channels, activation = nn.LeakyReLU()) -> None:
         super(critic, self).__init__()
-
-
-        if layer_type == "SE":
-            layer = ResSEBlock
-        elif layer_type == "conv":
-            layer = ConvBlock
-        else:
-            raise ValueError(f"{layer_type} is not a valid layer type")
         
         blocks = []
-        blocks.append(nn.Conv2d(intput_channels, intermediate_channels, kernel_size = 3, padding = 1))
+        blocks.append(nn.Conv2d(intput_channels, intermediate_channels, kernel_size = 5))
+        blocks.append(activation)
         for _ in range(n_blocks-2):
-            blocks.append(layer(intermediate_channels, intermediate_channels))
-        blocks.append(layer(intermediate_channels, intermediate_channels))
-        blocks.append(nn.Conv2d(intermediate_channels, 5, 1))
-        blocks.append(nn.ReLU())
-
-        self.global_block = GlobalBlock()
+            blocks.append(nn.Conv2d(intermediate_channels, intermediate_channels, kernel_size=5))
+            blocks.append(activation)
+        blocks.append(activation)
 
         self.conv = nn.Sequential(*blocks)
         
-        self.linear = nn.Sequential(nn.Linear((48**2)*5, 128),
+        self.linear = nn.Sequential(nn.Linear(512, 128),
                                     nn.ReLU(),
                                     nn.Linear(128, 64),
                                     nn.ReLU(),
@@ -40,7 +27,7 @@ class critic(nn.Module):
         if len(image_features.shape) == 3:
             image_features = image_features.unsqueeze(0)
         
-        global_image_channels = self.global_block(global_features)
+        global_image_channels = global_features.unsqueeze(dim = -1).unsqueeze(dim = -1).repeat(1,1,48,48)
         image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48
 
         image_features = self.conv(image_features)

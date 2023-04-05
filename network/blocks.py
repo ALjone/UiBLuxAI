@@ -1,7 +1,27 @@
-import torch
 from torch import nn
-import torch.nn.functional as F
 from torchvision.ops import SqueezeExcitation
+import torch
+
+class SELayer(nn.Module):
+    def __init__(self, n_channels: int, rescale_input: bool, reduction: int = 16):
+        super(SELayer, self).__init__()
+        self.rescale_input = rescale_input
+        self.fc = nn.Sequential(
+            nn.Linear(n_channels, n_channels // reduction, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Linear(n_channels // reduction, n_channels, bias=False),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        b, c, _, _ = x.shape
+        # Average feature planes
+        if self.rescale_input:
+            y = torch.flatten(x, start_dim=-2, end_dim=-1).sum(dim=-1)
+        else:
+            y = torch.flatten(x, start_dim=-2, end_dim=-1).mean(dim=-1)
+        y = self.fc(y.view(b, c)).view(b, c, 1, 1)
+        return x * y.expand_as(x)
 
 class ConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size = 5, reduction: int = 16, activation = nn.LeakyReLU()):
@@ -11,7 +31,7 @@ class ConvBlock(nn.Module):
         self.conv0 = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=(kernel_size-1)//2)
         self.conv1 = nn.Conv2d(in_channels=out_channels, out_channels=out_channels, kernel_size=kernel_size, padding=(kernel_size-1)//2)
         
-        self.SE = SqueezeExcitation(out_channels, out_channels//reduction)
+        self.SE = SELayer(out_channels, True, reduction)
 
         self.activation = activation
         
@@ -55,7 +75,7 @@ class GlobalBlock(nn.Module):
         #self.fc1 = nn.Linear(13, 64)
         #self.fc2 = nn.Linear(64, 13)
 
-        self.fc1 = nn.Linear(13, 16)
+        self.fc1 = nn.Linear(9, 16)
         self.fc2 = nn.Linear(16, 12)
         
     def forward(self, x):

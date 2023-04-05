@@ -14,8 +14,8 @@ def play_episode(agent: Agent, env: LuxAI_S2, make_gif = True):
     imgs = []
     done = False
     while not done:
-        i, g, um, fm = obs
-        actions = agent.get_action(i, g, um, fm, testing = True)
+        i, g, um = obs
+        actions = agent.get_action(i, g, um)
         step += 1
         obs, _, done, _ = env.step(actions)
         if make_gif:
@@ -29,7 +29,7 @@ def run(config):
     config["device"] = torch.device("cpu")
     env = LuxAI_S2(verbose=1, collect_stats=True, MIN_FACTORIES = config["n_factories"], MAX_FACTORIES = config["n_factories"], validate_action_space = True)
     env.reset() #NOTE: Reset here to initialize stats
-    env = SinglePlayerEnv(env)
+    env = SinglePlayerEnv(env, config)
     env = StateSpaceVol2(env, config)
     env = IceRewardWrapper(env, config)
     env.reset()
@@ -42,4 +42,5 @@ def run(config):
 
 if __name__ == "__main__":
     config = load_config()
+    config["mode_or_sample"] = "mode"
     run(config)

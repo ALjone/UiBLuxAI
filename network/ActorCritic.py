@@ -2,15 +2,14 @@ import torch.nn as nn
 from .actor import actor
 #from .actor_experimental import actor
 from .critic import critic
-import torch 
 
 class ActorCritic(nn.Module):
-    def __init__(self, unit_action_dim, factory_action_dim, config):
+    def __init__(self, unit_action_dim, config):
         super(ActorCritic, self).__init__()
         self.device = config["device"]
 
-        self.channels = 38
-        self.actor = actor(self.channels, unit_action_dim, factory_action_dim, config["actor_n_blocks"], config["actor_n_blocks_after_split"], config["actor_intermediate_channels"]).to(self.device)
+        self.channels = 30
+        self.actor = actor(self.channels, unit_action_dim, config["actor_n_blocks"], config["actor_intermediate_channels"]).to(self.device)
         # critic
         self.critic = critic(self.channels, config["critic_n_blocks"], config["critic_intermediate_channels"]).to(self.device)
 

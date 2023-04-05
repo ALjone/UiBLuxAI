@@ -3,19 +3,23 @@ import gym
 import numpy as np
 import torch
 
-from actions.actions import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
-from actions.action_masking import factory_action_mask, unit_action_mask
+from actions.actions import UNIT_ACTION_IDXS
+from actions.action_masking import unit_action_mask
 
-def occupancy_mask(array):
-    occupancy_mask = array.copy()
-    #DIM 0
-    occupancy_mask += np.roll(array, 1, axis=0)
-    occupancy_mask += np.roll(array, -1, axis=0)
-    #DIM 1
-    occupancy_mask += np.roll(occupancy_mask, 1, axis=1)
-    occupancy_mask += np.roll(occupancy_mask, -1, axis=1)
-    occupancy_mask[occupancy_mask > 0] = 1
-    return occupancy_mask
+def unit_can_go_mask(array):
+    can_go_mask = array.copy()
+
+    can_go_mask += np.roll(array, 1, axis=0)
+    can_go_mask += np.roll(array, -1, axis=0)
+    can_go_mask += np.roll(array, 1, axis=1)
+    can_go_mask += np.roll(array, -1, axis=1)
+
+    return can_go_mask
+
+if __name__ == "__main__":
+    a = np.zeros((7, 7))
+    a[3, 3] = 1
+    print(unit_can_go_mask(a))
 
 
 class StateSpaceVol2(gym.ObservationWrapper):
@@ -29,7 +33,7 @@ class StateSpaceVol2(gym.ObservationWrapper):
         #TODO: Check the bounds on "Box"
         super().__init__(env)
         #NOTE: could not broadcast errors often stem from here
-        self.observation_space = spaces.Tuple((spaces.Box(0, 255, shape=(26, 48, 48)), spaces.Box(0, 1, shape = (13, )), spaces.Box(0, 255, shape=(48, 48, UNIT_ACTION_IDXS)), spaces.Box(0, 255, shape=(48, 48, FACTORY_ACTION_IDXS))))
+        self.observation_space = spaces.Tuple((spaces.Box(0, 255, shape=(21, 48, 48)), spaces.Box(0, 1, shape = (9, )), spaces.Box(0, 255, shape=(48, 48, UNIT_ACTION_IDXS))))
 
 
     def _image_features(self, state):
@@ -43,14 +47,12 @@ class StateSpaceVol2(gym.ObservationWrapper):
             unit_mask_player_0 = np.zeros((self.map_size, self.map_size))
             unit_mask_player_1 = np.zeros((self.map_size, self.map_size))
 
-            factory_mask_player_0 = np.zeros((self.map_size, self.map_size))
-            factory_mask_player_1 = np.zeros((self.map_size, self.map_size))
+            factory_occupancy_mask_player_0 = np.zeros((self.map_size, self.map_size))
+            factory_occupancy_mask_player_1 = np.zeros((self.map_size, self.map_size))
 
             unit_power = np.zeros((self.map_size, self.map_size))
             unit_ice = np.zeros((self.map_size, self.map_size))
             unit_ore = np.zeros((self.map_size, self.map_size))
-            unit_water = np.zeros((self.map_size, self.map_size))
-            unit_metal = np.zeros((self.map_size, self.map_size))
 
             factory_power = np.zeros((self.map_size, self.map_size))
             factory_ice = np.zeros((self.map_size, self.map_size))
@@ -58,19 +60,14 @@ class StateSpaceVol2(gym.ObservationWrapper):
             factory_water = np.zeros((self.map_size, self.map_size))
             factory_metal = np.zeros((self.map_size, self.map_size))
 
-            heavy_pos_player_0 = np.zeros((self.map_size, self.map_size))
-            heavy_pos_player_1 = np.zeros((self.map_size, self.map_size))
-            light_pos_player_0 = np.zeros((self.map_size, self.map_size))
-            light_pos_player_1 = np.zeros((self.map_size, self.map_size))
+            heavy_pos = np.zeros((self.map_size, self.map_size))
+            light_pos = np.zeros((self.map_size, self.map_size))
             
 
 
-            for player, unit_mask, factory_mask, \
-            heavy_pos, light_pos in zip([player_0_id, player_1_id],
+            for player, unit_mask, factory_mask in zip([player_0_id, player_1_id],
                                         [unit_mask_player_0, unit_mask_player_1],
-                                        [factory_mask_player_0, factory_mask_player_1],
-                                        [heavy_pos_player_0, heavy_pos_player_1],
-                                        [light_pos_player_0, light_pos_player_1]):
+                                        [factory_occupancy_mask_player_0, factory_occupancy_mask_player_1]):
                 
                 factories = state["factories"][player]
                 units = state["units"][player]
@@ -87,20 +84,18 @@ class StateSpaceVol2(gym.ObservationWrapper):
                     unit_power[x, y] = unit["power"]/(150 if is_light else 3000)
                     unit_ice[x, y] = unit["cargo"]["ice"]/(100 if is_light else 1000)
                     unit_ore[x, y] = unit["cargo"]["ore"]/(100 if is_light else 1000)
-                    unit_water[x, y] = unit["cargo"]["water"]/(100 if is_light else 1000)
-                    unit_metal[x, y] = unit["cargo"]["metal"]/(100 if is_light else 1000)
                     
             
                 for _, factory in factories.items():
                     x, y = factory["pos"]
-                    factory_mask[x, y] = 1
+                    factory_mask[x-1:x+2, y-1:y+2] = 1
                     #Factories have no max capacity
                     #TODO: Look at tanh?
-                    factory_power[x, y] = factory["power"]/1000              
-                    factory_ice[x, y] = factory["cargo"]["ice"]/1000
-                    factory_ore[x, y] = factory["cargo"]["ore"]/1000
-                    factory_water[x, y] = factory["cargo"]["water"]/1000
-                    factory_metal[x, y] = factory["cargo"]["metal"]/1000
+                    factory_power[x-1:x+2, y-1:y+2] = min(1, factory["power"]/1000)              
+                    factory_ice[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ice"]/1000)
+                    factory_ore[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ore"]/1000)
+                    factory_water[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["water"]/1000)
+                    factory_metal[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["metal"]/1000)
 
             board_rubble = state["board"]["rubble"]/self.env.state.env_cfg.MAX_RUBBLE
             board_ice = state["board"]["ice"]
@@ -114,21 +109,17 @@ class StateSpaceVol2(gym.ObservationWrapper):
                 self.env.state.board.lichen_strains, self.state.teams["player_1"].factory_strains
             )
 
-            factory_occupancy_mask_player_0 = occupancy_mask(factory_mask_player_0)
-            factory_occupancy_mask_player_1 = occupancy_mask(factory_mask_player_1)
+            unit_can_go_mask_player_0 = unit_can_go_mask(unit_mask_player_0)
+            unit_can_go_mask_player_1 = unit_can_go_mask(unit_mask_player_1)
             
             #TODO: Double check this
             p0_image_features = np.stack((      unit_mask_player_0,
-                                                factory_mask_player_0,
                                                 unit_mask_player_1,
-                                                factory_mask_player_1,
                                                 factory_occupancy_mask_player_0,
                                                 factory_occupancy_mask_player_1,
                                                 unit_power,
                                                 unit_ice,
                                                 unit_ore,
-                                                unit_water,
-                                                unit_metal,
                                                 factory_power,
                                                 factory_ice,
                                                 factory_ore,
@@ -137,27 +128,22 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                                 board_rubble,
                                                 board_ore,
                                                 board_ice,
-                                                board_lichen,
-                                                player_0_lichen_mask,
-                                                player_1_lichen_mask,
-                                                heavy_pos_player_0,
-                                                heavy_pos_player_1,
-                                                light_pos_player_0,
-                                                light_pos_player_1), 
+                                                player_0_lichen_mask*board_lichen,
+                                                player_1_lichen_mask*board_lichen,
+                                                heavy_pos,
+                                                light_pos,
+                                                unit_can_go_mask_player_0,
+                                                unit_can_go_mask_player_1), 
                                                 axis = 0
                                                 )
             
             p1_image_features = np.stack((      unit_mask_player_1,
-                                                factory_mask_player_1,
                                                 unit_mask_player_0,
-                                                factory_mask_player_0,
                                                 factory_occupancy_mask_player_1,
                                                 factory_occupancy_mask_player_0,
                                                 unit_power,
                                                 unit_ice,
                                                 unit_ore,
-                                                unit_water,
-                                                unit_metal,
                                                 factory_power,
                                                 factory_ice,
                                                 factory_ore,
@@ -166,22 +152,17 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                                 board_rubble,
                                                 board_ore,
                                                 board_ice,
-                                                board_lichen,
-                                                player_1_lichen_mask,
-                                                player_0_lichen_mask,
-                                                heavy_pos_player_1,
-                                                heavy_pos_player_0,
-                                                light_pos_player_1,
-                                                light_pos_player_0),
+                                                player_1_lichen_mask*board_lichen,
+                                                player_0_lichen_mask*board_lichen,
+                                                unit_can_go_mask_player_1,
+                                                unit_can_go_mask_player_0),
                                                 axis = 0
                                                 )
 
 
-            return torch.tensor(p0_image_features, dtype=torch.float32), torch.tensor(p1_image_features, dtype=torch.float32), \
-            light_pos_player_0.sum(), heavy_pos_player_0.sum(), \
-            light_pos_player_1.sum(), heavy_pos_player_1.sum()
+            return torch.tensor(p0_image_features, dtype=torch.float32), torch.tensor(p1_image_features, dtype=torch.float32)
 
-    def _global_features(self, state, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy):
+    def _global_features(self, state):
         player_0_id = "player_0"
         player_1_id = "player_1"
 
@@ -197,10 +178,10 @@ class StateSpaceVol2(gym.ObservationWrapper):
         friendly_factories = len(state[player_0_id]["factories"][player_0_id].values())
         enemy_factories = len(state[player_0_id]["factories"][player_1_id].values())
 
-        friendly_light = p0_num_light
-        friendly_heavy = p0_num_heavy
-        enemy_light = p1_num_light
-        enemy_heavy = p1_num_heavy
+        #friendly_light = p0_num_light
+        #friendly_heavy = p0_num_heavy
+        #enemy_light = p1_num_light
+        #enemy_heavy = p1_num_heavy
         
         #Player 1 lichen
         player_0_lichen_mask = np.isin(
@@ -224,11 +205,11 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                             ice_on_map, 
                                             ore_on_map, 
                                             friendly_factories, 
-                                            friendly_light, 
-                                            friendly_heavy, 
+                                            #friendly_light, 
+                                            #friendly_heavy, 
                                             enemy_factories, 
-                                            enemy_light, 
-                                            enemy_heavy, 
+                                            #enemy_light, 
+                                            #enemy_heavy, 
                                             lichen_distribution), 
                                             axis = 0
                                             )
@@ -240,11 +221,11 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                         ice_on_map, 
                                         ore_on_map,
                                         enemy_factories, 
-                                        enemy_light, 
-                                        enemy_heavy, 
+                                        #enemy_light, 
+                                        #enemy_heavy, 
                                         friendly_factories, 
-                                        friendly_light, 
-                                        friendly_heavy, 
+                                        #friendly_light, 
+                                        #friendly_heavy, 
                                         lichen_distribution * -1), 
                                         axis = 0
                                         )
@@ -255,8 +236,8 @@ class StateSpaceVol2(gym.ObservationWrapper):
 
     def process_state(self, obs):
         #We get the number of light/heavy so we don't have to do it twice
-        p0_image_features, p1_image_features, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy = self._image_features(obs)
-        p0_global_features, p1_global_features = self._global_features(obs, p0_num_light, p0_num_heavy, p1_num_light, p1_num_heavy)
+        p0_image_features, p1_image_features = self._image_features(obs)
+        p0_global_features, p1_global_features = self._global_features(obs)
         return p0_image_features, p0_global_features, p1_image_features, p1_global_features
     
 
@@ -265,4 +246,4 @@ class StateSpaceVol2(gym.ObservationWrapper):
         self.last_obs = obs #TODO: I hope these don't get changed?
         self.last_state_p0 = p0_image_features 
         self.last_state_p1 = p1_image_features
-        return (p0_image_features, p0_global_features, unit_action_mask(obs, p0_image_features, torch.device("cpu")), factory_action_mask(obs, torch.device("cpu")))
+        return (p0_image_features, p0_global_features, unit_action_mask(obs, p0_image_features, torch.device("cpu")))

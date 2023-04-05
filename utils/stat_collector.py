@@ -33,8 +33,9 @@ class StatCollector:
         self.power_transfered = []
 
         #Rewards
-        self.heavy_unit_reward = []
+        self.unit_punishment = []
         self.resources_reward = []
+        self.rubble_reward = []
 
         #Action
         self.unit_action_distribution = []
@@ -82,8 +83,9 @@ class StatCollector:
 
         #Rewards
         reward = stats['rewards']
-        self.heavy_unit_reward.append(reward['heavy_unit_reward'])
+        self.unit_punishment.append(reward['unit_punishment'])
         self.resources_reward.append(reward['resource_reward'])
+        self.rubble_reward.append(reward['rubble_reward'])
 
         #Action
         act = stats["actions"]
@@ -94,7 +96,15 @@ class StatCollector:
 
 
     def get_last_x(self, x):
-        return {"consumption" : 
+        return {"main":
+                    {
+                    "metal_made": self.metal_made[-x:],
+                    "water_made": self.water_made[-x:],
+                    "lights_surviving": [np.mean(self.light_robots_built[-x:]) - np.mean(self.light_robots_lost[-x:])], #List because we take mean of it later
+                    "heavies_surviving": [np.mean(self.heavy_robots_built[-x:]) - np.mean(self.heavy_robots_lost[-x:])] #List because we take mean of it later
+                    },
+            
+                "consumption" : 
                     {
                     "power_consumed": self.power_consumed[-x:]
                     },
@@ -127,22 +137,23 @@ class StatCollector:
 
                 "transfered": 
                     {
-                  "ice_transfered": self.ice_transfered[-x:],
+                    "ice_transfered": self.ice_transfered[-x:],
                     "ore_transfered": self.ore_transfered[-x:],
                     "power_transfered": self.power_transfered[-x:]
                     },
 
                 "rewards":
                     {
-                    "heavy_unit_reward": self.heavy_unit_reward[-x:],
+                    "unit_punishment": self.unit_punishment[-x:],
                     "resources_reward": self.resources_reward[-x:],
+                    "rubble_reward": self.rubble_reward[-x:]
                     },
-                "actions":
-                    {
-                    "unit_action_distribution": [elem for elem in np.array(self.unit_action_distribution[-x:]).mean(0)],
-                    "factory_action_distribution": [elem for elem in np.array(self.factory_action_distribution[-x:]).mean(0)],
-                    "average_power_when_recharge": self.average_power_when_recharge[-x:]
-                    }
+                #"actions":
+                #    {
+                #    "unit_action_distribution": [elem for elem in np.array(self.unit_action_distribution[-x:]).mean(0)],
+                #    "factory_action_distribution": [elem for elem in np.array(self.factory_action_distribution[-x:]).mean(0)],
+                #    "average_power_when_recharge": self.average_power_when_recharge[-x:]
+                #    }
                 }
     
     def __repr__(self) -> str:

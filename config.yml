@@ -4,18 +4,18 @@ print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
 num_steps_per_env: 64
-num_minibatches: 8
+num_minibatches: 4
 lr: 0.00025
-gamma: 1
+gamma: 0.999
 epochs_per_batch: 2
 eps_clip: 0.2
 lmbda: 0.95
-ent_coef: 0.001
+ent_coef: 0.01 #From last years winner
 vf_coef: 0.5
 max_grad_norm: 0.5
 use_target_kl: True
 target_kl_max: 0.03
-target_kl_min : 0.001
+target_kl_min : 0.000001
 anneal_lr: True
 norm_adv: True
 clip_loss_value: False #According to 37 PPO implementation details, this should be false
@@ -26,13 +26,16 @@ map_size: 48
 n_factories: 4
 
 #Architecture - Actor
-actor_n_blocks: 20
-actor_n_blocks_after_split: 2
+actor_n_blocks: 16
 actor_intermediate_channels: 32
 
 #Architecture - Critic
-critic_n_blocks: 8
-critic_intermediate_channels: 16
+critic_n_blocks: 12
+critic_intermediate_channels: 32
+
+#Factory placement
+water_weight: 2
+ore_weight: 1
 
 #Other 
 device: cuda #cuda, cpu, mps
@@ -46,12 +49,14 @@ log_rate: 100000 #Log every 100k steps ish
 parallel_envs: 16
 
 #Reward
-heavy_unit_reward: 0 #0.05
+unit_punishment: 0.2 #0.05
+rubble_reward: 0.005
+scaling_ice:  0.005 #Value of ice
+scaling_ore:  0.005
+scaling_water_made: 0.1
+scaling_metal_made: 0.1
+
 
 lichen_divide_value: 20000
 scaling_lichen: 5
-scaling_ice: 0.005 #Value of ice
-scaling_ore: 0.005 #0.005
-scaling_water_made: 0.01
-scaling_metal_made: 0.01
 scaling_win: 0
