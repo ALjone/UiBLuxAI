@@ -27,7 +27,7 @@ class IceRewardWrapper(gym.RewardWrapper):
         self.previous_units = 0
         self.previous_rubble = self.env.state.get_obs()["board"]["rubble"]
         return_val = self.env.reset() #NOTE: We do this here because reset wipes the stats
-        self.env.state.stats["player_0"]['rewards'] = {'resource_reward' : 0, 'unit_punishment' : 0, 'rubble_reward': 0}
+        self.env.state.stats["player_0"]['rewards'] = {'resource_reward' : 0, 'unit_punishment' : 0, 'rubble_reward': 0, "factory_punishment": 0}
         self.env.state.stats["player_0"]["total_episodic_reward"] = 0
         return return_val
     

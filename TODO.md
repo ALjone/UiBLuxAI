@@ -10,7 +10,6 @@ TODO først:
 
 Spectral Normalization?
 
-Se på speedup (I sampling f.eks)
 Logic for 1 isbot per factory?
 
 

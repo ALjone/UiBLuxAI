@@ -3,11 +3,33 @@ from torch.distributions import Categorical
 import torch
 from network.ActorCritic import ActorCritic
 
+
+# ALGO LOGIC: initialize agent here:
+class CategoricalMasked(Categorical):
+    def __init__(self, probs=None, logits=None, validate_args=None, masks=[], device = torch.device("cpu")):
+        self.masks = masks
+        self.device = device
+        if len(self.masks) == 0:
+            super(CategoricalMasked, self).__init__(probs, logits, validate_args)
+        else:
+            self.masks = masks.type(torch.BoolTensor).to(device)
+            logits = torch.where(self.masks, logits, torch.tensor(-1e+8).to(device))
+            super(CategoricalMasked, self).__init__(probs, logits, validate_args)
+    
+    def entropy(self):
+        if len(self.masks) == 0:
+            return super(CategoricalMasked, self).entropy()
+        p_log_p = self.logits * self.probs
+        p_log_p = torch.where(self.masks, p_log_p, torch.tensor(0.).to(self.device))
+        return -p_log_p.sum(-1)
+
+
 class Agent():
     def __init__(self, player: str, config) -> None:
         self.player = player
         self.opp_player = "player_1" if self.player == "player_0" else "player_0"
         self.device = config["device"]
+        self.n_envs = config["parallel_envs"]
 
         self.sample_method = config["mode_or_sample"]
         assert self.sample_method in ["mode", "sample"], f"Mode or sample must be either mode or sample, found: {self.sample_method}"
@@ -39,9 +61,9 @@ class Agent():
 
         assert action_probs_unit.shape == unit_action_mask.shape, f"Prob shape: {action_probs_unit.shape}, Mask shape: {unit_action_mask.shape}"
 
-        action_probs_unit = torch.where(unit_action_mask, action_probs_unit, -1e8)
+        #action_probs_unit = torch.where(unit_action_mask, action_probs_unit, -1e8)
 
-        unit_dist = Categorical(logits = action_probs_unit)
+        unit_dist = CategoricalMasked(logits = action_probs_unit, masks = unit_action_mask, device = self.device)
 
 
         if action_unit is None:
@@ -55,6 +77,7 @@ class Agent():
         state_val = self.model.forward_critic(image_features, global_features)
 
         return action_unit, (action_logprob_unit).sum((1, 2)), (unit_dist.entropy() * image_features[:, 0]).sum((1, 2)), state_val
+
     
     def get_action(self, image_features, global_features, unit_action_mask):
         if len(image_features.shape) == 3:

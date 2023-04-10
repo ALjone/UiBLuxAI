@@ -42,7 +42,7 @@ water_weight: 2
 ore_weight: 1
 
 #Other 
-device: cpu #cuda, cpu, mps
+device: cuda #cuda, cpu, mps
 path: most_recent.t #model.t
 save_path: bigger_model.t #model.t
 video_save_rate: 1000 #How often to save a video, in episodes
