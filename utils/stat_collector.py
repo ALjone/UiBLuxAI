@@ -34,6 +34,7 @@ class StatCollector:
 
         #Rewards
         self.unit_punishment = []
+        self.factory_punishment = []
         self.resources_reward = []
         self.rubble_reward = []
 
@@ -84,6 +85,7 @@ class StatCollector:
         #Rewards
         reward = stats['rewards']
         self.unit_punishment.append(reward['unit_punishment'])
+        self.factory_punishment.append(reward["factory_punishment"])
         self.resources_reward.append(reward['resource_reward'])
         self.rubble_reward.append(reward['rubble_reward'])
 
@@ -145,6 +147,7 @@ class StatCollector:
                 "rewards":
                     {
                     "unit_punishment": self.unit_punishment[-x:],
+                    "factory_punishment": self.factory_punishment[-x:],
                     "resources_reward": self.resources_reward[-x:],
                     "rubble_reward": self.rubble_reward[-x:]
                     },

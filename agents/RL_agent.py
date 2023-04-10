@@ -12,6 +12,8 @@ class Agent():
         self.sample_method = config["mode_or_sample"]
         assert self.sample_method in ["mode", "sample"], f"Mode or sample must be either mode or sample, found: {self.sample_method}"
 
+        print("Running with sampling method:", self.sample_method)
+
         self.unit_actions_per_cell = UNIT_ACTION_IDXS
 
 
@@ -52,7 +54,7 @@ class Agent():
 
         state_val = self.model.forward_critic(image_features, global_features)
 
-        return action_unit, (action_logprob_unit).sum((1, 2)), unit_dist.entropy(), state_val
+        return action_unit, (action_logprob_unit).sum((1, 2)), (unit_dist.entropy()* image_features[:, 0]).sum((1, 2)), state_val
     
     def get_action(self, image_features, global_features, unit_action_mask):
         if len(image_features.shape) == 3:

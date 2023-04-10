@@ -232,6 +232,7 @@ if __name__ == "__main__":
 
 
         if last_steps_played > config["log_rate"]:
+            agent.save("most_recent.t")
             print(f"SPS: {int(last_steps_played / (time.time() - start_time))} Reward per timestep: {round(np.mean(episode_rewards).item(), 2)} Games played: {int(global_games_played)}")
             if np.mean(episode_rewards) > higest_average:
                 higest_average = np.mean(episode_rewards)

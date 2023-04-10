@@ -12,7 +12,7 @@ def load_config(change_dict = {}):
         raise ValueError("Expected device in Config to be either 'CPU' or 'CUDA', but found:", config["device"])
 
     if torch.cuda.is_available() and config["device"] == "cuda":
-        config["device"] = torch.device("cuda:1")
+        config["device"] = torch.device("cuda")
     elif config["device"] == "mps":
         config["device"] = torch.device("mps")#torch.device("mps")
     else:

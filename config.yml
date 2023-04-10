@@ -4,13 +4,13 @@ print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
 num_steps_per_env: 128
-num_minibatches: 2
+num_minibatches: 8  
 lr: 0.00025
 gamma: 0.999
 epochs_per_batch: 2
 eps_clip: 0.2
 lmbda: 0.95
-ent_coef: 0.01 #From last years winner
+ent_coef: 0.005
 vf_coef: 0.5
 max_grad_norm: 0.5
 use_target_kl: True
@@ -43,7 +43,7 @@ ore_weight: 1
 
 #Other 
 device: cuda #cuda, cpu, mps
-path: None #model.t
+path: trained_3_days.t #model.t
 save_path: bigger_model.t #model.t
 video_save_rate: 1000 #How often to save a video, in episodes
 log_to_wb: True
@@ -51,12 +51,14 @@ log_rate: 2000 #Log every 100k steps ish
 
 
 #Reward
-unit_punishment: 0.2 #0.05
+unit_punishment: 0 #0.05
 rubble_reward: 0.005
-scaling_ice:  0.005 #Value of ice
-scaling_ore:  0.005
-scaling_water_made: 0.1
-scaling_metal_made: 0.1
+scaling_ice: 0 #0.005 #Value of ice
+scaling_ore: 0 #0.005
+scaling_water_made: 0.01
+scaling_metal_made: 0.01
+
+factory_lost: 3
 
 
 lichen_divide_value: 20000
