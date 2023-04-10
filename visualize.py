@@ -8,28 +8,42 @@ from wrappers.action_wrapper import action_wrapper
 from utils.utils import load_config
 import torch
 from utils.visualization import visualize_obs
+import matplotlib.pyplot as plt
 
 def play_episode(agent: Agent, env: LuxAI_S2, make_gif = True):
     obs = env.reset()
     step = 0
-    imgs = []
+    map_imgs = []
+    obs_imgs = []
     done = False
     while not done:
         i, g, um = obs
         actions = agent.get_action(i, g, um)
         step += 1
-        obs, _, done, _ = env.step(actions)
-        if make_gif:
-            imgs += [env.render("rgb_array", width=640, height=640)]
 
-        if step % 50 == 0:
-            env.render()
-            visualize_obs(i)
-        if step > 300:
+        if step % 50 == 0 and not make_gif:
+            img = env.render("rgb_array", width=640, height=640)
+            plt.imshow(img)
+            plt.savefig(f'Images/map-{step}.png')
+            plt.cla()
+            plt.close()
+            img = visualize_obs(i, step, g, True)
+            obs_imgs.append(img)
+        elif make_gif:
+            img = visualize_obs(i, step, g)
+            obs_imgs.append(img)
+
+        obs, _, done, _ = env.step(actions)
+
+        if make_gif:
+            map_imgs += [env.render("rgb_array", width=640, height=640)]
+
+        if step > 30:
             break
     if make_gif:
         print("Making gif")
-        animate(imgs)
+        animate(map_imgs, "map.gif")
+        animate(obs_imgs, "observation.gif")
 
 def run(config):
     #Always run visualization on CPU

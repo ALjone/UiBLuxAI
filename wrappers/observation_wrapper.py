@@ -8,17 +8,18 @@ from actions.action_masking import unit_action_mask
 
 DIM_NAMES = ["Unit mask player 0", "Unit mask player 1", "Factory mask player 0", "Factory mask player 1", "Unit power", "Unit ice", "Unit ore", "Factory power", 
             "Factory ice", "Factory ore", "Factory water", "Factory metal", "Rubble on board", "Ore on board", "Ice on board", "Player 0 lichen", "Player 1 lichen", "Heavy units", "Light units", 
-            "Player 0 units can go", "Player 1 units can go"]
+            "Collision mask", "Player 1 collision mask"]
 
 def unit_can_go_mask(array):
-    can_go_mask = array.copy()
+    array_1 = np.pad(array.copy(), (1,1))
+    can_go_mask = array_1.copy()
 
-    can_go_mask += np.roll(array, 1, axis=0)
-    can_go_mask += np.roll(array, -1, axis=0)
-    can_go_mask += np.roll(array, 1, axis=1)
-    can_go_mask += np.roll(array, -1, axis=1)
+    can_go_mask += np.roll(array_1, 1, axis=0)
+    can_go_mask += np.roll(array_1, -1, axis=0)
+    can_go_mask += np.roll(array_1, 1, axis=1)
+    can_go_mask += np.roll(array_1, -1, axis=1)
 
-    return can_go_mask
+    return can_go_mask[1:-1, 1:-1]
 
 if __name__ == "__main__":
     a = np.zeros((7, 7))
@@ -85,7 +86,7 @@ class StateSpaceVol2(gym.ObservationWrapper):
                         light_pos[x, y] = 1
                     else:
                         heavy_pos[x, y] = 1
-                    unit_power[x, y] = unit["power"]/(150 if is_light else 3000)
+                    unit_power[x, y] = unit["power"]/(500) #NOTE: THIS IS WEIRD
                     unit_ice[x, y] = unit["cargo"]["ice"]/(100 if is_light else 1000)
                     unit_ore[x, y] = unit["cargo"]["ore"]/(100 if is_light else 1000)
                     
@@ -113,8 +114,9 @@ class StateSpaceVol2(gym.ObservationWrapper):
                 self.env.state.board.lichen_strains, self.state.teams["player_1"].factory_strains
             )
 
-            unit_can_go_mask_player_0 = unit_can_go_mask(unit_mask_player_0)
-            unit_can_go_mask_player_1 = unit_can_go_mask(unit_mask_player_1)
+            unit_can_go_mask_player_0 = unit_can_go_mask(unit_mask_player_0 + unit_mask_player_1) > 1
+            #TODO: Remove duplicate
+            unit_can_go_mask_player_1 = unit_can_go_mask(unit_mask_player_1) > 1
             
             #TODO: Double check this
             p0_image_features = np.stack((      unit_mask_player_0,
@@ -175,12 +177,12 @@ class StateSpaceVol2(gym.ObservationWrapper):
         night = np.cos((2*np.pi*self.env.state.real_env_steps)/1000)*0.2
         timestep = self.env.state.real_env_steps / 1000
         day_night = self.env.state.real_env_steps % 50 < 30
-        ice_on_map = np.sum(state[player_0_id]["board"]["ice"])
-        ore_on_map = np.sum(state[player_0_id]["board"]["ore"])
+        ice_on_map = np.sum(state[player_0_id]["board"]["ice"]) / 30
+        ore_on_map = np.sum(state[player_0_id]["board"]["ore"]) / 30
 
         #All these must be flipped
-        friendly_factories = len(state[player_0_id]["factories"][player_0_id].values())
-        enemy_factories = len(state[player_0_id]["factories"][player_1_id].values())
+        friendly_factories = len(state[player_0_id]["factories"][player_0_id].values()) /4
+        enemy_factories = len(state[player_0_id]["factories"][player_1_id].values()) /4
 
         #friendly_light = p0_num_light
         #friendly_heavy = p0_num_heavy

@@ -9,7 +9,7 @@ MOVES = [   "No move",
             "Transfer max to closest factory",
             "Dig",
             "Pick up power",
-            #"Transport to closest unit",
+            #"Transfer to closest unit",
             ]
 
 UNIT_ACTION_IDXS = len(MOVES)

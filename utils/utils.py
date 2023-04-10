@@ -45,10 +45,11 @@ def find_closest_tile(tile_map, unit_pos):
     tile_distances = np.mean(
         np.abs(tile_locations - np.array(unit_pos)), 1
     )
-    if len(tile_distances) == 0:
-        return (0, 0) #TODO: Default case, shady, but circumvents a bug
+    #if len(tile_distances) == 0:
+    #    return (0, 0) #TODO: Default case, shady, but circumvents a bug
     # normalize the ice tile location
     closest_tile = (
         tile_locations[np.argmin(tile_distances)]
     )   
+
     return closest_tile 
