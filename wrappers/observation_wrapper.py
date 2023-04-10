@@ -6,6 +6,10 @@ import torch
 from actions.actions import UNIT_ACTION_IDXS
 from actions.action_masking import unit_action_mask
 
+DIM_NAMES = ["Unit mask player 0", "Unit mask player 1", "Factory mask player 0", "Factory mask player 1", "Unit power", "Unit ice", "Unit ore", "Factory power", 
+            "Factory ice", "Factory ore", "Factory water", "Factory metal", "Rubble on board", "Ore on board", "Ice on board", "Player 0 lichen", "Player 1 lichen", "Heavy units", "Light units", 
+            "Player 0 units can go", "Player 1 units can go"]
+
 def unit_can_go_mask(array):
     can_go_mask = array.copy()
 

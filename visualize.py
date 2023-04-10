@@ -7,6 +7,7 @@ from wrappers.reward_wrappers import IceRewardWrapper
 from wrappers.action_wrapper import action_wrapper
 from utils.utils import load_config
 import torch
+from utils.visualization import visualize_obs
 
 def play_episode(agent: Agent, env: LuxAI_S2, make_gif = True):
     obs = env.reset()
@@ -20,6 +21,12 @@ def play_episode(agent: Agent, env: LuxAI_S2, make_gif = True):
         obs, _, done, _ = env.step(actions)
         if make_gif:
             imgs += [env.render("rgb_array", width=640, height=640)]
+
+        if step % 50 == 0:
+            env.render()
+            visualize_obs(i)
+        if step > 300:
+            break
     if make_gif:
         print("Making gif")
         animate(imgs)

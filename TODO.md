@@ -19,6 +19,8 @@ Logic for 1 isbot per factory?
 
 Fikse bugs: 
 
+Action masking
+
 Entropi fra MicroRTS
 
 Sigurd: Lage flere filter størrelser
