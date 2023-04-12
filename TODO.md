@@ -1,4 +1,5 @@
 TODO først:
+	Fikse rewards for factory. Ikke gi reward for hver water som lages, men heller en engangsreward for at ice transferes
     . Gå tilbake til factory actions
 	0. Fjerne is/ore som allerede er nærmest en factory, sånn at man ikke får 2 factories som deler en is
 	00. Sørge for at om det er for langt til ice/ore, så er man alltids nærme en ice(?)
