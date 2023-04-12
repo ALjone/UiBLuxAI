@@ -16,6 +16,8 @@ class SinglePlayerEnv(gym.Wrapper):
         self.water_weight = config["water_weight"]
         self.ore_weight = config["ore_weight"]
 
+        self.config = config
+
     #NOTE: Thanks to ChatGPT
     def get_closest(self, ice, ore, valid_spawns):
         ice = np.argwhere(ice == 1)
@@ -71,7 +73,7 @@ class SinglePlayerEnv(gym.Wrapper):
         obs, reward, done, info = self.env.step(action)
         self.prev_actions = action
 
-        if self.env.state.real_env_steps > 199:
+        if self.env.state.real_env_steps >= self.config["max_game_length"]:
             done = True
         
         info = {}

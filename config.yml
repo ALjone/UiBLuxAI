@@ -28,6 +28,7 @@ parallel_envs: 16
 #Environment
 map_size: 48
 n_factories: 4
+max_game_length: 200
 
 #Architecture - Actor
 actor_n_blocks: 24
