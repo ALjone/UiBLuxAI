@@ -70,6 +70,9 @@ class SinglePlayerEnv(gym.Wrapper):
 
         obs, reward, done, info = self.env.step(action)
         self.prev_actions = action
+
+        if self.env.state.real_env_steps > 199:
+            done = True
         
         info = {}
         if done[agent]:

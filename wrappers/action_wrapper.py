@@ -17,7 +17,7 @@ class action_wrapper(gym.ActionWrapper):
 
         target_num_heavies = 1
 
-        target_num_lights = 5
+        target_num_lights = 0
 
         if metal > 100 and power > 500 and heavies/num_factories < target_num_heavies:
             return 1

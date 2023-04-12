@@ -26,8 +26,9 @@ class IceRewardWrapper(gym.RewardWrapper):
         self.previous_metal = 0
         self.previous_units = 0
         self.previous_rubble = self.env.state.get_obs()["board"]["rubble"]
+        self.previous_destroyed_factories = 0
         return_val = self.env.reset() #NOTE: We do this here because reset wipes the stats
-        self.env.state.stats["player_0"]['rewards'] = {'resource_reward' : 0, 'unit_punishment' : 0, 'rubble_reward': 0, "factory_punishment": 0}
+        self.env.state.stats["player_0"]['rewards'] = {'resource_reward' : 0, 'unit_punishment' : 0, 'rubble_reward': 0, "factory_punishment" : 0}
         self.env.state.stats["player_0"]["total_episodic_reward"] = 0
         return return_val
     
@@ -55,7 +56,7 @@ class IceRewardWrapper(gym.RewardWrapper):
     def reward(self, rewards):
         # NOTE: Only handles player_0 atm
 
-        if len(self.agents) == 0:  # Game is over
+        """if len(self.agents) == 0:  # Game is over
             strain_ids = self.state.teams["player_0"].factory_strains
             agent_lichen_mask = np.isin(
                 self.state.board.lichen_strains, strain_ids
@@ -65,7 +66,12 @@ class IceRewardWrapper(gym.RewardWrapper):
             reward = self.config['scaling_win'] if rewards["player_0"] > rewards["player_1"] else -self.config['scaling_win'] if rewards["player_0"] < rewards["player_1"] else 0
             reward += np.tanh(lichen/self.config["lichen_divide_value"])*self.config['scaling_lichen']
             #self.env.state.stats["player_0"]['rewards']['end_of_episode_reward'] += reward
-            return reward
+            return reward"""
+        
+
+        #Factories lost reward
+        factories_lost = -(self.env.state.stats["player_0"]["destroyed"]["FACTORY"]-self.previous_destroyed_factories)*self.config["factory_lost"]
+        self.previous_destroyed_factories = self.env.state.stats["player_0"]["destroyed"]["FACTORY"]
 
 
         #Resource reward
@@ -95,11 +101,13 @@ class IceRewardWrapper(gym.RewardWrapper):
             unit_punishment
             + resource_reward
             + rubble_reward
+            + factories_lost
         )
 
         self.env.state.stats["player_0"]["total_episodic_reward"] += reward
         self.env.state.stats["player_0"]['rewards']['resource_reward'] += resource_reward
         self.env.state.stats["player_0"]['rewards']['unit_punishment'] += unit_punishment
         self.env.state.stats["player_0"]['rewards']['rubble_reward'] += rubble_reward
+        self.env.state.stats["player_0"]["rewards"]["factory_punishment"] += factories_lost
 
         return reward

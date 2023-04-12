@@ -44,7 +44,7 @@ def single_unit_action_mask(unit, obs, state, device):
     #TODO: !!!!! Should be own lichen eventually, not every lichen
     lichen = obs["board"]["lichen"]
     #How much digging costs for this unit
-    dig_cost = 5 if unit["unit_type"] == "LIGHT" else 60
+    dig_cost = 5 if unit["unit_type"] == "LIGHT" else 60 
     #The base cost of moving for this unit
     move_cost_base = 1 if unit["unit_type"] == "LIGHT" else 20
     #The modifier for how much extra it costs to move over each rubble
@@ -93,5 +93,8 @@ def unit_action_mask(obs, state, device, player = "player_0"):
     for unit in units.values():
         x, y = unit["pos"]
         action_mask[x, y] = single_unit_action_mask(unit, obs, state, device)
+
+        if torch.sum(action_mask[x, y]) == 0:
+            print("No valid actions for unit:", unit)
 
     return action_mask

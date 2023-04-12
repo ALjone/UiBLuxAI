@@ -38,8 +38,6 @@ def play_episode(agent: Agent, env: LuxAI_S2, make_gif = True):
         if make_gif:
             map_imgs += [env.render("rgb_array", width=640, height=640)]
 
-        if step > 30:
-            break
     if make_gif:
         print("Making gif")
         animate(map_imgs, "map.gif")
@@ -63,5 +61,5 @@ def run(config):
 
 if __name__ == "__main__":
     config = load_config()
-    config["mode_or_sample"] = "mode"
+    config["mode_or_sample"] = "sample"
     run(config)

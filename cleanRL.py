@@ -270,5 +270,5 @@ if __name__ == "__main__":
             start_time = time.time()
             episode_rewards = []
             episode_lengths = []
-
+    print("Finished training")
     envs.close()

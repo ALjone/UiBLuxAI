@@ -7,12 +7,15 @@ def load_config(change_dict = {}):
     config["batch_size"] = config["parallel_envs"]*config["num_steps_per_env"]
     config["mini_batch_size"] = int(config["batch_size"] // config["num_minibatches"])
 
+    if not (config["mini_batch_size"] & (config["mini_batch_size"]-1) == 0):
+        print("Running with a non-power-of-two batch size!")
+
     
     if not config["device"].lower() in ["cpu", "cuda", "mps"]:
         raise ValueError("Expected device in Config to be either 'CPU' or 'CUDA', but found:", config["device"])
 
     if torch.cuda.is_available() and config["device"] == "cuda":
-        config["device"] = torch.device("cuda:1")
+        config["device"] = torch.device("cuda")
     elif config["device"] == "mps":
         config["device"] = torch.device("mps")#torch.device("mps")
     else:
@@ -45,8 +48,8 @@ def find_closest_tile(tile_map, unit_pos):
     tile_distances = np.mean(
         np.abs(tile_locations - np.array(unit_pos)), 1
     )
-    #if len(tile_distances) == 0:
-    #    return (0, 0) #TODO: Default case, shady, but circumvents a bug
+    if len(tile_distances) == 0:
+        return (0, 0) #TODO: Default case, shady, but circumvents a bug
     # normalize the ice tile location
     closest_tile = (
         tile_locations[np.argmin(tile_distances)]

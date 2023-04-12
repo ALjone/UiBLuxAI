@@ -96,11 +96,11 @@ class StateSpaceVol2(gym.ObservationWrapper):
                     factory_mask[x-1:x+2, y-1:y+2] = 1
                     #Factories have no max capacity
                     #TODO: Look at tanh?
-                    factory_power[x-1:x+2, y-1:y+2] = min(1, factory["power"]/1000)              
-                    factory_ice[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ice"]/1000)
-                    factory_ore[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ore"]/1000)
-                    factory_water[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["water"]/1000)
-                    factory_metal[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["metal"]/1000)
+                    factory_power[x-1:x+2, y-1:y+2] = min(1, factory["power"]/500)              
+                    factory_ice[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ice"]/200)
+                    factory_ore[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ore"]/200)
+                    factory_water[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["water"]/200)
+                    factory_metal[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["metal"]/200)
 
             board_rubble = state["board"]["rubble"]/self.env.state.env_cfg.MAX_RUBBLE
             board_ice = state["board"]["ice"]

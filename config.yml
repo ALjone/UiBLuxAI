@@ -1,13 +1,13 @@
 #Training
-max_episodes: 10000000000000
+max_episodes: 10000000
 print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
-num_steps_per_env: 128
-num_minibatches: 8  
+num_steps_per_env: 64
+num_minibatches: 8
 lr: 0.00025
 gamma: 0.999
-epochs_per_batch: 2
+epochs_per_batch: 1
 eps_clip: 0.2
 lmbda: 0.95
 ent_coef: 0.005
@@ -30,12 +30,12 @@ map_size: 48
 n_factories: 4
 
 #Architecture - Actor
-actor_n_blocks: 16
-actor_intermediate_channels: 32
+actor_n_blocks: 24
+actor_intermediate_channels: 64
 
 #Architecture - Critic
 critic_n_blocks: 12
-critic_intermediate_channels: 32
+critic_intermediate_channels: 64
 
 #Factory placement
 water_weight: 2
@@ -53,12 +53,12 @@ log_rate: 2000 #Log every 100k steps ish
 #Reward
 unit_punishment: 0 #0.05
 rubble_reward: 0.005
-scaling_ice: 0 #0.005 #Value of ice
-scaling_ore: 0 #0.005
-scaling_water_made: 0.01
-scaling_metal_made: 0.01
+scaling_ice: 0.005 #Value of ice
+scaling_ore: 0.005
+scaling_water_made: 0.02
+scaling_metal_made: 0.02
 
-factory_lost: 3
+factory_lost: 1
 
 
 lichen_divide_value: 20000
