@@ -1,12 +1,13 @@
 
 # docs and experiment results can be found at https://docs.cleanrl.dev/rl-algorithms/ppo/#ppopy
+from agents.opponent import Opponent
 from utils.stat_collector import StatCollector
 from utils.utils import load_config
 import time
 import gym
 from tqdm import tqdm
 
-from actions.actions import UNIT_ACTION_IDXS
+from actions.actions import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
 
 from agents.RL_agent import Agent
 import numpy as np
@@ -21,13 +22,10 @@ from wrappers.action_wrapper import action_wrapper
 from utils.wandb_logging import WAndB
 import os
 os.environ["WANDB_SILENT"] = "true"
-#torch.backends.cudnn.benchmark = True
-#torch.backends.cuda.matmul.allow_tf32 = True
-
 
 def make_env(config):
     def thunk():
-        env = LuxAI_S2(verbose=0, collect_stats=True, MIN_FACTORIES = config["n_factories"], MAX_FACTORIES = config["n_factories"], validate_action_space = False)
+        env = LuxAI_S2(verbose=0, collect_stats=True, map_size = config["map_size"], MIN_FACTORIES = config["n_factories"], MAX_FACTORIES = config["n_factories"], validate_action_space = False)
         env.reset() #NOTE: Reset here to initialize stats
         env = SinglePlayerEnv(env, config)
         env = StateSpaceVol2(env, config)
@@ -59,15 +57,25 @@ if __name__ == "__main__":
         [make_env(config) for _ in range(config["parallel_envs"])]
     )
 
-    agent = Agent("player_0", config)
+    agent = Agent(config)
+    agent.save("Opponents/start.t")
+    opponent = Opponent(config)
+    opponent.load("Opponents/start.t")
     optimizer = optim.Adam(agent.model.parameters(), lr=config["lr"], eps=1e-5)
 
     # ALGO Logic: Storage setup
-    image_obs = torch.zeros((config["batch_size"], config["parallel_envs"]) + envs.observation_space[0].shape[1:]).to(device)
-    global_obs = torch.zeros((config["batch_size"], config["parallel_envs"]) + envs.observation_space[1].shape[1:]).to(device)
-    unit_action_masks = torch.zeros((config["batch_size"], config["parallel_envs"]) + (48, 48, UNIT_ACTION_IDXS), dtype=torch.bool).to(device)
-    unit_actions = torch.zeros((config["batch_size"], config["parallel_envs"]) + (48, 48)).to(device)
+    image_obs = torch.zeros((config["batch_size"], config["parallel_envs"]) + envs.observation_space["player_0"]["features"].shape[1:]).to(device)
+
+    unit_action_masks = torch.zeros((config["batch_size"], config["parallel_envs"]) + (config["map_size"], config["map_size"], UNIT_ACTION_IDXS)).to(device)
+    unit_actions = torch.zeros((config["batch_size"], config["parallel_envs"]) + (config["map_size"], config["map_size"])).to(device)
     unit_logprobs = torch.zeros((config["batch_size"], config["parallel_envs"])).to(device)
+    unit_masks = torch.zeros((config["batch_size"], config["parallel_envs"]) + (config["map_size"], config["map_size"])).to(device)
+
+    factory_action_masks = torch.zeros((config["batch_size"], config["parallel_envs"]) + (config["map_size"], config["map_size"], FACTORY_ACTION_IDXS)).to(device)
+    factory_actions = torch.zeros((config["batch_size"], config["parallel_envs"]) + (config["map_size"], config["map_size"])).to(device)
+    factory_logprobs = torch.zeros((config["batch_size"], config["parallel_envs"])).to(device)
+    factory_masks = torch.zeros((config["batch_size"], config["parallel_envs"]) + (config["map_size"], config["map_size"])).to(device)
+
     rewards = torch.zeros((config["batch_size"], config["parallel_envs"])).to(device)
     dones = torch.zeros((config["batch_size"], config["parallel_envs"])).to(device)
     values = torch.zeros((config["batch_size"], config["parallel_envs"])).to(device)
@@ -80,9 +88,14 @@ if __name__ == "__main__":
     higest_average = 0
 
     start_time = time.time()
+
     next_obs = envs.reset()
-    next_image_obs, next_global_obs = torch.tensor(next_obs[0]).to(config["device"]), torch.tensor(next_obs[1]).to(config["device"])
-    unit_action_mask = torch.tensor(next_obs[2], dtype=torch.bool).to(config["device"])
+    next_image_obs = torch.tensor(next_obs["player_0"]["features"]).to(config["device"])
+    unit_action_mask = torch.tensor(next_obs["player_0"]["invalid_unit_action_mask"]).to(config["device"])
+    factory_action_mask = torch.tensor(next_obs["player_0"]["invalid_factory_action_mask"]).to(config["device"])    
+    unit_mask = torch.tensor(next_obs["player_0"]["unit_mask"]).to(config["device"])
+    factory_mask = torch.tensor(next_obs["player_0"]["factory_mask"]).to(config["device"])
+
     next_done = torch.zeros(config["parallel_envs"]).to(device)
     num_updates = config["max_episodes"] // config["batch_size"]
     episode_lengths = []    
@@ -100,22 +113,36 @@ if __name__ == "__main__":
         pre_and_post_step = time.time()
         with tqdm(total = config["num_steps_per_env"]*config["parallel_envs"], desc = "Playing", leave = False) as pbar:
             for step in range(0, config["num_steps_per_env"]):
-                global_step += 1 * config["parallel_envs"]
+                global_step += config["parallel_envs"]
                 image_obs[step] = next_image_obs
-                global_obs[step] = next_global_obs
                 dones[step] = next_done
                 unit_action_masks[step] = unit_action_mask
+                factory_action_masks[step] = factory_action_mask
+                unit_masks[step] = unit_mask
+                factory_masks[step] = factory_mask
+
+                state = {"features": next_image_obs,
+                         "unit_mask": unit_mask,
+                         "factory_mask": factory_mask,
+                         "invalid_unit_action_mask": unit_action_mask,
+                         "invalid_factory_action_mask": factory_action_mask}
 
                 # ALGO LOGIC: action logic
                 with torch.no_grad():
-                    unit_action, unit_logprob, _, value = agent.get_action_and_value(next_image_obs, next_global_obs, unit_action_mask)
+                    unit_action, unit_logprob, _, factory_action, factory_logprob, _, value = agent.get_action_and_value(state)
+                    opponent_action, opponent_factory_action = opponent.get_action(next_obs["player_0"])
                     values[step] = value.flatten()
+
                 unit_actions[step] = unit_action
                 unit_logprobs[step] = unit_logprob
+                factory_actions[step] = factory_action
+                factory_logprobs[step] = factory_logprob
 
-                # TRY NOT TO MODIFY: execute the game and log data.
-                #TODO: This needs to be changed drastically when going to 2p
-                action = unit_action.cpu().numpy()
+                unit_action, factory_action = unit_action.cpu().numpy(), factory_action.cpu().numpy()
+                
+
+                action = [{"player_0" : {"unit_action" : unit_action[i], "factory_action": factory_action[i]},
+                          "player_1" : {"unit_action" : opponent_action[i], "factory_action": opponent_factory_action[i]}} for i in range(config["parallel_envs"])] #NOTE: Atm just a copy
                 single_stepping_time = time.time()
                 next_obs, reward, done, info = envs.step(action)
                 stepping_time += time.time() - single_stepping_time
@@ -126,8 +153,12 @@ if __name__ == "__main__":
                         episode_lengths.append(single_info["episode_length"])
                         episode_rewards.append(single_info["stats"]["total_episodic_reward"])
 
-                next_image_obs, next_global_obs = torch.tensor(next_obs[0]).to(config["device"]), torch.tensor(next_obs[1]).to(config["device"])
-                unit_action_mask = torch.tensor(next_obs[2], dtype=torch.bool).to(config["device"])
+                next_image_obs = torch.tensor(next_obs["player_0"]["features"]).to(config["device"])
+                unit_action_mask = torch.tensor(next_obs["player_0"]["invalid_unit_action_mask"]).to(config["device"])
+                factory_action_mask = torch.tensor(next_obs["player_0"]["invalid_factory_action_mask"]).to(config["device"])
+                unit_mask = torch.tensor(next_obs["player_0"]["unit_mask"]).to(config["device"])
+                factory_mask = torch.tensor(next_obs["player_0"]["factory_mask"]).to(config["device"])
+
                 rewards[step] = torch.tensor(reward).to(device).view(-1)
                 next_done = torch.Tensor(done).to(device)
                 global_games_played += next_done.sum()
@@ -135,11 +166,12 @@ if __name__ == "__main__":
                 last_games_played += next_done.sum().item()
 
                 pbar.update(config["parallel_envs"])
+
         pre_and_post_step = time.time()-pre_and_post_step
         training_time = time.time()
         # bootstrap value if not done
         with torch.no_grad():
-            next_value = agent.get_value(next_image_obs, next_global_obs).reshape(1, -1)
+            next_value = agent.get_value(next_image_obs).reshape(1, -1)
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
             for t in reversed(range(config["batch_size"])):
@@ -154,11 +186,18 @@ if __name__ == "__main__":
             returns = advantages + values
 
         # flatten the batch
-        b_image_obs = image_obs.reshape((-1,) + envs.observation_space[0].shape[1:])
-        b_global_obs = global_obs.reshape((-1,) + envs.observation_space[1].shape[1:])
-        b_unit_masks = unit_action_masks.reshape((-1,) + (48, 48, UNIT_ACTION_IDXS))
+        b_image_obs = image_obs.reshape((-1,) + envs.observation_space["player_0"]["features"].shape[1:])
+
+        b_unit_action_masks = unit_action_masks.reshape((-1,) + (config["map_size"], config["map_size"], UNIT_ACTION_IDXS))
         b_unit_logprobs = unit_logprobs.reshape(-1)
-        b_unit_actions = unit_actions.reshape((-1,) + (48, 48))
+        b_unit_actions = unit_actions.reshape((-1,) + (config["map_size"], config["map_size"]))
+        b_unit_masks = unit_masks.reshape((-1,) + (config["map_size"], config["map_size"]))
+
+        b_factory_action_masks = factory_action_masks.reshape((-1,) + (config["map_size"], config["map_size"], FACTORY_ACTION_IDXS))
+        b_factory_logprobs = factory_logprobs.reshape(-1)
+        b_factory_actions = factory_actions.reshape((-1,) + (config["map_size"], config["map_size"]))
+        b_factory_masks = factory_masks.reshape((-1,) + (config["map_size"], config["map_size"]))
+
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
@@ -172,28 +211,52 @@ if __name__ == "__main__":
                 end = start + config["mini_batch_size"]
                 mb_inds = b_inds[start:end]
 
-                _, unit_newlogprob, unit_entropy, newvalue = agent.get_action_and_value(b_image_obs[mb_inds],
-                                                                                        b_global_obs[mb_inds],
-                                                                                        b_unit_masks[mb_inds],
-                                                                                        action_unit = b_unit_actions.long()[mb_inds])
+                state = {"features": b_image_obs[mb_inds],
+                         "unit_mask": b_unit_masks[mb_inds],
+                         "factory_mask": b_factory_masks[mb_inds],
+                         "invalid_unit_action_mask": b_unit_action_masks[mb_inds],
+                         "invalid_factory_action_mask": b_factory_action_masks[mb_inds]}
+
+                _, unit_newlogprob, unit_entropy, _, factory_newlogprob, factory_entropy, newvalue = agent.get_action_and_value(state, b_unit_actions[mb_inds], b_factory_actions[mb_inds])
                 mb_advantages = b_advantages[mb_inds]
+
                 if config["norm_adv"]:
                     mb_advantages = (mb_advantages - mb_advantages.mean()) / (mb_advantages.std() + 1e-8)
 
-                #UNITS
+                ##############UNITS###################
                 logratio = unit_newlogprob - b_unit_logprobs[mb_inds]
                 ratio = logratio.exp()
 
                 with torch.no_grad():
                     # calculate approx_kl http://joschu.net/blog/kl-approx.html
-                    old_approx_kl = (-logratio).mean()
-                    approx_kl = ((ratio - 1) - logratio).mean()
+                    old_approx_kl_unit = (-logratio).mean()
+                    approx_kl_unit = ((ratio - 1) - logratio).mean()
                     clipfracs += [((ratio - 1.0).abs() > config["eps_clip"]).float().mean().item()]
 
                 # Policy loss
                 pg_loss1 = -mb_advantages * ratio
                 pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - config["eps_clip"], 1 + config["eps_clip"])
                 pg_unit_loss = torch.max(pg_loss1, pg_loss2).mean()
+                ######################################
+
+                ############FACTORIES#################
+                logratio = factory_newlogprob - b_factory_logprobs[mb_inds]
+                ratio = logratio.exp()
+
+                with torch.no_grad():
+                    # calculate approx_kl http://joschu.net/blog/kl-approx.html
+                    old_approx_kl_factory = (-logratio).mean()
+                    approx_kl_factory = ((ratio - 1) - logratio).mean()
+                    clipfracs += [((ratio - 1.0).abs() > config["eps_clip"]).float().mean().item()]
+
+                # Policy loss
+                pg_loss1 = -mb_advantages * ratio
+                pg_loss2 = -mb_advantages * torch.clamp(ratio, 1 - config["eps_clip"], 1 + config["eps_clip"])
+                pg_factory_loss = torch.max(pg_loss1, pg_loss2).mean()
+                ######################################
+
+                approx_kl = approx_kl_unit+approx_kl_factory
+                old_approx_kl = old_approx_kl_unit + old_approx_kl_factory
 
                 # Value loss
                 newvalue = newvalue.view(-1)
@@ -210,8 +273,8 @@ if __name__ == "__main__":
                 else:
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
-                entropy_loss = unit_entropy.mean()
-                loss = pg_unit_loss - config["ent_coef"] * entropy_loss + v_loss * config["vf_coef"]
+                entropy_loss = unit_entropy.mean()+factory_entropy.mean()
+                loss = (pg_unit_loss + pg_factory_loss) - config["ent_coef"] * entropy_loss + v_loss * config["vf_coef"]
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -233,6 +296,8 @@ if __name__ == "__main__":
 
         if last_steps_played > config["log_rate"]:
             agent.save("most_recent.t")
+            agent.save(f"Opponents/newest.t")
+            opponent.load(f"Opponents/newest.t")
             print(f"SPS: {int(last_steps_played / (time.time() - start_time))} Reward per timestep: {round(np.mean(episode_rewards).item(), 2)} Games played: {int(global_games_played)}")
             if np.mean(episode_rewards) > higest_average:
                 higest_average = np.mean(episode_rewards)

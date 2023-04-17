@@ -13,9 +13,6 @@ class SinglePlayerEnv(gym.Wrapper):
         """
         super().__init__(env)
 
-        self.water_weight = config["water_weight"]
-        self.ore_weight = config["ore_weight"]
-
         self.config = config
 
     #NOTE: Thanks to ChatGPT
@@ -74,7 +71,7 @@ class SinglePlayerEnv(gym.Wrapper):
         self.prev_actions = action
 
         if self.env.state.real_env_steps >= self.config["max_game_length"]:
-            done = True
+            done = {"player_0": True, "player_1": True}
         
         info = {}
         if done[agent]:

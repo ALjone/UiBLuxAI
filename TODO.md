@@ -1,28 +1,17 @@
-TODO først:
-	Fikse rewards for factory. Ikke gi reward for hver water som lages, men heller en engangsreward for at ice transferes
-    . Gå tilbake til factory actions
+Factory placement:
 	0. Fjerne is/ore som allerede er nærmest en factory, sånn at man ikke får 2 factories som deler en is
 	00. Sørge for at om det er for langt til ice/ore, så er man alltids nærme en ice(?)
-	000. Injecte unit mask mot slutten av nettverket?
-    0000. Fikse lichen produksjon (annenhver tur mye tidligere, så man ikke mister lichen)
-	1. Dual game (Motstander med mode?)	
-	2. Exploring starts, med hovedvekt på "vanskelige" seeds, så den lærer de bedre
+
+Reward shaping:
+	Gi diminishing returns på hvor mye res det er i en factory når noe transferes
+	No' rubble greier
+	Faktisk implementere reward for self-play
+
+Trening:
+	1. Øke antall parallel envs
+	2. Teacher loss	
 	3. Full mask + soft mask for actions (Movement + transfer/movement)
-    4. Visualisere output av nettverket (softmax?)
-
-
-Spectral Normalization?
-
-Logic for 1 isbot per factory?
-
 
 Fikse bugs: 
 
-
-Action masking
-
-Entropi fra MicroRTS
-
 Sigurd: Lage flere filter størrelser
-
-Warnings

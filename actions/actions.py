@@ -13,6 +13,7 @@ MOVES = [   "No move",
             ]
 
 UNIT_ACTION_IDXS = len(MOVES)
+FACTORY_ACTION_IDXS = 4
 
 
 
@@ -54,5 +55,17 @@ def unit_output_to_actions(unit_output, units, state, rubble):
         action = _unit_idx_to_action(action_idx, x, y, state, max_res_idx, rubble)
         
         actions[unit["unit_id"]] = [action]
+
+    return actions
+
+def factory_output_to_actions(factory_output, factories):
+    """Turns outputs from the model into action dicts for factories"""
+    actions = {}
+    for factory in factories:
+        x, y = factory["pos"][0], factory["pos"][1]
+        action = factory_output[x, y].item()
+        if action == 3:
+            continue
+        actions[factory["unit_id"]] = action
 
     return actions

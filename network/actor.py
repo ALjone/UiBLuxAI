@@ -5,15 +5,11 @@ from .blocks import ResSEBlock, ConvBlock, GlobalBlock, RotationInvariantConv2d
 
 
 class actor(nn.Module):
-    def __init__(self, intput_channels, unit_action_space:int, n_blocks:int, intermediate_channels:int, layer_type = "conv", activation = nn.LeakyReLU()) -> None:
+    def __init__(self, intput_channels, unit_action_space:int, n_blocks:int, intermediate_channels:int, use_batch_norm = True) -> None:
         super(actor, self).__init__()
         
-        if layer_type == "SE":
-            layer = ResSEBlock
-        elif layer_type == "conv":
-            layer = ConvBlock
-        else:
-            raise ValueError(f"{layer_type} is not a valid layer type")
+
+        layer = ConvBlock
         
         blocks = []
 
@@ -22,28 +18,38 @@ class actor(nn.Module):
         blocks.append(nn.LeakyReLU())
         for _ in range(n_blocks-2):
             blocks.append(layer(intermediate_channels, intermediate_channels, kernel_size=5))
+            if use_batch_norm:
+                blocks.append(nn.BatchNorm2d(intermediate_channels))
 
-        blocks.append(nn.Conv2d(intermediate_channels, unit_action_space, 1))
 
         #Make global features part
         self.global_block =  GlobalBlock()
 
         self.conv = nn.Sequential(*blocks)
 
-    def forward(self, image_features: torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+
+        self.spectral_layer = nn.utils.parametrizations.spectral_norm(nn.Conv2d(intermediate_channels, intermediate_channels, 1))
+
+        self.unit_output = nn.Conv2d(intermediate_channels, unit_action_space, 1)
+        
+        self.factory_output = nn.Conv2d(intermediate_channels, 4, 1)
+
+        self.critic_output = nn.Linear(intermediate_channels, 1)
+
+    def forward(self, image_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         if len(image_features.shape) == 3:
             image_features = image_features.unsqueeze(0)
-        if len(global_features.shape) == 1:
-            global_features = global_features.unsqueeze(0)
 
-            
-        global_image_channels = self.global_block(global_features)
-        image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48
+        x = self.conv(image_features)
+        x = nn.LeakyReLU()(self.spectral_layer(x))
 
-        # TODO: 12 new dimensions for image_features input
-        x_unit = self.conv(image_features)
+        x_unit = self.unit_output(x)
 
-        return x_unit.permute(0, 2, 3, 1)
+        x_factory = self.factory_output(x)
+
+        critic = self.critic_output(nn.AvgPool2d(x.shape[-2])(x).flatten(1))
+
+        return x_unit.permute(0, 2, 3, 1), x_factory.permute(0, 2, 3, 1), critic
         
 
     def count_parameters(self):

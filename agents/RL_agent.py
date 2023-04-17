@@ -25,24 +25,21 @@ class CategoricalMasked(Categorical):
 
 
 class Agent():
-    def __init__(self, player: str, config) -> None:
-        self.player = player
-        self.opp_player = "player_1" if self.player == "player_0" else "player_0"
+    def __init__(self, config) -> None:
         self.device = config["device"]
-        self.n_envs = config["parallel_envs"]
 
         self.sample_method = config["mode_or_sample"]
         assert self.sample_method in ["mode", "sample"], f"Mode or sample must be either mode or sample, found: {self.sample_method}"
 
-        print("Running with sampling method:", self.sample_method)
 
-        self.unit_actions_per_cell = UNIT_ACTION_IDXS
+        print("Running with sampling method:", self.sample_method)
 
 
         self.model = ActorCritic(UNIT_ACTION_IDXS, config)
+        print("Actor/Critic has:", self.model.count_parameters(), "parameters")
 
         if config["path"] is not None:
-            self.model.load_state_dict(torch.load(config["path"], map_location=lambda storage, loc: storage))
+            self.model.load_state_dict(torch.load(config["path"]))
             print("Successfully loaded model, this is not a fresh run")
         else:
             print("This is a fresh run! Good luck")
@@ -51,39 +48,49 @@ class Agent():
     def save(self, checkpoint_path):
         torch.save(self.model.state_dict(), checkpoint_path)
     
-    def get_value(self, image_features, global_features):
-        return self.model.forward_critic(image_features, global_features)
+    def get_value(self, image_features):
+        _, _, state_val = self.model.forward_actor(image_features)
+        return state_val
+    
+    def get_action_probs(self, state):
+        unit_action_probs, factory_action_probs, _ = self.model.forward_actor(state["features"])
+        return torch.nn.functional.softmax(unit_action_probs, -1).squeeze(), torch.nn.functional.softmax(factory_action_probs, -1).squeeze()
 
-    def get_action_and_value(self, image_features, global_features, unit_action_mask, action_unit=None):
+    def get_action_and_value(self, state, unit_action = None, factory_action = None):
         #NOTE: Assumes first channel is unit mask for our agent
 
-        action_probs_unit = self.model.forward_actor(image_features, global_features)
+        unit_action_probs, factory_action_probs, state_val = self.model.forward_actor(state["features"])
 
-        assert action_probs_unit.shape == unit_action_mask.shape, f"Prob shape: {action_probs_unit.shape}, Mask shape: {unit_action_mask.shape}"
+        assert unit_action_probs.shape == state["invalid_unit_action_mask"].shape
 
-        #action_probs_unit = torch.where(unit_action_mask, action_probs_unit, -1e8)
+        unit_dist = CategoricalMasked(logits = unit_action_probs, masks = state["invalid_unit_action_mask"], device = self.device)
 
-        unit_dist = CategoricalMasked(logits = action_probs_unit, masks = unit_action_mask, device = self.device)
+        factory_dist = CategoricalMasked(logits = factory_action_probs, masks = state["invalid_factory_action_mask"], device = self.device)
 
-
-        if action_unit is None:
+        if unit_action is None:
             if self.sample_method == "mode":
-                action_unit = unit_dist.mode
+                unit_action = unit_dist.mode
+                factory_action = factory_dist.mode
             else:
-                action_unit = unit_dist.sample()
+                unit_action = unit_dist.sample()
+                factory_action = factory_dist.sample()
 
-        action_logprob_unit = unit_dist.log_prob(action_unit) * image_features[:, 0]
+        unit_action_logprob = (unit_dist.log_prob(unit_action) * state["unit_mask"]).sum((1, 2))
+        factory_action_logprob = (factory_dist.log_prob(factory_action) * state["factory_mask"]).sum((1, 2))
 
-        state_val = self.model.forward_critic(image_features, global_features)
+        unit_entropy = (unit_dist.entropy() * state["unit_mask"]).sum((1, 2))
+        factory_entropy = (factory_dist.entropy() * state["factory_mask"]).sum((1, 2))
 
-        return action_unit, (action_logprob_unit).sum((1, 2)), (unit_dist.entropy() * image_features[:, 0]).sum((1, 2)), state_val
+        #state_val = self.model.forward_critic(state["features"])       
+
+        return unit_action, unit_action_logprob, unit_entropy, factory_action, factory_action_logprob, factory_entropy, state_val
 
     
-    def get_action(self, image_features, global_features, unit_action_mask):
-        if len(image_features.shape) == 3:
-            image_features = image_features.unsqueeze(0)
-            global_features = global_features.unsqueeze(0)
-            unit_action_mask = unit_action_mask.unsqueeze(0)
+    def get_action(self, obs):
+        if len(obs["features"].shape) == 3:
+            for key, item in obs.items():
+                obs[key] = torch.tensor(item).unsqueeze(0)
 
-        unit_action, _, _, _ = self.get_action_and_value(image_features, global_features, unit_action_mask)
-        return unit_action.squeeze().cpu().numpy()
+        unit_action, _, _, factory_action, _, _, _ = self.get_action_and_value(obs)
+
+        return unit_action.squeeze().cpu().numpy(), factory_action.squeeze().cpu().numpy()

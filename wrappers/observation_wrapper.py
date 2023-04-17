@@ -1,14 +1,13 @@
 from gym import spaces
 import gym
 import numpy as np
-import torch
 
 from actions.actions import UNIT_ACTION_IDXS
-from actions.action_masking import unit_action_mask
+from actions.action_masking import unit_action_mask, factory_action_mask
 
 DIM_NAMES = ["Unit mask player 0", "Unit mask player 1", "Factory mask player 0", "Factory mask player 1", "Unit power", "Unit ice", "Unit ore", "Factory power", 
             "Factory ice", "Factory ore", "Factory water", "Factory metal", "Rubble on board", "Ore on board", "Ice on board", "Player 0 lichen", "Player 1 lichen", "Heavy units", "Light units", 
-            "Collision mask", "Player 1 collision mask"]
+            "Collision mask"]
 
 def unit_can_go_mask(array):
     array_1 = np.pad(array.copy(), (1,1))
@@ -38,9 +37,22 @@ class StateSpaceVol2(gym.ObservationWrapper):
         #TODO: Check the bounds on "Box"
         super().__init__(env)
         #NOTE: could not broadcast errors often stem from here
-        self.observation_space = spaces.Tuple((spaces.Box(0, 255, shape=(21, 48, 48)), spaces.Box(0, 1, shape = (9, )), spaces.Box(0, 255, shape=(48, 48, UNIT_ACTION_IDXS))))
 
-
+        self.observation_space = spaces.Dict({
+                                                "player_0" : spaces.Dict({
+                                                                "features": spaces.Box(0, 1, shape = (29, self.map_size, self.map_size)),
+                                                                "unit_mask" : spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
+                                                                "factory_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
+                                                                "invalid_unit_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, UNIT_ACTION_IDXS)),
+                                                                "invalid_factory_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, 4)),
+                                                            }),
+                                                "player_1" : spaces.Dict({
+                                                                "features": spaces.Box(0, 1, shape = (29, self.map_size, self.map_size)),
+                                                                "unit_mask" : spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
+                                                                "factory_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
+                                                                "invalid_unit_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, UNIT_ACTION_IDXS)),
+                                                                "invalid_factory_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, 4)),
+                                                            })})
     def _image_features(self, state):
             player_0_id = "player_0"
             player_1_id = "player_1"
@@ -49,8 +61,11 @@ class StateSpaceVol2(gym.ObservationWrapper):
             
 
             #NOTE: First channel ALWAYS unit_mask, second channel ALWAYS factory mask
-            unit_mask_player_0 = np.zeros((self.map_size, self.map_size))
-            unit_mask_player_1 = np.zeros((self.map_size, self.map_size))
+            p0_unit_mask = np.zeros((self.map_size, self.map_size))
+            p1_unit_mask = np.zeros((self.map_size, self.map_size))
+
+            p0_factory_mask = np.zeros((self.map_size, self.map_size))
+            p1_factory_mask = np.zeros((self.map_size, self.map_size))
 
             factory_occupancy_mask_player_0 = np.zeros((self.map_size, self.map_size))
             factory_occupancy_mask_player_1 = np.zeros((self.map_size, self.map_size))
@@ -70,9 +85,10 @@ class StateSpaceVol2(gym.ObservationWrapper):
             
 
 
-            for player, unit_mask, factory_mask in zip([player_0_id, player_1_id],
-                                        [unit_mask_player_0, unit_mask_player_1],
-                                        [factory_occupancy_mask_player_0, factory_occupancy_mask_player_1]):
+            for player, unit_mask, factory_occupancy_mask, factory_mask in zip([player_0_id, player_1_id],
+                                        [p0_unit_mask, p1_unit_mask],
+                                        [factory_occupancy_mask_player_0, factory_occupancy_mask_player_1],
+                                        [p0_factory_mask, p1_factory_mask]):
                 
                 factories = state["factories"][player]
                 units = state["units"][player]
@@ -93,7 +109,8 @@ class StateSpaceVol2(gym.ObservationWrapper):
             
                 for _, factory in factories.items():
                     x, y = factory["pos"]
-                    factory_mask[x-1:x+2, y-1:y+2] = 1
+                    factory_occupancy_mask[x-1:x+2, y-1:y+2] = 1
+                    factory_mask[x, y] = 1
                     #Factories have no max capacity
                     #TODO: Look at tanh?
                     factory_power[x-1:x+2, y-1:y+2] = min(1, factory["power"]/500)              
@@ -114,13 +131,11 @@ class StateSpaceVol2(gym.ObservationWrapper):
                 self.env.state.board.lichen_strains, self.state.teams["player_1"].factory_strains
             )
 
-            unit_can_go_mask_player_0 = unit_can_go_mask(unit_mask_player_0 + unit_mask_player_1) > 1
-            #TODO: Remove duplicate
-            unit_can_go_mask_player_1 = unit_can_go_mask(unit_mask_player_1) > 1
+            collision_mask = unit_can_go_mask(p0_unit_mask + p1_unit_mask) > 1
             
             #TODO: Double check this
-            p0_image_features = np.stack((      unit_mask_player_0,
-                                                unit_mask_player_1,
+            p0_image_features = np.stack((      p0_unit_mask,
+                                                p1_unit_mask,
                                                 factory_occupancy_mask_player_0,
                                                 factory_occupancy_mask_player_1,
                                                 unit_power,
@@ -138,13 +153,12 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                                 player_1_lichen_mask*board_lichen,
                                                 heavy_pos,
                                                 light_pos,
-                                                unit_can_go_mask_player_0,
-                                                unit_can_go_mask_player_1), 
+                                                collision_mask), 
                                                 axis = 0
                                                 )
             
-            p1_image_features = np.stack((      unit_mask_player_1,
-                                                unit_mask_player_0,
+            p1_image_features = np.stack((      p1_unit_mask,
+                                                p0_unit_mask,
                                                 factory_occupancy_mask_player_1,
                                                 factory_occupancy_mask_player_0,
                                                 unit_power,
@@ -160,29 +174,30 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                                 board_ice,
                                                 player_1_lichen_mask*board_lichen,
                                                 player_0_lichen_mask*board_lichen,
-                                                unit_can_go_mask_player_1,
-                                                unit_can_go_mask_player_0),
+                                                heavy_pos,
+                                                light_pos,
+                                                collision_mask),
                                                 axis = 0
                                                 )
 
-
-            return torch.tensor(p0_image_features, dtype=torch.float32), torch.tensor(p1_image_features, dtype=torch.float32)
+            return p0_image_features, p0_unit_mask, p0_factory_mask, p1_image_features, p1_unit_mask, p1_factory_mask
 
     def _global_features(self, state):
+        #TODO: Fill like, and stack with image
         player_0_id = "player_0"
         player_1_id = "player_1"
 
         #All these are common
-        day = np.sin((2*np.pi*self.env.state.real_env_steps)/1000)*0.3
-        night = np.cos((2*np.pi*self.env.state.real_env_steps)/1000)*0.2
-        timestep = self.env.state.real_env_steps / 1000
-        day_night = self.env.state.real_env_steps % 50 < 30
-        ice_on_map = np.sum(state[player_0_id]["board"]["ice"]) / 30
-        ore_on_map = np.sum(state[player_0_id]["board"]["ore"]) / 30
+        day = np.ones((self.map_size, self.map_size))*np.sin((2*np.pi*self.env.state.real_env_steps)/1000)*0.3
+        night = np.ones((self.map_size, self.map_size))*np.cos((2*np.pi*self.env.state.real_env_steps)/1000)*0.2
+        timestep = np.ones((self.map_size, self.map_size))*self.env.state.real_env_steps / 1000
+        day_night = np.ones((self.map_size, self.map_size))*self.env.state.real_env_steps % 50 < 30
+        ice_on_map = np.ones((self.map_size, self.map_size))*np.sum(state[player_0_id]["board"]["ice"]) / 30
+        ore_on_map = np.ones((self.map_size, self.map_size))*np.sum(state[player_0_id]["board"]["ore"]) / 30
 
         #All these must be flipped
-        friendly_factories = len(state[player_0_id]["factories"][player_0_id].values()) /4
-        enemy_factories = len(state[player_0_id]["factories"][player_1_id].values()) /4
+        friendly_factories = np.ones((self.map_size, self.map_size))*len(state[player_0_id]["factories"][player_0_id].values()) /4
+        enemy_factories = np.ones((self.map_size, self.map_size))*len(state[player_0_id]["factories"][player_1_id].values()) /4
 
         #friendly_light = p0_num_light
         #friendly_heavy = p0_num_heavy
@@ -197,11 +212,11 @@ class StateSpaceVol2(gym.ObservationWrapper):
             self.env.state.board.lichen_strains, self.state.teams[player_1_id].factory_strains
         )
 
-        friendly_lichen_amount =  np.sum(np.where(player_0_lichen_mask, self.env.state.board.lichen, 0))
-        enemy_lichen_amount =  np.sum(np.where(player_1_lichen_mask, self.env.state.board.lichen, 0))
+        friendly_lichen_amount =  np.ones((self.map_size, self.map_size))*np.sum(np.where(player_0_lichen_mask, self.env.state.board.lichen, 0))
+        enemy_lichen_amount =  np.ones((self.map_size, self.map_size))*np.sum(np.where(player_1_lichen_mask, self.env.state.board.lichen, 0))
         
 
-        lichen_distribution = (friendly_lichen_amount-enemy_lichen_amount)/np.clip(friendly_lichen_amount+enemy_lichen_amount, a_min = 1, a_max = None)
+        lichen_distribution = np.ones((self.map_size, self.map_size))*(friendly_lichen_amount-enemy_lichen_amount)/np.clip(friendly_lichen_amount+enemy_lichen_amount, a_min = 1, a_max = None)
 
 
         p0_global_features = np.stack((     day, 
@@ -236,20 +251,35 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                         axis = 0
                                         )
 
-        return torch.tensor(p0_global_features, dtype=torch.float32), torch.tensor(p1_global_features, dtype=torch.float32)
-
-    
+        return p0_global_features.astype(np.float32), p1_global_features.astype(np.float32)
 
     def process_state(self, obs):
         #We get the number of light/heavy so we don't have to do it twice
-        p0_image_features, p1_image_features = self._image_features(obs)
+        p0_image_features, p0_unit_mask, p0_factory_mask, p1_image_features, p1_unit_mask, p1_factory_mask = self._image_features(obs)
         p0_global_features, p1_global_features = self._global_features(obs)
-        return p0_image_features, p0_global_features, p1_image_features, p1_global_features
+        p0_features = np.concatenate((p0_image_features, p0_global_features))
+        p1_features = np.concatenate((p1_image_features, p1_global_features))
+        return p0_features, p0_unit_mask, p0_factory_mask, p1_features, p1_unit_mask, p1_factory_mask
     
 
     def observation(self, obs):
-        p0_image_features, p0_global_features, p1_image_features, p1_global_features = self.process_state(obs)
+        p0_features, p0_unit_mask, p0_factory_mask, p1_features, p1_unit_mask, p1_factory_mask = self.process_state(obs)
         self.last_obs = obs #TODO: I hope these don't get changed?
-        self.last_state_p0 = p0_image_features 
-        self.last_state_p1 = p1_image_features
-        return (p0_image_features, p0_global_features, unit_action_mask(obs, p0_image_features, torch.device("cpu")))
+        self.last_state_p0 = p0_features 
+        self.last_state_p1 = p1_features
+
+        p0_features = {"features": p0_features.astype(np.float32),
+                       "unit_mask": p0_unit_mask.astype(np.float32), 
+                       "factory_mask": p0_factory_mask.astype(np.float32),
+                       "invalid_unit_action_mask": unit_action_mask(obs, p0_features, "player_0").astype(np.float32),
+                       "invalid_factory_action_mask": factory_action_mask(obs, "player_0").astype(np.float32)
+                       }
+        
+        p1_features = {"features": p1_features.astype(np.float32),
+                       "unit_mask": p1_unit_mask.astype(np.float32), 
+                       "factory_mask": p1_factory_mask.astype(np.float32),
+                       "invalid_unit_action_mask": unit_action_mask(obs, p1_features, "player_1").astype(np.float32),
+                       "invalid_factory_action_mask": factory_action_mask(obs, "player_1").astype(np.float32)
+                       }
+        
+        return {"player_0": p0_features, "player_1": p1_features}

@@ -1,15 +1,4 @@
 import gym
-import numpy as np
-
-
-class SimpleRewardWrapper(gym.RewardWrapper):
-    def reward(self, reward):
-        obs = self.state.get_obs()
-        observations = {}
-        for k in self.agents:
-            observations[k] = obs
-        return reward
-
 
 class IceRewardWrapper(gym.RewardWrapper):
 
@@ -24,34 +13,49 @@ class IceRewardWrapper(gym.RewardWrapper):
         self.previous_ore = 0
         self.previous_water = 0
         self.previous_metal = 0
-        self.previous_units = 0
         self.previous_rubble = self.env.state.get_obs()["board"]["rubble"]
         self.previous_destroyed_factories = 0
+        self.previous_units = {}
         return_val = self.env.reset() #NOTE: We do this here because reset wipes the stats
         self.env.state.stats["player_0"]['rewards'] = {'resource_reward' : 0, 'unit_punishment' : 0, 'rubble_reward': 0, "factory_punishment" : 0}
         self.env.state.stats["player_0"]["total_episodic_reward"] = 0
         return return_val
     
 
-    def unit_rewards(self):
+    def transfer_reward(self):
+        obs = self.env.state.get_obs()
+        units = obs["units"]["player_0"]
+
+        ice_deposited = 0
+        ore_deposited = 0
+        ice_mined = 0
+        ore_mined = 0
+        #NOTE: Only way for a unit to lose resources is if it transferes to a factory. Could this be done by simply looking at the stats? 
+        for id, unit in units.items():
+            if id in self.previous_units.keys():
+                ice_deposited += max(0, self.previous_units[id]["cargo"]["ice"]-unit["cargo"]["ice"])
+                ore_deposited += max(0, self.previous_units[id]["cargo"]["ore"]-unit["cargo"]["ore"])
+                ice_mined += max(0, unit["cargo"]["ice"]-self.previous_units[id]["cargo"]["ice"])
+                ore_mined += max(0, unit["cargo"]["ore"]-self.previous_units[id]["cargo"]["ore"])
+
+        self.previous_units = units
+        return ice_deposited, ore_deposited, ice_mined, ore_mined
+    
+
+    def rubble_reward(self):
         obs = self.env.state.get_obs()
         rubble = obs["board"]["rubble"]
         rubble_mined = 0
 
-        units = len(obs["units"]["player_0"].keys())
-        units_made = 0
+        
         for id, action in self.prev_actions["player_0"].items():
-            if action in [0, 1]: #Unit was generated
-                units_made += 1
             if isinstance(action, list):
                 if action[0][0] == 3 and id in obs["units"]["player_0"].keys():
                     x, y = obs["units"]["player_0"][id]["pos"]
                     rubble_mined += max(self.previous_rubble[x, y] - rubble[x, y], 0) #Max of this and 0 because dying factories leave behind rubble, although this should be masked away
-
-        unit_reward = units - (self.previous_units+units_made) #How many units you should have
-        self.previous_units = units
         self.previous_rubble = rubble
-        return unit_reward, rubble_mined
+        
+        return rubble_mined
 
     def reward(self, rewards):
         # NOTE: Only handles player_0 atm
@@ -75,38 +79,28 @@ class IceRewardWrapper(gym.RewardWrapper):
 
 
         #Resource reward
-        gen = self.env.state.stats["player_0"]["generation"]
-        ice = gen["ice"]["HEAVY"] #HEAVY, LIGHT
-        ore = gen["ore"]["HEAVY"] #HEAVY, LIGHT   
-        water = gen["water"]
-        metal = gen["metal"]
+        ice_deposited, ore_deposited, ice_mined, ore_mined = self.transfer_reward()
 
-        resource_reward = (ice-self.previous_ice)*self.config["scaling_ice"] + (ore-self.previous_ore)*self.config["scaling_ore"]+(water-self.previous_water)*self.config["scaling_water_made"] + (metal-self.previous_metal)*self.config["scaling_metal_made"]
-        self.previous_ice = ice
-        self.previous_ore = ore
-        self.previous_water = water
-        self.previous_metal = metal
+        resource_reward = ice_mined*self.config["scaling_ice"] + ore_mined*self.config["scaling_ore"]+ice_deposited*self.config["scaling_water"] + ore_deposited*self.config["scaling_metal"]
+
 
         #Unit reward, only heavies atm
-        unit_punishment, rubble_reward = self.unit_rewards()
+        rubble_reward = self.rubble_reward() if self.config["rubble_reward"] != 0 else 0
 
         #Normalize and return
         num_factories = self.env.state.board.factories_per_team
 
         resource_reward /= num_factories
         rubble_reward = (rubble_reward*self.config["rubble_reward"])/num_factories
-        unit_punishment = (unit_punishment*self.config["unit_punishment"])/num_factories
         
         reward = (
-            unit_punishment
-            + resource_reward
+            resource_reward
             + rubble_reward
             + factories_lost
         )
 
         self.env.state.stats["player_0"]["total_episodic_reward"] += reward
         self.env.state.stats["player_0"]['rewards']['resource_reward'] += resource_reward
-        self.env.state.stats["player_0"]['rewards']['unit_punishment'] += unit_punishment
         self.env.state.stats["player_0"]['rewards']['rubble_reward'] += rubble_reward
         self.env.state.stats["player_0"]["rewards"]["factory_punishment"] += factories_lost
 
