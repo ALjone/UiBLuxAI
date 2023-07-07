@@ -1,6 +1,8 @@
 # UiBLuxAI
 
-https://docs.google.com/presentation/d/1y-0tbCL7tE0Zk4FrThTu_77o_NypuFvNtzr4wUXGyIc/edit?usp=sharing
+An implementation of a solution for the Kaggle competition Lux AI S2 made by 4 students for the University in Bergen
+
+https://www.kaggle.com/competitions/lux-ai-season-2
 
 # Installing PyTorch with CUDA 11.8
 
