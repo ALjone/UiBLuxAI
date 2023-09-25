@@ -49,11 +49,11 @@ class PPO:
         
         self.MseLoss = nn.MSELoss()
 
-    def select_action(self, image_features, global_features, obs):
+    def select_action(self, image_features, global_features, obs, player):
 
         with torch.no_grad():
             image_features = image_features.float().to(self.device)
-            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(image_features, global_features, obs)
+            action_unit, action_factory, action_logprobs_unit, action_logprobs_factories, state_values = self.policy_old.act(image_features, global_features, obs, player)
         
         self.buffer.image_features.append(image_features)
         self.buffer.global_features.append(global_features)

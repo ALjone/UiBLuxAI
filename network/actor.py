@@ -6,10 +6,10 @@ import numpy as np
 from .blocks import ResSEBlock, ConvBlock, GlobalBlock
 
 
-class actor(nn.Module):
+class Actor(nn.Module):
     def __init__(self, intput_channels, unit_action_space:int, factory_action_space:int,  n_blocks:int, n_blocks_factories_units:int,
-                  intermediate_channels:int, layer_type = "conv") -> None:
-        super(actor, self).__init__()
+                  intermediate_channels:int, config, layer_type = "conv") -> None:
+        super(Actor, self).__init__()
         
         if layer_type == "SE":
             layer = ResSEBlock
@@ -39,20 +39,22 @@ class actor(nn.Module):
         blocks_factory.append(nn.Conv2d(intermediate_channels, factory_action_space, 1))
 
         #Make global features part
-        self.global_block =  GlobalBlock()
+        self.global_block =  GlobalBlock(config['map_size'], config)
 
         self.shared_conv = nn.Sequential(*blocks)
         self.unit_conv = nn.Sequential(*blocks_units)
         self.factory_conv = nn.Sequential(*blocks_factory)
 
-    def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        if type(image_features) == np.ndarray:
-            image_features = torch.from_numpy(image_features)
-        if len(image_features.shape) == 3:
-            image_features = image_features.unsqueeze(0)
+        del blocks
+        del blocks_factory
+        del blocks_units
 
-        global_features = global_features.float()
-        image_features = image_features.float()
+        #self.forward = torch.jit.trace(self.forward, example_inputs=(torch.ones(config["parallel_envs"], 24, 48, 48), torch.ones((config["parallel_envs"], 16))))
+
+    def forward(self, image_features:torch.Tensor, global_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+
+        #global_features[:] = global_features.float()
+        #image_features[:] = image_features.float()
 
         global_image_channels = self.global_block(global_features)
         image_features = torch.concatenate((image_features, global_image_channels), dim=1)  # Assumning Batch_Size x Channels x 48 x 48
@@ -62,15 +64,7 @@ class actor(nn.Module):
         x_robot = self.unit_conv(image_features)
         x_factory = self.factory_conv(image_features)
 
-        x_robot = x_robot.permute(0, 2, 3, 1)
-        x_factory = x_factory.permute(0, 2, 3, 1)
-
-        x_action_type = F.softmax(x_robot[:,:,:, :5], dim = 3).squeeze()
-        x_direction = F.softmax(x_robot[:,:,:, 5:10], dim = 3).squeeze()
-        x_value = F.softmax(x_robot[:,:,:, 10:], dim = 3).squeeze()
-
-        #TODO: Softmax should happen in categorical due to action masking
-        return x_action_type, x_direction, x_value, F.softmax(x_factory, dim=3).squeeze()
+        return x_robot, x_factory
 
     def count_parameters(self):
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+        return sum(p.numel() for p in self.parameters())# if p.requires_grad

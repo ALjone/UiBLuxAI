@@ -1,6 +1,8 @@
 # UiBLuxAI
 
-https://docs.google.com/presentation/d/1y-0tbCL7tE0Zk4FrThTu_77o_NypuFvNtzr4wUXGyIc/edit?usp=sharing
+An implementation of a solution for the Kaggle competition Lux AI S2 made by 4 students for the University in Bergen
+
+https://www.kaggle.com/competitions/lux-ai-season-2
 
 # Installing PyTorch with CUDA 11.8
 
@@ -57,10 +59,57 @@ Every feature here has a 48x48 channel containing the information in every tile.
 13. `float` Entropy of Rubble  -  Statistical entropy of the rubble on the map
 
 
-## Action Space
+## NEW Action Space
 
-1. First collumn - Action Types:  Move, Dig, Transfer, Pickup, Self-Destruct
-2. Second collumn - Directions:   North, East, South, West, Center
-3. Third Collumn - Values:        25%, 50%, 75%, 100%
+STILL NEEDS TO BE IMPLEMENTED!
 
-Final vector 1x13.
+Flattend actionarray:
+
+0. Do Nothing
+1. Move north
+2. Move east
+3. Move south
+4. Move west
+5. Transfer Ice North
+6. Transfer Ice East
+7. Transfer Ice West
+8. Transfer Ice South
+9. Transfer Ore North
+10. Transfer Ore East
+11. Transfer Ore South
+12. Transfer Ore West
+13. Transfer Water North
+14. Transfer Water East
+15. Transfer Water South
+16. Transfer Water West
+17. Transfer Power North 25%
+18. Transfer Power North 50%
+19. Transfer Power North 75%
+20. Transfer Power North 100%
+21. Transfer Power East 25%
+22. Transfer Power East 50%
+23. Transfer Power East 75%
+24. Transfer Power East 100%
+25. Transfer Power South 25%
+26. Transfer Power South 50%
+27. Transfer Power South 75%
+28. Transfer Power South 100%
+29. Transfer Power West 25%
+30. Transfer Power West 50%
+31. Transfer Power West 75%
+32. Transfer Power West 100% 
+33. Pickup Power
+34. Pickup Ice
+35. Pickup Ore
+36. Pickup Water
+37. Digg
+38. Self Destruct
+
+
+# Summary
+1. Move x 5 - One for each dir
+2. Transfer Resource x 12 - [North, East, South, West] * 100% * [Water, Ice, Ore]  
+3. Transfer Power x 16 - [North, East, South, West] * [25%, 50%, 75%, 100%]
+4. Pickup x 4 - [Power, Ice, Ore, Water]
+5. Digg x 1
+6. Self Destruct x 1

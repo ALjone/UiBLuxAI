@@ -48,7 +48,7 @@ class IceRewardWrapper(gym.RewardWrapper):
                 else:
                     raise ValueError("Oh no, what's wrong with this unit ID:", unit_id)
 
-            units_died = (self.number_of_units[player] + units_made) - units # This is acctually just change of unit number
+            units_died = (self.number_of_units[player] - units) # This is acctually just change of unit number
             #TODO fix this (This is based on actions, and factories that do nothing submit no actions)
 
             factories_died = 0#self.number_of_factories[player] - factories
@@ -77,7 +77,8 @@ class IceRewardWrapper(gym.RewardWrapper):
             )
             # TODO: Check for correctness
             reward = self.config['scaling_win'] if rewards["player_0"] > rewards["player_1"] else -self.config['scaling_win'] if rewards["player_0"] < rewards["player_1"] else 0
-            reward += np.tanh(lichen/self.config["lichen_divide_value"])*self.config['scaling_lichen']
+            if self.env.state.real_env_steps > 998:
+                reward += np.tanh(lichen/self.config["lichen_divide_value"])*self.config['scaling_lichen']
             self.env.state.stats["player_0"]['rewards']['end_of_episode_reward'] += reward
             return reward
 
@@ -90,10 +91,12 @@ class IceRewardWrapper(gym.RewardWrapper):
         factory_pos = [factory["pos"] for _, factory in factories.items()]
 
         # Getting units lost and units enemy has lost
-        units_lost, factories_lost = self.get_died_units_and_factories()
+        unit_change, factories_lost = self.get_died_units_and_factories()
         units_killed, _ = self.get_died_units_and_factories("player_1")
 
-        unit_lost_reward = units_lost*-self.config["unit_lost_scale"] if units_lost < 0 else units_lost*-self.config["unit_lost_scale"]*self.config['birth_kill_relation']
+        unit_lost_reward = unit_change*self.config["unit_lost_scale"]
+        if unit_lost_reward <= 0:
+            unit_lost_reward *= self.config['birth_kill_relation']
         factories_lost_reward = factories_lost*- \
             self.config["factory_lost_scale"]
         # TODO: Implement this

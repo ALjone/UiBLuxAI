@@ -3,17 +3,20 @@ max_episodes: 10000000
 print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
-batch_size: 512
+batch_size: 256
+mini_batch_size: 256
 actor_lr: 0.0003
 critic_lr: 0.0003
 gamma: 0.99
-epochs_per_batch: 6
+epochs_per_batch: 2
 eps_clip: 0.1
 lmbda: 0.95
+learning_rate: 0.0001
+regularization: 0.0001
 
 #Environment
 map_size: 48
-parallel_envs: 50
+parallel_envs: 256
 
 #Architecture - Actor
 actor_n_blocks: 6
@@ -29,7 +32,7 @@ device: cuda #cuda, cpu, mps
 path:  None #model.t 
 save_path: model.t
 video_save_rate: 1000 #How often to save a video, in episodes
-log_to_wb: False
+log_to_wb: True
 
 #Reward
 unit_lost_scale: 0.1
