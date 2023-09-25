@@ -59,7 +59,14 @@ class SinglePlayerEnv(gym.Wrapper):
 
     def step(self, action):
         agent = self.agents[0]
+        opp_agent = self.agents[1]
 
+        opp_factories = self.env.state.factories[opp_agent]
+
+        for k in opp_factories:
+            factory = opp_factories[k]
+            factory.cargo.water = 1000 # set enemy factories to have 1000 water to keep them alive the whole around and treat the game as single-agent 
+        
         obs, reward, done, info = self.env.step(action)
         self.prev_actions = action
 
@@ -70,7 +77,6 @@ class SinglePlayerEnv(gym.Wrapper):
         if done[agent]:
             info["stats"] = self.env.state.stats[agent]
             info["episode_length"] = self.env.state.real_env_steps
-
 
         return obs, reward, done[agent], info
 
@@ -86,8 +92,9 @@ class SinglePlayerEnv(gym.Wrapper):
             a = {"player_0" : self.get_factory(step, "player_0"), "player_1" : self.get_factory(step, "player_1")}
             obs, _, _, _ = self.step(a)
             step += 1
+        
+        self.env.state.stats["player_0"]["max_value_observation"] = 0
 
-        self.prev_actions = {}
         self.env.state.stats["player_0"]["actions"] = {
                                                         "factories": [0]*(3), #Minus one because the do nothing action is never registered here
                                                         "units" : [0]*UNIT_ACTION_IDXS,

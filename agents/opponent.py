@@ -10,6 +10,7 @@ class Opponent():
 
         self.sample_method = "mode"
         self.model = ActorCritic(UNIT_ACTION_IDXS, config)
+        #del self.model.critic
 
     def save(self, checkpoint_path):
         torch.save(self.model.state_dict(), checkpoint_path)
@@ -29,7 +30,7 @@ class Opponent():
         for key, val in state.items():
             state[key] = torch.tensor(val).to(self.device)
 
-        unit_action_probs, factory_action_probs, _ = self.model.forward_actor(state["features"])
+        unit_action_probs, factory_action_probs = self.model.forward_actor(state["features"])
 
 
         unit_dist = CategoricalMasked(logits = unit_action_probs, masks = state["invalid_unit_action_mask"], device = self.device)

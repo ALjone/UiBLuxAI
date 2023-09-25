@@ -36,7 +36,8 @@ class Agent():
 
 
         self.model = ActorCritic(UNIT_ACTION_IDXS, config)
-        print("Actor/Critic has:", self.model.count_parameters(), "parameters")
+        print("Actor has:", self.model.count_actor_parameters(), "parameters")
+        print("Critic has:", self.model.count_critic_parameters(), "parameters")
 
         if config["path"] is not None:
             self.model.load_state_dict(torch.load(config["path"]))
@@ -49,17 +50,18 @@ class Agent():
         torch.save(self.model.state_dict(), checkpoint_path)
     
     def get_value(self, image_features):
-        _, _, state_val = self.model.forward_actor(image_features)
+        state_val = self.model.forward_critic(image_features)
         return state_val
     
     def get_action_probs(self, state):
-        unit_action_probs, factory_action_probs, _ = self.model.forward_actor(state["features"])
+        unit_action_probs, factory_action_probs = self.model.forward_actor(state["features"])
         return torch.nn.functional.softmax(unit_action_probs, -1).squeeze(), torch.nn.functional.softmax(factory_action_probs, -1).squeeze()
 
     def get_action_and_value(self, state, unit_action = None, factory_action = None):
         #NOTE: Assumes first channel is unit mask for our agent
 
-        unit_action_probs, factory_action_probs, state_val = self.model.forward_actor(state["features"])
+        unit_action_probs, factory_action_probs  = self.model.forward_actor(state["features"])
+        state_val = self.model.forward_critic(state["features"])
 
         assert unit_action_probs.shape == state["invalid_unit_action_mask"].shape
 
@@ -81,8 +83,6 @@ class Agent():
         unit_entropy = (unit_dist.entropy() * state["unit_mask"]).sum((1, 2))
         factory_entropy = (factory_dist.entropy() * state["factory_mask"]).sum((1, 2))
 
-        #state_val = self.model.forward_critic(state["features"])       
-
         return unit_action, unit_action_logprob, unit_entropy, factory_action, factory_action_logprob, factory_entropy, state_val
 
     
@@ -94,3 +94,18 @@ class Agent():
         unit_action, _, _, factory_action, _, _, _ = self.get_action_and_value(obs)
 
         return unit_action.squeeze().cpu().numpy(), factory_action.squeeze().cpu().numpy()
+
+    def get_dist_and_value(self, features: torch.Tensor, unit_mask:torch.Tensor, factory_mask: torch.Tensor):
+        unit_action_probs, factory_action_probs = self.model.forward_actor(features)
+        state_val = self.model.forward_critic(features)
+
+        unit_mask = unit_mask.unsqueeze(-1).repeat_interleave(11, -1)
+        factory_mask = factory_mask.unsqueeze(-1).repeat_interleave(4, -1)
+
+        unit_dist = torch.nn.LogSoftmax(dim = 3)(unit_action_probs)*unit_mask
+        #unit_dist = unit_dist[unit_mask.to(torch.bool).flatten(1)]
+
+        factory_dist = torch.nn.LogSoftmax(dim = 3)(factory_action_probs)*factory_mask
+        #factory_dist = factory_dist[factory_mask.to(torch.bool).flatten(1)]
+
+        return unit_dist, factory_dist, state_val

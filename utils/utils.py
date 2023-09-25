@@ -1,8 +1,8 @@
 import torch 
 import yaml
 import numpy as np
-def load_config(change_dict = {}):
-    config = yaml.safe_load(open("config.yml"))
+def load_config(change_dict = {}, path = "config.yml"):
+    config = yaml.safe_load(open(path))
 
     config["batch_size"] = config["parallel_envs"]*config["num_steps_per_env"]
     config["mini_batch_size"] = int(config["batch_size"] // config["num_minibatches"])

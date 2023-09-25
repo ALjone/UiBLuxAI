@@ -42,7 +42,7 @@ def self_destruct():
 
 def recharge(x, repeat=0, n=1):
     """Gets the action for rechargings"""
-    return np.array([5, 0, 0, x, r0epeat, 1])
+    return np.array([5, 0, 0, x, repeat, 1])
 
 
 def dig(repeat=0, n=1):

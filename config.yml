@@ -1,22 +1,21 @@
 #Training
 max_episodes: 50000000
-print_freq: 100 # print avg reward in the interval (in episodes)
 
 #PPO
-num_steps_per_env: 64
-num_minibatches: 2
+num_steps_per_env: 32
+num_minibatches: 4
 lr: 0.00025
-gamma: 0.999
+gamma: 0.97
 epochs_per_batch: 4
 eps_clip: 0.2
 lmbda: 0.95
-ent_coef: 0.005
+ent_coef: 0.001
 vf_coef: 0.5
 max_grad_norm: 0.5
 use_target_kl: True
-target_kl_max: 0.03
+target_kl_max: 0.3
 target_kl_min : 0
-anneal_lr: True
+anneal_lr: False
 norm_adv: True
 clip_loss_value: False #According to 37 PPO implementation details, this should be false
 mode_or_sample: sample #sample
@@ -26,35 +25,40 @@ parallel_envs: 16
 
 
 #Environment
-map_size: 30
+map_size: 32
 n_factories: 2
 max_game_length: 2000
 
 #Architecture - Actor
-actor_n_blocks: 4
-actor_intermediate_channels: 64
+actor_n_blocks: 16
+actor_intermediate_channels: 32
 actor_use_batch_norm: False
+
+#Architecture - Teacher
+teacher_actor_n_blocks: 4
+teacher_actor_intermediate_channels: 64
+teacher_actor_use_batch_norm: False
+
+#Teacher stuff:
+KL_factor: 0
+KL_steps_to_anneal: 5000000
+teacher_path: smaller_model_checkpoint.t
 
 #Other 
 device: cuda #cuda, cpu, mps
-path: most_recent.t #model.t
+path: None #most_recent.t
 save_path: bigger_model.t #model.t
-video_save_rate: 1000 #How often to save a video, in episodes
 log_to_wb: True
-log_rate: 50000 #Log every 100k steps ish
+log_rate: 20000 #Log every 100k steps ish
 
 
 #Reward
 unit_punishment: 0 #0.05
-rubble_reward: 0.005
-scaling_ice: 0.01 #Value of ice
-scaling_ore: 0.01
-scaling_water: 0.02
-scaling_metal: 0.02
+rubble_reward: 0.05
+scaling_ice: 0.025 #Value of ice
+scaling_ore: 0.0005
+scaling_water: 0.05
+scaling_metal: 0.025
 
 factory_lost: 0 #0.5
-
-
-lichen_divide_value: 20000
-scaling_lichen: 5
 scaling_win: 0

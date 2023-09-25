@@ -8,10 +8,10 @@ from wrappers.reward_wrappers import IceRewardWrapper
 from wrappers.action_wrapper import action_wrapper
 from utils.utils import load_config
 import torch
-from utils.visualization import visualize_obs, visualize_network_output
+from utils.visualization import visualize_obs, visualize_network_output, visualize_critic_and_returns
 import numpy as np
 
-def play_episode(agent: Agent, opponent: Opponent, env: LuxAI_S2, make_gif = True, make_obs_gif = False, make_network_gif = False):
+def play_episode(agent: Agent, opponent: Opponent, env: LuxAI_S2, make_gif = True, make_obs_gif = False, make_network_gif = False, step_num = 300):
     state = env.reset()
     agent.model.eval()
     step = 0
@@ -19,6 +19,9 @@ def play_episode(agent: Agent, opponent: Opponent, env: LuxAI_S2, make_gif = Tru
     obs_imgs = []
     output_imgs = []
     done = False
+    returns = []
+    reward = 0
+    critic_output = []
     while not done:
         with torch.no_grad():
             unit_action, factory_action = agent.get_action(state["player_0"])
@@ -27,9 +30,7 @@ def play_episode(agent: Agent, opponent: Opponent, env: LuxAI_S2, make_gif = Tru
                           "player_1" : {"unit_action" : opponent_unit_actions, "factory_action": opponent_factory_action}} #NOTE: Atm just a copy
         step += 1
         print(step)
-        #max_ = np.max(state["player_0"]["features"])
-        #if max_ > 2:    
-        #    print("Max feature:", max_)
+
 
         if make_network_gif:
             with torch.no_grad():
@@ -40,12 +41,19 @@ def play_episode(agent: Agent, opponent: Opponent, env: LuxAI_S2, make_gif = Tru
         if make_obs_gif:
             img = visualize_obs(state["player_0"], step)
             obs_imgs.append(img)
-        state, _, done, _ = env.step(action)
+
+        critic_output.append(agent.get_value(state["player_0"]["features"]).detach().cpu().numpy().squeeze())
+        state, r, done, _ = env.step(action)
+
+        reward += r
+        print(r)
+        returns.append(reward)
+
 
         if make_gif:
             map_imgs += [env.render("rgb_array", width=640, height=640)]
 
-        if step > 300:
+        if step > step_num:
             break
 
     print("Making gif")
@@ -55,6 +63,8 @@ def play_episode(agent: Agent, opponent: Opponent, env: LuxAI_S2, make_gif = Tru
         animate(obs_imgs, "observation.gif")
     if make_network_gif:
         animate(output_imgs, "network_output.gif")
+
+    visualize_critic_and_returns(returns[::-1], critic_output)
 
 def run(config):
     #Always run visualization on CPU
@@ -70,7 +80,7 @@ def run(config):
     agent = Agent(config)
     opponent = Opponent(config)
     opponent.load(agent.model.state_dict())
-    play_episode(agent, opponent, env, True, False, True)
+    play_episode(agent, opponent, env, True, True, True, 1000)
 
 
 if __name__ == "__main__":

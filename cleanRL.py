@@ -23,7 +23,7 @@ from utils.wandb_logging import WAndB
 import os
 os.environ["WANDB_SILENT"] = "true"
 
-def make_env(config):
+def make_env(config, seed):
     def thunk():
         env = LuxAI_S2(verbose=0, collect_stats=True, map_size = config["map_size"], MIN_FACTORIES = config["n_factories"], MAX_FACTORIES = config["n_factories"], validate_action_space = False)
         env.reset() #NOTE: Reset here to initialize stats
@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
     # env setup
     envs = gym.vector.AsyncVectorEnv(
-        [make_env(config) for _ in range(config["parallel_envs"])]
+        [make_env(config, i) for i in range(config["parallel_envs"])]
     )
 
     agent = Agent(config)
@@ -101,9 +101,20 @@ if __name__ == "__main__":
     episode_lengths = []    
     episode_rewards = []
 
+    if config["KL_factor"] > 0:
+        KL_loss = torch.nn.KLDivLoss(reduce="batchmean", log_target=True)
+        teacher = Agent({"device": config["device"],
+                        "mode_or_sample": config["mode_or_sample"],
+                        "path": config["teacher_path"],
+                        "actor_n_blocks": config["teacher_actor_n_blocks"],
+                        "actor_intermediate_channels": config["teacher_actor_intermediate_channels"],
+                        "actor_use_batch_norm": config["teacher_actor_use_batch_norm"]})
+
 
     for update in range(1, num_updates + 1):
         # Annealing the rate if instructed to do so.
+        frac = 1.0 - (global_step/config["KL_steps_to_anneal"])
+        KL_factor = frac*config["KL_factor"]
         if config["anneal_lr"]:
             frac = 1.0 - (update - 1.0) / num_updates
             lrnow = frac * config["lr"]
@@ -130,7 +141,10 @@ if __name__ == "__main__":
                 # ALGO LOGIC: action logic
                 with torch.no_grad():
                     unit_action, unit_logprob, _, factory_action, factory_logprob, _, value = agent.get_action_and_value(state)
-                    opponent_action, opponent_factory_action = opponent.get_action(next_obs["player_0"])
+                    #opponent_action, opponent_factory_action = opponent.get_action(next_obs["player_1"])
+                    opponent_action = torch.zeros((16, 48, 48)).to(device)
+                    opponent_factory_action = torch.ones((16, 48, 48)).to(device)*3
+                    
                     values[step] = value.flatten()
 
                 unit_actions[step] = unit_action
@@ -273,8 +287,23 @@ if __name__ == "__main__":
                 else:
                     v_loss = 0.5 * ((newvalue - b_returns[mb_inds]) ** 2).mean()
 
+
                 entropy_loss = unit_entropy.mean()+factory_entropy.mean()
                 loss = (pg_unit_loss + pg_factory_loss) - config["ent_coef"] * entropy_loss + v_loss * config["vf_coef"]
+
+                if KL_factor > 0:
+                    #Slow but who cares
+                    unit_dist, factory_dist, _ = agent.get_dist_and_value(b_image_obs[mb_inds], b_unit_masks[mb_inds], b_factory_masks[mb_inds])
+
+                    with torch.no_grad():
+                        old_unit_dist, old_factory_dist, _ = teacher.get_dist_and_value(b_image_obs[mb_inds], b_unit_masks[mb_inds], b_factory_masks[mb_inds])
+                    
+
+                    unit_KL_loss = KL_loss(unit_dist.squeeze(), old_unit_dist.squeeze())
+                    factory_KL_loss = KL_loss(factory_dist.squeeze(), old_factory_dist.squeeze())
+
+                    loss += (unit_KL_loss + factory_KL_loss)*KL_factor
+
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -307,6 +336,8 @@ if __name__ == "__main__":
                 log_dict["Main/Average reward per step"] = np.mean(episode_rewards).item()
                 log_dict["Main/Average episode length"] = np.mean(episode_lengths)
                 #log_dict["Main/Max episode length"] = np.max(episode_lengths)
+                if KL_factor > 0:
+                    log_dict["Losses/Student_Teacher_KL"] = (unit_KL_loss+factory_KL_loss).item()
                 log_dict["Losses/value_loss"] = v_loss.item()
                 log_dict["Losses/policy_loss"] = (pg_unit_loss).item()
                 log_dict["Losses/entropy"] = entropy_loss.item()
@@ -315,6 +346,7 @@ if __name__ == "__main__":
                 log_dict["Losses/clipfrac"] = np.mean(clipfracs)
                 log_dict["Losses/explained_variance"] = explained_var
                 log_dict["Charts/learning_rate"] = optimizer.param_groups[0]["lr"]
+                log_dict["Charts/KL_factory"] = KL_factor
                 log_dict["Charts/Steps per second"] = int(last_steps_played / (time.time() - start_time))
                 log_dict["Charts/Portion of time as training"] = training_time/(training_time+pre_and_post_step+stepping_time)
                 log_dict["Charts/Portion of time as misc"] = pre_and_post_step/(training_time+pre_and_post_step+stepping_time)

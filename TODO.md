@@ -8,9 +8,11 @@ Reward shaping:
 	Faktisk implementere reward for self-play
 
 Trening:
-	1. Øke antall parallel envs
-	2. Teacher loss	
-	3. Full mask + soft mask for actions (Movement + transfer/movement)
+	1. Teacher loss	
+	2. Full mask + soft mask for actions (Movement + transfer/movement)
+
+
+Observation plane: More than 50 water in a factory
 
 Fikse bugs: 
 

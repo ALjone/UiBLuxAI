@@ -36,11 +36,15 @@ class StatCollector:
         self.factory_punishment = []
         self.resources_reward = []
         self.rubble_reward = []
+        self.end_of_game_reward = []
 
         #Action
         self.unit_action_distribution = []
         self.factory_action_distribution = []
         self.average_power_when_recharge = []
+
+        #Other
+        self.max_value_observation = []
 
     def update(self, stats):
         """Call this with the stats dict at the end of an episode"""
@@ -86,6 +90,7 @@ class StatCollector:
         self.factory_punishment.append(reward["factory_punishment"])
         self.resources_reward.append(reward['resource_reward'])
         self.rubble_reward.append(reward['rubble_reward'])
+        self.end_of_game_reward.append(reward["end_of_game_reward"])
 
         #Action
         act = stats["actions"]
@@ -93,6 +98,9 @@ class StatCollector:
         self.factory_action_distribution.append(np.array(act["factories"]))
         if len(act["average_power_when_recharge"]) > 0:
             self.average_power_when_recharge.append(np.mean(act["average_power_when_recharge"]))
+
+        #Other
+        self.max_value_observation.append(stats["max_value_observation"])
 
 
     def get_last_x(self, x):
@@ -146,8 +154,14 @@ class StatCollector:
                     {
                     "factory_punishment": self.factory_punishment[-x:],
                     "resources_reward": self.resources_reward[-x:],
-                    "rubble_reward": self.rubble_reward[-x:]
+                    "rubble_reward": self.rubble_reward[-x:],
+                    "self.end_of_game_reward": self.end_of_game_reward[-x:]
                     },
+                
+                "other":
+                    {
+                    "max_value_observation": self.max_value_observation[-x:]
+                    }
                 #"actions":
                 #    {
                 #    "unit_action_distribution": [elem for elem in np.array(self.unit_action_distribution[-x:]).mean(0)],

@@ -37,7 +37,7 @@ def visualize_obs(state, step, save_img = False):
 
 def visualize_network_output(unit_action, factory_action, unit_mask, factory_mask, step):
 
-    fig, axs = plt.subplots(4, 4, figsize = (25, 25))
+    fig, axs = plt.subplots(5, 4, figsize = (25, 25))
     for i, name in enumerate(MOVES):
         row, col = divmod(i, 4)
         axs[row, col].set_title(name)
@@ -45,14 +45,14 @@ def visualize_network_output(unit_action, factory_action, unit_mask, factory_mas
         plt.colorbar(img)
 
     for i, name in enumerate(["LIGHT", "HEAVY", "LICHEN", "NOTHING"]):
-        axs[2, i].set_title(name)
-        img = axs[2, i].imshow(factory_action[:, :, i].T)
+        axs[3, i].set_title(name)
+        img = axs[3, i].imshow(factory_action[:, :, i].T)
         plt.colorbar(img)
     
-    axs[3, 1].set_title("Unit mask")
-    axs[3, 1].imshow(unit_mask.squeeze().T)
-    axs[3, 2].set_title("Factory mask")
-    axs[3, 2].imshow(factory_mask.squeeze().T)
+    axs[4, 1].set_title("Unit mask")
+    axs[4, 1].imshow(unit_mask.squeeze().T)
+    axs[4, 2].set_title("Factory mask")
+    axs[4, 2].imshow(factory_mask.squeeze().T)
 
     fig.suptitle(f"Step: {step}")
 
@@ -64,3 +64,16 @@ def visualize_network_output(unit_action, factory_action, unit_mask, factory_mas
     plt.cla()
     plt.close()
     return data
+
+
+def visualize_critic_and_returns(returns, critic_output):
+    fig, axs = plt.subplots(3, 1)
+    axs[0].set_title("Returns")
+    axs[1].set_title("Critic guess")
+    axs[2].set_title("Difference")
+
+    axs[0].plot(returns)
+    axs[1].plot(critic_output)
+    axs[2].plot(np.abs(np.array(returns).squeeze()-np.array(critic_output).squeeze()))
+
+    plt.show()

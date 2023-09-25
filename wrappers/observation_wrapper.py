@@ -34,20 +34,20 @@ class StateSpaceVol2(gym.ObservationWrapper):
         self.map_size = config["map_size"]
 
         self.config = config
-        #TODO: Check the bounds on "Box"
+
         super().__init__(env)
         #NOTE: could not broadcast errors often stem from here
 
         self.observation_space = spaces.Dict({
                                                 "player_0" : spaces.Dict({
-                                                                "features": spaces.Box(0, 1, shape = (29, self.map_size, self.map_size)),
+                                                                "features": spaces.Box(0, 1, shape = (33, self.map_size, self.map_size)),
                                                                 "unit_mask" : spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
                                                                 "factory_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
                                                                 "invalid_unit_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, UNIT_ACTION_IDXS)),
                                                                 "invalid_factory_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, 4)),
                                                             }),
                                                 "player_1" : spaces.Dict({
-                                                                "features": spaces.Box(0, 1, shape = (29, self.map_size, self.map_size)),
+                                                                "features": spaces.Box(0, 1, shape = (33, self.map_size, self.map_size)),
                                                                 "unit_mask" : spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
                                                                 "factory_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
                                                                 "invalid_unit_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, UNIT_ACTION_IDXS)),
@@ -102,7 +102,7 @@ class StateSpaceVol2(gym.ObservationWrapper):
                         light_pos[x, y] = 1
                     else:
                         heavy_pos[x, y] = 1
-                    unit_power[x, y] = unit["power"]/(500) #NOTE: THIS IS WEIRD
+                    unit_power[x, y] = unit["power"]/(150 if is_light else 3000)
                     unit_ice[x, y] = unit["cargo"]["ice"]/(100 if is_light else 1000)
                     unit_ore[x, y] = unit["cargo"]["ore"]/(100 if is_light else 1000)
                     
@@ -113,11 +113,11 @@ class StateSpaceVol2(gym.ObservationWrapper):
                     factory_mask[x, y] = 1
                     #Factories have no max capacity
                     #TODO: Look at tanh?
-                    factory_power[x-1:x+2, y-1:y+2] = min(1, factory["power"]/500)              
-                    factory_ice[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ice"]/200)
-                    factory_ore[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ore"]/200)
-                    factory_water[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["water"]/200)
-                    factory_metal[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["metal"]/200)
+                    factory_power[x-1:x+2, y-1:y+2] = min(1, factory["power"]/5000)              
+                    factory_ice[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ice"]/2000)
+                    factory_ore[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ore"]/2000)
+                    factory_water[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["water"]/1000)
+                    factory_metal[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["metal"]/1000)
 
             board_rubble = state["board"]["rubble"]/self.env.state.env_cfg.MAX_RUBBLE
             board_ice = state["board"]["ice"]
@@ -179,6 +179,17 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                                 collision_mask),
                                                 axis = 0
                                                 )
+            
+            if np.max(p0_image_features) > 1 or np.max(p1_image_features) > 1:
+                print("Image feature p0/p1 max:", np.max(p0_image_features), np.max(p1_image_features))
+                print("Idx p0 max:", np.unravel_index(np.argmax(p0_image_features, axis=None), p0_image_features.shape))
+                print("Idx p1 max:", np.unravel_index(np.argmax(p1_image_features, axis=None), p1_image_features.shape))
+                print()
+            if np.min(p0_image_features) < 0 or np.min(p1_image_features) < 0:
+                print("Image feature p0/p1 max:", np.min(p0_image_features), np.min(p1_image_features))
+                print("Idx p0 min:", np.unravel_index(np.argmin(p0_image_features, axis=None), p0_image_features.shape))
+                print("Idx p1 min:", np.unravel_index(np.argmin(p1_image_features, axis=None), p1_image_features.shape))
+                print()
 
             return p0_image_features, p0_unit_mask, p0_factory_mask, p1_image_features, p1_unit_mask, p1_factory_mask
 
@@ -188,16 +199,33 @@ class StateSpaceVol2(gym.ObservationWrapper):
         player_1_id = "player_1"
 
         #All these are common
-        day = np.ones((self.map_size, self.map_size))*np.sin((2*np.pi*self.env.state.real_env_steps)/1000)*0.3
-        night = np.ones((self.map_size, self.map_size))*np.cos((2*np.pi*self.env.state.real_env_steps)/1000)*0.2
-        timestep = np.ones((self.map_size, self.map_size))*self.env.state.real_env_steps / 1000
-        day_night = np.ones((self.map_size, self.map_size))*self.env.state.real_env_steps % 50 < 30
-        ice_on_map = np.ones((self.map_size, self.map_size))*np.sum(state[player_0_id]["board"]["ice"]) / 30
-        ore_on_map = np.ones((self.map_size, self.map_size))*np.sum(state[player_0_id]["board"]["ore"]) / 30
+        day = np.tile(np.sin((2*np.pi*self.env.state.real_env_steps)/1000)*0.3, (self.map_size, self.map_size))
+        night = np.tile(np.cos((2*np.pi*self.env.state.real_env_steps)/1000)*0.2, (self.map_size, self.map_size))
+        timestep = np.tile((self.env.state.real_env_steps / 1000), (self.map_size, self.map_size))
+        day_night = np.tile(self.env.state.real_env_steps % 50 < 30, (self.map_size, self.map_size))
+        ice_on_map = np.tile(min(1, np.sum(state[player_0_id]["board"]["ice"]) / 50), (self.map_size, self.map_size))
+        ore_on_map = np.tile(min(1, np.sum(state[player_0_id]["board"]["ore"]) / 50), (self.map_size, self.map_size))
 
         #All these must be flipped
-        friendly_factories = np.ones((self.map_size, self.map_size))*len(state[player_0_id]["factories"][player_0_id].values()) /4
-        enemy_factories = np.ones((self.map_size, self.map_size))*len(state[player_0_id]["factories"][player_1_id].values()) /4
+        friendly_factories = np.tile(len(state[player_0_id]["factories"][player_0_id].values()) /4, (self.map_size, self.map_size))
+        enemy_factories = np.tile(len(state[player_0_id]["factories"][player_1_id].values()) /4, (self.map_size, self.map_size))
+
+        p0_water = 0
+        p0_ice = 0
+        for _, factory in state["player_0"]["factories"]["player_0"].items():
+            p0_ice += factory["cargo"]["ice"]
+            p0_water += factory["cargo"]["water"]
+        p1_water = 0
+        p1_ice = 0
+        for _, factory in state["player_0"]["factories"]["player_1"].items():
+            p1_ice += factory["cargo"]["ice"]
+            p1_water += factory["cargo"]["water"]
+
+        p0_factory_water = np.tile(min(1, p0_water/500), (self.map_size, self.map_size))
+        p0_factory_ice = np.tile(min(1, p0_ice/500), (self.map_size, self.map_size))
+        p1_factory_water = np.tile(min(1, p1_water/500), (self.map_size, self.map_size))
+        p1_factory_ice = np.tile(min(1, p1_ice/500), (self.map_size, self.map_size))
+        
 
         #friendly_light = p0_num_light
         #friendly_heavy = p0_num_heavy
@@ -212,14 +240,18 @@ class StateSpaceVol2(gym.ObservationWrapper):
             self.env.state.board.lichen_strains, self.state.teams[player_1_id].factory_strains
         )
 
-        friendly_lichen_amount =  np.ones((self.map_size, self.map_size))*np.sum(np.where(player_0_lichen_mask, self.env.state.board.lichen, 0))
-        enemy_lichen_amount =  np.ones((self.map_size, self.map_size))*np.sum(np.where(player_1_lichen_mask, self.env.state.board.lichen, 0))
+        friendly_lichen_amount = np.sum(np.where(player_0_lichen_mask, self.env.state.board.lichen, 0))
+        enemy_lichen_amount = np.sum(np.where(player_1_lichen_mask, self.env.state.board.lichen, 0))
         
 
-        lichen_distribution = np.ones((self.map_size, self.map_size))*(friendly_lichen_amount-enemy_lichen_amount)/np.clip(friendly_lichen_amount+enemy_lichen_amount, a_min = 1, a_max = None)
+        lichen_distribution = np.tile((friendly_lichen_amount-enemy_lichen_amount)/np.clip(friendly_lichen_amount+enemy_lichen_amount, a_min = 1, a_max = None), (self.map_size, self.map_size))
 
-
-        p0_global_features = np.stack((     day, 
+        p0_global_features = np.stack((     
+                                            p0_factory_water,
+                                            p1_factory_water,
+                                            p0_factory_ice,
+                                            p1_factory_ice,
+                                            day, 
                                             night, 
                                             timestep, 
                                             day_night, 
@@ -235,7 +267,12 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                             axis = 0
                                             )
         
-        p1_global_features = np.stack(( day, 
+        p1_global_features = np.stack(( 
+                                        p1_factory_water,
+                                        p0_factory_water,
+                                        p1_factory_ice,
+                                        p0_factory_ice,
+                                        day, 
                                         night, 
                                         timestep, 
                                         day_night, 
@@ -250,15 +287,27 @@ class StateSpaceVol2(gym.ObservationWrapper):
                                         lichen_distribution * -1), 
                                         axis = 0
                                         )
-
+        
+        if np.max(p0_global_features) > 1 or np.max(p1_global_features) > 1:
+            print("Global feature p0/p1 max:", np.max(p0_global_features), np.max(p1_global_features))
+            print("Idx p0 max:", np.unravel_index(np.argmax(p0_global_features, axis=None), p0_global_features.shape))
+            print("Idx p1 max:", np.unravel_index(np.argmax(p1_global_features, axis=None), p1_global_features.shape))
+            print()
+        if np.min(p0_global_features) < -1 or np.min(p1_global_features) < -1:
+            print("Global feature p0/p1 min:", np.min(p0_global_features), np.min(p1_global_features))
+            print("Idx p0 min:", np.unravel_index(np.argmin(p0_global_features, axis=None), p0_global_features.shape))
+            print("Idx p1 min:", np.unravel_index(np.argmin(p1_global_features, axis=None), p1_global_features.shape))
+            print()
         return p0_global_features.astype(np.float32), p1_global_features.astype(np.float32)
 
     def process_state(self, obs):
         #We get the number of light/heavy so we don't have to do it twice
         p0_image_features, p0_unit_mask, p0_factory_mask, p1_image_features, p1_unit_mask, p1_factory_mask = self._image_features(obs)
+
         p0_global_features, p1_global_features = self._global_features(obs)
         p0_features = np.concatenate((p0_image_features, p0_global_features))
         p1_features = np.concatenate((p1_image_features, p1_global_features))
+        
         return p0_features, p0_unit_mask, p0_factory_mask, p1_features, p1_unit_mask, p1_factory_mask
     
 
@@ -267,6 +316,8 @@ class StateSpaceVol2(gym.ObservationWrapper):
         self.last_obs = obs #TODO: I hope these don't get changed?
         self.last_state_p0 = p0_features 
         self.last_state_p1 = p1_features
+
+        self.env.state.stats["player_0"]["max_value_observation"] = max(self.env.state.stats["player_0"]["max_value_observation"], np.max(p0_features))
 
         p0_features = {"features": p0_features.astype(np.float32),
                        "unit_mask": p0_unit_mask.astype(np.float32), 
