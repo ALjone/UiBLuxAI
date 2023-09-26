@@ -77,10 +77,12 @@ def run(config):
     env.reset()
     env = action_wrapper(env)
     env.reset()
+    #config["path"] = "most_recent.t"
     agent = Agent(config)
     opponent = Opponent(config)
     opponent.load(agent.model.state_dict())
-    play_episode(agent, opponent, env, True, True, True, 1000)
+    #play_episode(agent, opponent, env, True, True, True, 1000)
+    play_episode(agent, opponent, env, True, False, False, 1000)
 
 
 if __name__ == "__main__":

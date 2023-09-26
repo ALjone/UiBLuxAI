@@ -20,12 +20,14 @@ def can_transfer_to_tile(x, y, factory_occupancy_map, dir):
     return False
 
 
-
 def where_will_unit_end_up(move, unit_x, unit_y):
     if isinstance(move, list):
         assert len(move) == 1, f"Move is a list, expected it to have length 1, found lenght {len(move)}"
         move = move[0]
+    #print(move)
     if move[0] != 0:
+    #    print("Unit didn't move")
         return (unit_x, unit_y)
     dir_x, dir_y = int_to_dir[move[1]] #Move[1] is the direction as an int
+    #print(f"Previous pos: ({unit_x}, {unit_y}), Move dir: ({dir_x}, {dir_y}), New pos: ({unit_x+dir_x}, {unit_y+dir_y})")
     return (unit_x+dir_x, unit_y+dir_y)

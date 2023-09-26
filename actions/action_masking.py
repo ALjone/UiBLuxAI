@@ -1,5 +1,5 @@
 from actions.action_utils import calculate_move_cost, can_transfer_to_tile
-from actions.actions import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from actions.actions import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, move_to_closest_thing
 from actions.single_move_actions import find_dir_to_closest
 import numpy as np
 from utils.utils import load_config
@@ -69,8 +69,10 @@ def single_unit_action_mask(unit, obs, state):
     if not can_transfer_to_tile(x, y, factory_occupancy_mask, "center") or factory_power[x, y] < FACTORY_MIN_POWER:
         action_mask[7] = MASK_EPS
 
-    if factory_occupancy_mask[x, y] == 1:
-        action_mask[10] = MASK_EPS
+    #TODO: Add for 8 and 9 as well?
+
+    #if factory_occupancy_mask[x, y] == 1:
+    #    action_mask[10] = MASK_EPS
 
     return action_mask
 

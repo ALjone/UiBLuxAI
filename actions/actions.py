@@ -10,9 +10,9 @@ MOVES = [   "No move",
             "Transfer max to closest factory",
             "Dig",
             "Pick up power",
-            "ore",
-            "ice",
-            "factory"
+            #"ore",
+            #"ice",
+            #"factory"
             #"Transfer to closest unit",
             ]
 
@@ -51,42 +51,47 @@ def _unit_idx_to_action(idx, unit_x, unit_y, state, max_res_idx, rubble, ice, or
     raise ValueError("Should've returned by now???")
 
 
+def do_stuff_depending_on_action_idx(unit, unit_output, state, rubble, ice, ore, pos_to_units_there, actions):
+    x, y = unit["pos"][0], unit["pos"][1]
+    cargo = [unit["cargo"]["ice"], unit["cargo"]["ore"], unit["cargo"]["water"], unit["cargo"]["metal"]]
+    max_res_idx = np.argmax(cargo).item()
+    action_idx = unit_output[x, y].item()
+    if action_idx != 0: #Do nothing if == 0
+        action = _unit_idx_to_action(action_idx, x, y, state, max_res_idx, rubble, ice, ore)
+        new_pos = where_will_unit_end_up(action, x, y)
+    else:
+        new_pos = (x, y)
+
+    if new_pos in pos_to_units_there.keys():
+        pos_to_units_there[(x, y)] = [unit["unit_id"]]#.append(unit["unit_id"])
+    else:
+        pos_to_units_there[new_pos] = [unit["unit_id"]]
+        #TODO: Can be solved better, we shouldn't have to check this idx twice
+        if action_idx != 0:
+            actions[unit["unit_id"]] = [action]
+
 def unit_output_to_actions(unit_output, units, state, rubble, ice, ore):
-
-
-        
-
-
-
     """Turns outputs from the model into action dicts for units"""
     pos_to_units_there = {}
     actions = {}
+    units_processed = set()
     for unit in units:
         x, y = unit["pos"][0], unit["pos"][1]
+        action_idx = unit_output[x, y].item()
         cargo = [unit["cargo"]["ice"], unit["cargo"]["ore"], unit["cargo"]["water"], unit["cargo"]["metal"]]
         max_res_idx = np.argmax(cargo).item()
-        action_idx = unit_output[x, y].item()
-        if action_idx == 0: #Do nothing
-            continue
-        action = _unit_idx_to_action(action_idx, x, y, state, max_res_idx, rubble, ice, ore)
+        if action_idx == 0 or where_will_unit_end_up(_unit_idx_to_action(action_idx, x, y, state, max_res_idx, rubble, ice, ore), x, y) == (x, y):
+            do_stuff_depending_on_action_idx(unit, unit_output, state, rubble, ice, ore, pos_to_units_there, actions)
+            units_processed.add(unit["unit_id"])
 
-        new_pos = where_will_unit_end_up(action, x, y)
+    for unit in units:
+        if unit["unit_id"] in units_processed: continue
 
-        if new_pos in pos_to_units_there.keys():
-            pos_to_units_there[new_pos].append(unit["unit_id"])
-        else:
-            pos_to_units_there[new_pos] = [unit["unit_id"]]
-        
-        actions[unit["unit_id"]] = [action]
-    
-    for pos, units in pos_to_units_there.items():
-        if len(units) > 1:
-            for unit in units:
-                if actions[unit][0][0] == 0: #This should be moving right? First zero because it's a list, second because first element decides move type
-                    del actions[unit]
-                    #print("Found collision for:", unit, "at pos:", pos)
-                #else:
-                #    print("Found non-moving collision for:", unit, "at pos:", pos)
+        do_stuff_depending_on_action_idx(unit, unit_output, state, rubble, ice, ore, pos_to_units_there, actions)
+
+    #for new_pos, units in pos_to_units_there.items():
+
+        #print(f"Pos: {new_pos} Units: {units}")
 
     return actions
 
@@ -95,6 +100,7 @@ def factory_output_to_actions(factory_output, factories):
     actions = {}
     for factory in factories:
         x, y = factory["pos"][0], factory["pos"][1]
+        #print("Factory x, y", x, y)
         action = factory_output[x, y].item()
         if action == 3:
             continue

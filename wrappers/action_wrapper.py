@@ -39,5 +39,4 @@ class action_wrapper(gym.ActionWrapper):
 
         for player in self.env.agents:
             lux_action[player] = self.transform_action(action[player], player, self.last_obs[player])
-
         return lux_action

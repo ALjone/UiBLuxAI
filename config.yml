@@ -54,7 +54,7 @@ log_rate: 20000 #Log every 100k steps ish
 
 #Reward
 unit_punishment: 0 #0.05
-rubble_reward: 0.05
+rubble_reward: 0.005
 scaling_ice: 0.025 #Value of ice
 scaling_ore: 0.0005
 scaling_water: 0.05

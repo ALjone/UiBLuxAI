@@ -1,6 +1,8 @@
 import torch 
 import yaml
 import numpy as np
+import time
+
 def load_config(change_dict = {}, path = "config.yml"):
     config = yaml.safe_load(open(path))
 
@@ -28,6 +30,15 @@ def load_config(change_dict = {}, path = "config.yml"):
         config["path"] = None
 
     return config
+
+def save_with_retry(agent, path, retries=3, delay=2):
+    for _ in range(retries):
+        try:
+            agent.save(path)
+            return
+        except RuntimeError as e:
+            #print(f"Save failed: {e}, retrying...")
+            time.sleep(delay)
 
 
 def formate_time(seconds):
