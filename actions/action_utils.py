@@ -10,7 +10,7 @@ def calculate_move_cost(x, y, base_cost, modifier, rubble, dir, enemy_factory_oc
     dir = str_to_dir[dir.lower()]
     x, y = x+dir[0], y+dir[1]
 
-    return floor(base_cost + modifier*rubble[x, y]) + enemy_factory_occupancy_mask[x, y]*2000
+    return floor(base_cost + modifier*rubble[x, y]) + enemy_factory_occupancy_mask[x, y]*50000
 
 def can_transfer_to_tile(x, y, factory_occupancy_map, dir):
     dir = str_to_dir[dir.lower()]

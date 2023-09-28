@@ -1,12 +1,12 @@
 from actions.action_utils import calculate_move_cost, can_transfer_to_tile
-from actions.actions import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS, move_to_closest_thing
-from actions.single_move_actions import find_dir_to_closest
+from actions.actions import UNIT_ACTION_IDXS, FACTORY_ACTION_IDXS
+from wrappers.observations_config import FACTORY_MAX_POWER
 import numpy as np
 from utils.utils import load_config
 
 MASK_EPS = 0
 MIN_TRANSFER_AMOUNT = 2
-FACTORY_MIN_POWER = 500
+FACTORY_MIN_POWER = 50
 
 config = load_config()
 device = config["device"]
@@ -17,7 +17,7 @@ def single_unit_action_mask(unit, obs, state):
     action_mask = np.ones(UNIT_ACTION_IDXS, dtype=np.float32)
     factory_occupancy_mask = state[2]
     enemy_factory_occupancy_mask = state[3]
-    factory_power = state[7]*500
+    factory_power = state[7]*FACTORY_MAX_POWER
 
     #TODO: Look reaaaaaaally close if there are any bugs here
 
@@ -54,25 +54,32 @@ def single_unit_action_mask(unit, obs, state):
 
 
     #NOTE: Transfer max to closest factory
-    factory_dir = find_dir_to_closest(factory_occupancy_mask, x, y, rubble)
-    if not can_transfer_to_tile(x, y, factory_occupancy_mask, factory_dir) or \
+    if y == 0 or not can_transfer_to_tile(x, y, factory_occupancy_mask, "north") or \
     (unit["cargo"]["ice"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["ore"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["water"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["metal"] < MIN_TRANSFER_AMOUNT):
         action_mask[5] = MASK_EPS
+
+    if x == map_size-1 or not can_transfer_to_tile(x, y, factory_occupancy_mask, "east") or \
+    (unit["cargo"]["ice"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["ore"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["water"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["metal"] < MIN_TRANSFER_AMOUNT):
+        action_mask[6] = MASK_EPS
+
+    if y == map_size-1 or not can_transfer_to_tile(x, y, factory_occupancy_mask, "south") or \
+    (unit["cargo"]["ice"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["ore"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["water"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["metal"] < MIN_TRANSFER_AMOUNT):
+        action_mask[7] = MASK_EPS
+
+    if x == 0 or not can_transfer_to_tile(x, y, factory_occupancy_mask, "west") or \
+    (unit["cargo"]["ice"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["ore"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["water"] < MIN_TRANSFER_AMOUNT and unit["cargo"]["metal"] < MIN_TRANSFER_AMOUNT):
+        action_mask[8] = MASK_EPS
+
 
     #Dig
     #TODO: Needs to be enemy lichen
     if unit["power"] < dig_cost or factory_occupancy_mask[x, y] == 1 or (ice[x, y] == 0 and ore[x, y] == 0 and rubble[x, y] == 0) or lichen[x, y] > 0:
-        action_mask[6] = MASK_EPS
+        action_mask[9] = MASK_EPS
 
     #Power
-    #TODO: Check if factory has enough power
     if not can_transfer_to_tile(x, y, factory_occupancy_mask, "center") or factory_power[x, y] < FACTORY_MIN_POWER:
-        action_mask[7] = MASK_EPS
+        action_mask[10] = MASK_EPS
 
-    #TODO: Add for 8 and 9 as well?
-
-    #if factory_occupancy_mask[x, y] == 1:
-    #    action_mask[10] = MASK_EPS
 
     return action_mask
 

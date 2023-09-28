@@ -25,9 +25,7 @@ class action_wrapper(gym.ActionWrapper):
         units = obs["units"][player].values()
         factories = obs["factories"][player].values()
 
-        state = self.last_state_p0 if player == "player_0" else self.last_state_p1
-
-        transformed_action = unit_output_to_actions(actions["unit_action"], units, state, obs["board"]["rubble"], obs["board"]["ice"], obs["board"]["ore"]) #Second channel is always factory_map
+        transformed_action = unit_output_to_actions(actions["unit_action"], units) #Second channel is always factory_map
 
         transformed_action = transformed_action | factory_output_to_actions(actions["factory_action"], factories)
 

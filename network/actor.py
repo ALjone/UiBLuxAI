@@ -4,30 +4,35 @@ from torch import nn
 from .blocks import ConvBlock
 
 
-class actor(nn.Module):
-    def __init__(self, intput_channels, unit_action_space:int, n_blocks:int, intermediate_channels:int, use_batch_norm = False) -> None:
-        super(actor, self).__init__()
+class Actor(nn.Module):
+    def __init__(self, input_channels, unit_action_space:int, n_blocks:int, intermediate_channels:int, kernel_size) -> None:
+        super(Actor, self).__init__()
         
         layer = ConvBlock
+
+        padding = 1 if kernel_size == 3 else 2
 
         blocks = []
 
         #Make shared part
-        blocks.append(nn.Conv2d(intput_channels, intermediate_channels, kernel_size=5, padding = 2))
+        blocks.append(nn.Conv2d(input_channels, intermediate_channels, kernel_size=kernel_size, padding = padding))
         blocks.append(nn.LeakyReLU())
         for _ in range(n_blocks):
-            blocks.append(layer(intermediate_channels, intermediate_channels, kernel_size=5))
-            if use_batch_norm:
-                blocks.append(nn.BatchNorm2d(intermediate_channels))
-
+            blocks.append(layer(intermediate_channels, intermediate_channels, kernel_size=kernel_size))
 
         #Make global features part
 
         self.conv = nn.Sequential(*blocks)
 
-        self.unit_output = nn.Conv2d(intermediate_channels, unit_action_space, 1)
-        
-        self.factory_output = nn.Conv2d(intermediate_channels, 4, 1)
+        self.unit_output = nn.Sequential(nn.Conv2d(intermediate_channels, intermediate_channels, kernel_size, padding = padding),
+                                         nn.LeakyReLU(),
+                                         nn.Conv2d(intermediate_channels, unit_action_space, 1))
+        #self.unit_output = nn.Conv2d(intermediate_channels, unit_action_space, 1)
+
+        self.factory_output = nn.Sequential(nn.Conv2d(intermediate_channels, intermediate_channels, kernel_size, padding = padding),
+                                         nn.LeakyReLU(),
+                                         nn.Conv2d(intermediate_channels, 4, 1))
+        #self.factory_output = nn.Conv2d(intermediate_channels, 4, 1)
 
     def forward(self, image_features: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         if len(image_features.shape) == 3:

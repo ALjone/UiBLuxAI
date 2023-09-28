@@ -2,15 +2,16 @@ import torch
 from torch import nn
 
 
-class critic(nn.Module):
-    def __init__(self, intput_channels, intermediate_channels, activation = nn.LeakyReLU()) -> None:
-        super(critic, self).__init__()
+class Critic(nn.Module):
+    def __init__(self, intput_channels, intermediate_channels, n_blocks, kernel_size, activation = nn.LeakyReLU()) -> None:
+        super(Critic, self).__init__()
         
+        padding = 1 if kernel_size == 3 else 2
         blocks = []
-        blocks.append(nn.Conv2d(intput_channels, intermediate_channels, kernel_size = 5, padding = 1))
+        blocks.append(nn.Conv2d(intput_channels, intermediate_channels, kernel_size = kernel_size, padding = padding))
         blocks.append(activation)
-        for _ in range(6):
-            blocks.append(nn.Conv2d(intermediate_channels, intermediate_channels, kernel_size=5, padding = 1))
+        for _ in range(n_blocks):
+            blocks.append(nn.Conv2d(intermediate_channels, intermediate_channels, kernel_size=kernel_size, padding = padding))
             blocks.append(activation)
         blocks.append(nn.Conv2d(intermediate_channels, 64, kernel_size=1))
         blocks.append(activation)

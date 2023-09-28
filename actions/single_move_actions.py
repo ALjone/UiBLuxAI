@@ -109,8 +109,7 @@ def move_to_closest_thing(res_map, unit_x, unit_y, rubble):
     return move(dir, 0, 1)
    
 
-def transfer_to_closest_thing(res_map, unit_x, unit_y, res_idx, rubble):
-    dir = find_dir_to_closest(res_map, unit_x, unit_y, rubble)
-    dir = ["Center", "North", "East", "South", "West"].index(dir)
+def transfer_all_res_to_dir(dir, res_idx):
+    dir = ["center", "north", "east", "south", "west"].index(dir.lower())
     
     return transfer(res_idx, 2000, dir, 0)

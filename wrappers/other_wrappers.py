@@ -63,9 +63,10 @@ class SinglePlayerEnv(gym.Wrapper):
 
         opp_factories = self.env.state.factories[opp_agent]
 
-        for k in opp_factories:
-            factory = opp_factories[k]
-            factory.cargo.water = 1000 # set enemy factories to have 1000 water to keep them alive the whole around and treat the game as single-agent 
+        if self.config["keep_opponent_alive"]:
+            for k in opp_factories:
+                factory = opp_factories[k]
+                factory.cargo.water = 1000 # set enemy factories to have 1000 water to keep them alive the whole around and treat the game as single-agent 
         
         obs, reward, done, info = self.env.step(action)
         self.prev_actions = action

@@ -1,21 +1,21 @@
 #Training
-max_episodes: 50000000
+total_timesteps: 10000000
 
 #PPO
-num_steps_per_env: 32
-num_minibatches: 4
-lr: 0.00025
-gamma: 0.97
+num_steps_per_env: 64
+num_minibatches: 2
+lr: 1.0e-3 #0.00025
+gamma: 0.98
 epochs_per_batch: 4
-eps_clip: 0.2
+eps_clip: 0.1
 lmbda: 0.95
 ent_coef: 0.001
-vf_coef: 0.5
+vf_coef: 1
 max_grad_norm: 0.5
 use_target_kl: True
 target_kl_max: 0.3
 target_kl_min : 0
-anneal_lr: False
+anneal_lr: True
 norm_adv: True
 clip_loss_value: False #According to 37 PPO implementation details, this should be false
 mode_or_sample: sample #sample
@@ -26,18 +26,22 @@ parallel_envs: 16
 
 #Environment
 map_size: 32
-n_factories: 2
+n_factories_min: 2
+n_factories_max: 2
 max_game_length: 2000
 
+self_play: False
+keep_opponent_alive: True
+
 #Architecture - Actor
-actor_n_blocks: 16
-actor_intermediate_channels: 32
+kernel_size: 5
+actor_n_blocks: 8
+actor_intermediate_channels: 64
 actor_use_batch_norm: False
 
-#Architecture - Teacher
-teacher_actor_n_blocks: 4
-teacher_actor_intermediate_channels: 64
-teacher_actor_use_batch_norm: False
+#Architecture - Critic
+critic_n_blocks: 12
+critic_intermediate_channels: 32
 
 #Teacher stuff:
 KL_factor: 0
@@ -53,12 +57,14 @@ log_rate: 20000 #Log every 100k steps ish
 
 
 #Reward
-unit_punishment: 0 #0.05
+light_reward: 0.1 #0.05
+heavy_reward: 1
 rubble_reward: 0.005
-scaling_ice: 0.025 #Value of ice
-scaling_ore: 0.0005
-scaling_water: 0.05
-scaling_metal: 0.025
+scaling_ice: 0.01 #Value of ice
+scaling_ore: 0.01
+scaling_water: 0.02
+scaling_metal: 0.02
 
 factory_lost: 0 #0.5
 scaling_win: 0
+end_of_game_reward: 0 #50

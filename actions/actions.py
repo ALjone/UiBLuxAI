@@ -1,4 +1,4 @@
-from actions.single_move_actions import move, move_to_closest_thing, transfer_to_closest_thing, dig, pickup
+from actions.single_move_actions import move, transfer_all_res_to_dir, dig, pickup
 from actions.action_utils import where_will_unit_end_up
 import numpy as np
 
@@ -7,7 +7,12 @@ MOVES = [   "No move",
             "Move East", 
             "Move South", 
             "Move West",
-            "Transfer max to closest factory",
+            #There's never a use for transfer max center. Almost(?)
+            "Transfer max North",
+            "Transfer max East",
+            "Transfer max South",
+            "Transfer max West",
+            #"Transfer max to closest factory",
             "Dig",
             "Pick up power",
             #"ore",
@@ -21,9 +26,8 @@ FACTORY_ACTION_IDXS = 4
 
 
 
-def _unit_idx_to_action(idx, unit_x, unit_y, state, max_res_idx, rubble, ice, ore):
+def _unit_idx_to_action(idx, max_res_idx):
     assert 0 < idx < UNIT_ACTION_IDXS #Bigger than 0 because 0 should be handled as "Don't submit an action"
-    factory_map = state[2] #NOTE: State[2] is factory occupancy mask for friendly.
     
     #NOTE: Normal MOVE commands
     if 1 <= idx < 5:
@@ -31,33 +35,32 @@ def _unit_idx_to_action(idx, unit_x, unit_y, state, max_res_idx, rubble, ice, or
     
     #NOTE: Transfer
     if idx == 5:
-        return transfer_to_closest_thing(factory_map, unit_x, unit_y, max_res_idx, rubble)
-    
-    #NOTE: Dig
+        return transfer_all_res_to_dir("north", max_res_idx)
     if idx == 6:
+        return transfer_all_res_to_dir("east", max_res_idx)
+    if idx == 7:
+        return transfer_all_res_to_dir("south", max_res_idx)
+    if idx == 8:
+        return transfer_all_res_to_dir("west", max_res_idx)
+
+    #NOTE: Dig
+    if idx == 9:
         return dig()
     
     #NOTE: Pickup power
-    if idx == 7:
-        return pickup("power")
-    
-    if idx == 8:
-        return move_to_closest_thing(ice, unit_x, unit_y, rubble)
-    if idx == 9:
-        return move_to_closest_thing(ore, unit_x, unit_y, rubble)
     if idx == 10:
-        return move_to_closest_thing(factory_map, unit_x, unit_y, rubble)
-    
+        return pickup("power")
+
     raise ValueError("Should've returned by now???")
 
 
-def do_stuff_depending_on_action_idx(unit, unit_output, state, rubble, ice, ore, pos_to_units_there, actions):
+def do_stuff_depending_on_action_idx(unit, unit_output, pos_to_units_there, actions):
     x, y = unit["pos"][0], unit["pos"][1]
     cargo = [unit["cargo"]["ice"], unit["cargo"]["ore"], unit["cargo"]["water"], unit["cargo"]["metal"]]
     max_res_idx = np.argmax(cargo).item()
     action_idx = unit_output[x, y].item()
     if action_idx != 0: #Do nothing if == 0
-        action = _unit_idx_to_action(action_idx, x, y, state, max_res_idx, rubble, ice, ore)
+        action = _unit_idx_to_action(action_idx ,max_res_idx)
         new_pos = where_will_unit_end_up(action, x, y)
     else:
         new_pos = (x, y)
@@ -70,7 +73,7 @@ def do_stuff_depending_on_action_idx(unit, unit_output, state, rubble, ice, ore,
         if action_idx != 0:
             actions[unit["unit_id"]] = [action]
 
-def unit_output_to_actions(unit_output, units, state, rubble, ice, ore):
+def unit_output_to_actions(unit_output, units):
     """Turns outputs from the model into action dicts for units"""
     pos_to_units_there = {}
     actions = {}
@@ -80,14 +83,14 @@ def unit_output_to_actions(unit_output, units, state, rubble, ice, ore):
         action_idx = unit_output[x, y].item()
         cargo = [unit["cargo"]["ice"], unit["cargo"]["ore"], unit["cargo"]["water"], unit["cargo"]["metal"]]
         max_res_idx = np.argmax(cargo).item()
-        if action_idx == 0 or where_will_unit_end_up(_unit_idx_to_action(action_idx, x, y, state, max_res_idx, rubble, ice, ore), x, y) == (x, y):
-            do_stuff_depending_on_action_idx(unit, unit_output, state, rubble, ice, ore, pos_to_units_there, actions)
+        if action_idx == 0 or where_will_unit_end_up(_unit_idx_to_action(action_idx ,max_res_idx), x, y) == (x, y):
+            do_stuff_depending_on_action_idx(unit, unit_output, pos_to_units_there, actions)
             units_processed.add(unit["unit_id"])
 
     for unit in units:
         if unit["unit_id"] in units_processed: continue
 
-        do_stuff_depending_on_action_idx(unit, unit_output, state, rubble, ice, ore, pos_to_units_there, actions)
+        do_stuff_depending_on_action_idx(unit, unit_output, pos_to_units_there, actions)
 
     #for new_pos, units in pos_to_units_there.items():
 

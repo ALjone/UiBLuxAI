@@ -50,7 +50,7 @@ class Agent():
     
     def get_action_probs(self, state):
         unit_action_probs, factory_action_probs = self.model.forward_actor(state["features"])
-        return torch.nn.functional.softmax(unit_action_probs, -1).squeeze(), torch.nn.functional.softmax(factory_action_probs, -1).squeeze()
+        return unit_action_probs.squeeze(), factory_action_probs.squeeze() #torch.nn.functional.softmax(unit_action_probs, -1).squeeze(), torch.nn.functional.softmax(factory_action_probs, -1).squeeze()
 
     def get_action_and_value(self, state, unit_action = None, factory_action = None):
         #NOTE: Assumes first channel is unit mask for our agent
@@ -58,7 +58,11 @@ class Agent():
         unit_action_probs, factory_action_probs  = self.model.forward_actor(state["features"])
         state_val = self.model.forward_critic(state["features"])
 
-        assert unit_action_probs.shape == state["invalid_unit_action_mask"].shape
+        if len(state["invalid_unit_action_mask"].shape) == 3:
+            state["invalid_unit_action_mask"] = state["invalid_unit_action_mask"].unsqueeze(0)
+            state["invalid_factory_action_mask"] = state["invalid_factory_action_mask"].unsqueeze(0)
+
+        assert unit_action_probs.shape == state["invalid_unit_action_mask"].shape, f"Unit shape: {unit_action_probs.shape} Mask shape: {state['invalid_unit_action_mask'].shape}"
         unit_dist = CategoricalMasked(logits = unit_action_probs, masks = state["invalid_unit_action_mask"], device = self.device)
         # Categorical(logits = torch.where(state["invalid_unit_action_mask"].to(torch.bool).to(self.device), unit_action_probs, torch.tensor(-1e+8)), device = self.device)
         factory_dist = CategoricalMasked(logits = factory_action_probs, masks = state["invalid_factory_action_mask"], device = self.device)

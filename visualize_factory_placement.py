@@ -16,7 +16,7 @@ def play_episode(env: LuxAI_S2):
 def run(config):
     #Always run visualization on CPU
     config["device"] = torch.device("cpu")
-    env = LuxAI_S2(verbose=1, collect_stats=True, map_size = config["map_size"], MIN_FACTORIES = config["n_factories"], MAX_FACTORIES = config["n_factories"], validate_action_space = True)
+    env = LuxAI_S2(verbose=1, collect_stats=True, map_size = config["map_size"], MIN_FACTORIES = config["n_factories_min"], MAX_FACTORIES = config["n_factories_max"], validate_action_space = True)
     env.reset() #NOTE: Reset here to initialize stats
     env = SinglePlayerEnv(env, config)
     

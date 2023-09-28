@@ -1,7 +1,7 @@
 import torch.nn as nn
-from .actor import actor
+from .actor import Actor
 #from .actor_experimental import actor
-from .critic import critic
+from .critic import Critic
 
 class ActorCritic(nn.Module):
     def __init__(self, unit_action_dim, config):
@@ -9,8 +9,8 @@ class ActorCritic(nn.Module):
         self.device = config["device"]
 
         self.channels = 33
-        self.actor = actor(self.channels, unit_action_dim, config["actor_n_blocks"], config["actor_intermediate_channels"], use_batch_norm=config["actor_use_batch_norm"]).to(self.device)
-        self.critic = critic(self.channels, intermediate_channels=config["actor_intermediate_channels"]).to(self.device)
+        self.actor = Actor(self.channels, unit_action_dim, config["actor_n_blocks"], config["actor_intermediate_channels"], kernel_size = config["kernel_size"]).to(self.device)
+        self.critic = Critic(self.channels, intermediate_channels=config["actor_intermediate_channels"], n_blocks = config["critic_n_blocks"], kernel_size = config["kernel_size"]).to(self.device)
 
     def forward_actor(self, *args):
         return self.actor(*args)

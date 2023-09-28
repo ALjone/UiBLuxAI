@@ -4,6 +4,7 @@ import numpy as np
 
 from actions.actions import UNIT_ACTION_IDXS
 from actions.action_masking import unit_action_mask, factory_action_mask
+from wrappers.observations_config import FACTORY_MAX_POWER, FACTORY_MAX_BASE_RES, FACTORY_MAX_RES
 
 DIM_NAMES = ["Unit mask player 0", "Unit mask player 1", "Factory mask player 0", "Factory mask player 1", "Unit power", "Unit ice", "Unit ore", "Factory power", 
             "Factory ice", "Factory ore", "Factory water", "Factory metal", "Rubble on board", "Ore on board", "Ice on board", "Player 0 lichen", "Player 1 lichen", "Heavy units", "Light units", 
@@ -113,11 +114,11 @@ class StateSpaceVol2(gym.ObservationWrapper):
                     factory_mask[x, y] = 1
                     #Factories have no max capacity
                     #TODO: Look at tanh?
-                    factory_power[x-1:x+2, y-1:y+2] = min(1, factory["power"]/5000)              
-                    factory_ice[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ice"]/2000)
-                    factory_ore[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ore"]/2000)
-                    factory_water[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["water"]/1000)
-                    factory_metal[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["metal"]/1000)
+                    factory_power[x-1:x+2, y-1:y+2] = min(1, factory["power"]/FACTORY_MAX_POWER)              
+                    factory_ice[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ice"]/FACTORY_MAX_BASE_RES)
+                    factory_ore[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["ore"]/FACTORY_MAX_BASE_RES)
+                    factory_water[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["water"]/FACTORY_MAX_RES)
+                    factory_metal[x-1:x+2, y-1:y+2] = min(1, factory["cargo"]["metal"]/FACTORY_MAX_RES)
 
             board_rubble = state["board"]["rubble"]/self.env.state.env_cfg.MAX_RUBBLE
             board_ice = state["board"]["ice"]
@@ -207,8 +208,8 @@ class StateSpaceVol2(gym.ObservationWrapper):
         ore_on_map = np.tile(min(1, np.sum(state[player_0_id]["board"]["ore"]) / 50), (self.map_size, self.map_size))
 
         #All these must be flipped
-        friendly_factories = np.tile(len(state[player_0_id]["factories"][player_0_id].values()) /4, (self.map_size, self.map_size))
-        enemy_factories = np.tile(len(state[player_0_id]["factories"][player_1_id].values()) /4, (self.map_size, self.map_size))
+        friendly_factories = np.tile(len(state[player_0_id]["factories"][player_0_id].values()) / 5, (self.map_size, self.map_size))
+        enemy_factories = np.tile(len(state[player_0_id]["factories"][player_1_id].values()) / 5, (self.map_size, self.map_size))
 
         p0_water = 0
         p0_ice = 0

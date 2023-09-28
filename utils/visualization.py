@@ -66,14 +66,26 @@ def visualize_network_output(unit_action, factory_action, unit_mask, factory_mas
     return data
 
 
-def visualize_critic_and_returns(returns, critic_output):
-    fig, axs = plt.subplots(3, 1)
-    axs[0].set_title("Returns")
-    axs[1].set_title("Critic guess")
-    axs[2].set_title("Difference")
+def visualize_critic_and_returns(returns, critic_output, rewards, single_plot=True):
+    if single_plot:
+        plt.title("Returns, Critic and Difference")
+        plt.plot(returns, label='Returns')
+        plt.plot(critic_output, label='Critic Output')
+        plt.plot(np.abs(np.array(returns).squeeze() - np.array(critic_output).squeeze()), label='Difference')
+        plt.legend()
+        plt.show()
+    else:
+        fig, axs = plt.subplots(3, 1, sharey=True)
+        axs[0].set_title("Returns")
+        axs[1].set_title("Critic guess")
+        axs[2].set_title("Difference")
 
-    axs[0].plot(returns)
-    axs[1].plot(critic_output)
-    axs[2].plot(np.abs(np.array(returns).squeeze()-np.array(critic_output).squeeze()))
+        axs[0].plot(returns)
+        axs[1].plot(critic_output)
+        axs[2].plot(np.abs(np.array(returns).squeeze() - np.array(critic_output).squeeze()))
 
+        plt.show()
+
+
+    plt.plot(rewards)
     plt.show()

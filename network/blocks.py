@@ -3,9 +3,8 @@ import torch
 import torch.nn.functional as F
 
 class SELayer(nn.Module):
-    def __init__(self, n_channels: int, rescale_input: bool, reduction: int = 16):
+    def __init__(self, n_channels: int, reduction: int = 16):
         super(SELayer, self).__init__()
-        self.rescale_input = rescale_input
         self.fc = nn.Sequential(
             nn.Linear(n_channels, n_channels // reduction, bias=False),
             nn.ReLU(inplace=True),
@@ -16,15 +15,12 @@ class SELayer(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         b, c, _, _ = x.shape
         # Average feature planes
-        if self.rescale_input:
-            y = torch.flatten(x, start_dim=-2, end_dim=-1).sum(dim=-1)
-        else:
-            y = torch.flatten(x, start_dim=-2, end_dim=-1).mean(dim=-1)
+        y = torch.flatten(x, start_dim=-2, end_dim=-1).mean(dim=-1)
         y = self.fc(y.view(b, c)).view(b, c, 1, 1)
         return x * y.expand_as(x)
 
 class ConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size = 5, reduction: int = 4, activation = nn.GELU()):
+    def __init__(self, in_channels, out_channels, kernel_size = 5, reduction: int = 4, activation = nn.LeakyReLU()):
         """A copy of the conv block from last years winner. Reduction is how many times to reduce the size in the SE"""
         super().__init__()
         assert kernel_size%2 == 1 #Need kernel size to be odd in order to preserve size
@@ -37,9 +33,9 @@ class ConvBlock(nn.Module):
 
     def forward(self, x):
         y = self.activation(self.conv0(x))
-        y = self.conv1(y) #self.activation(self.conv1(y)) #NOTE: No activiation due to flg
+        y = self.conv1(y)
         y = self.SE(y)
 
         x = y + x
 
-        return x
+        return self.activation(x)
