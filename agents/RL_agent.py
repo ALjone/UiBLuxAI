@@ -1,8 +1,7 @@
-from actions.actions import UNIT_ACTION_IDXS
 from torch.distributions import Categorical
 import torch
-from network.ActorCritic import ActorCritic
-
+from network.doubleconv_agent import double_conv_agent
+from actions.actions import UNIT_ACTION_IDXS
 
 # ALGO LOGIC: initialize agent here:
 class CategoricalMasked(Categorical):
@@ -23,6 +22,7 @@ class Agent():
     def __init__(self, config) -> None:
         self.device = config["device"]
 
+        self.mean_entropy = config["mean_entropy"]
         self.sample_method = config["mode_or_sample"]
         assert self.sample_method in ["mode", "sample"], f"Mode or sample must be either mode or sample, found: {self.sample_method}"
 
@@ -30,13 +30,14 @@ class Agent():
         print("Running with sampling method:", self.sample_method)
 
 
-        self.model = ActorCritic(UNIT_ACTION_IDXS, config)
-        print("Actor has:", self.model.count_actor_parameters(), "parameters")
-        print("Critic has:", self.model.count_critic_parameters(), "parameters")
+        self.model = double_conv_agent(config)
+        print("Model has:", self.model.count_parameters(), "parameters")
 
         if config["path"] is not None:
-            self.model.load_state_dict(torch.load(config["path"]))
+            state_dict = torch.load(config["path"])
+            self.model.load_state_dict(state_dict)
             print("Successfully loaded model, this is not a fresh run")
+    
         else:
             print("This is a fresh run! Good luck")
 
@@ -45,65 +46,78 @@ class Agent():
         torch.save(self.model.state_dict(), checkpoint_path)
     
     def get_value(self, image_features):
-        state_val = self.model.forward_critic(image_features)
+        _, _, _,  state_val = self.model(image_features)
         return state_val
     
     def get_action_probs(self, state):
-        unit_action_probs, factory_action_probs = self.model.forward_actor(state["features"])
-        return unit_action_probs.squeeze(), factory_action_probs.squeeze() #torch.nn.functional.softmax(unit_action_probs, -1).squeeze(), torch.nn.functional.softmax(factory_action_probs, -1).squeeze()
+        factory_logits, light_unit_logits, heavy_unit_logits, _ = self.model(state["features"])
+        return factory_logits.squeeze(), light_unit_logits.squeeze(), heavy_unit_logits.squeeze()
 
-    def get_action_and_value(self, state, unit_action = None, factory_action = None):
+    def get_action_and_value(self, state, factory_action = None, light_unit_action = None, heavy_unit_action = None, return_dist = False):
         #NOTE: Assumes first channel is unit mask for our agent
 
-        unit_action_probs, factory_action_probs  = self.model.forward_actor(state["features"])
-        state_val = self.model.forward_critic(state["features"])
+        factory_logits, light_unit_logits, heavy_unit_logits, state_val  = self.model(state["features"])
+
 
         if len(state["invalid_unit_action_mask"].shape) == 3:
             state["invalid_unit_action_mask"] = state["invalid_unit_action_mask"].unsqueeze(0)
             state["invalid_factory_action_mask"] = state["invalid_factory_action_mask"].unsqueeze(0)
+            state["unit_mask"] = state["unit_mask"].unsqueeze(0)
+            state["factory_mask"] = state["factory_mask"].unsqueeze(0)
 
-        assert unit_action_probs.shape == state["invalid_unit_action_mask"].shape, f"Unit shape: {unit_action_probs.shape} Mask shape: {state['invalid_unit_action_mask'].shape}"
-        unit_dist = CategoricalMasked(logits = unit_action_probs, masks = state["invalid_unit_action_mask"], device = self.device)
-        # Categorical(logits = torch.where(state["invalid_unit_action_mask"].to(torch.bool).to(self.device), unit_action_probs, torch.tensor(-1e+8)), device = self.device)
-        factory_dist = CategoricalMasked(logits = factory_action_probs, masks = state["invalid_factory_action_mask"], device = self.device)
+        if return_dist:
+            factory_mask = state["factory_mask"].unsqueeze(-1).repeat_interleave(4, -1)
+            unit_mask = state["unit_mask"].unsqueeze(-1).repeat_interleave(11, -1)
+            
+            factory_dist_for_KL = torch.nn.LogSoftmax(dim = 3)(factory_logits)*factory_mask
 
-        if unit_action is None:
+            light_unit_dist_for_KL = torch.nn.LogSoftmax(dim = 3)(light_unit_logits)*unit_mask
+
+            heavy_unit_dist_for_KL = torch.nn.LogSoftmax(dim = 3)(heavy_unit_logits)*unit_mask
+
+        else:
+            factory_dist_for_KL = None
+            light_unit_dist_for_KL = None
+            heavy_unit_dist_for_KL = None
+
+        factory_dist = CategoricalMasked(logits = factory_logits, masks = state["invalid_factory_action_mask"], device = self.device)
+        
+        light_unit_dist = CategoricalMasked(logits = light_unit_logits, masks = state["invalid_unit_action_mask"], device = self.device)
+        heavy_unit_dist = CategoricalMasked(logits = heavy_unit_logits, masks = state["invalid_unit_action_mask"], device = self.device)
+        
+        if light_unit_action is None:
             if self.sample_method == "mode":
-                unit_action = unit_dist.mode
                 factory_action = factory_dist.mode
-            else:
-                unit_action = unit_dist.sample()
+                light_unit_action = light_unit_dist.mode
+                heavy_unit_action = heavy_unit_dist.mode
+            elif self.sample_method == "sample":
                 factory_action = factory_dist.sample()
+                light_unit_action = light_unit_dist.sample()
+                heavy_unit_action = heavy_unit_dist.sample()
 
-        unit_action_logprob = (unit_dist.log_prob(unit_action) * state["unit_mask"]).sum((1, 2))
         factory_action_logprob = (factory_dist.log_prob(factory_action) * state["factory_mask"]).sum((1, 2))
+        light_unit_action_logprob = (light_unit_dist.log_prob(light_unit_action) * state["unit_mask"]).sum((1, 2))
+        heavy_unit_action_logprob = (heavy_unit_dist.log_prob(heavy_unit_action) * state["unit_mask"]).sum((1, 2))
 
-        unit_entropy = (unit_dist.entropy() * state["unit_mask"]).sum((1, 2))
         factory_entropy = (factory_dist.entropy() * state["factory_mask"]).sum((1, 2))
+        light_unit_entropy = (light_unit_dist.entropy() * state["unit_mask"]).sum((1, 2))
+        heavy_unit_entropy = (heavy_unit_dist.entropy() * state["unit_mask"]).sum((1, 2))
 
-        return unit_action, unit_action_logprob, unit_entropy, factory_action, factory_action_logprob, factory_entropy, state_val
+        return  factory_action, factory_action_logprob, factory_entropy, factory_dist_for_KL, \
+                light_unit_action, light_unit_action_logprob, light_unit_entropy, light_unit_dist_for_KL, \
+                heavy_unit_action,  heavy_unit_action_logprob,  heavy_unit_entropy, heavy_unit_dist_for_KL, \
+                state_val
 
-    
-    def get_action(self, obs):
-        if len(obs["features"].shape) == 3:
-            for key, item in obs.items():
-                obs[key] = torch.tensor(item).unsqueeze(0)
-
-        unit_action, _, _, factory_action, _, _, _ = self.get_action_and_value(obs)
-
-        return unit_action.squeeze().cpu().numpy(), factory_action.squeeze().cpu().numpy()
 
     def get_dist_and_value(self, features: torch.Tensor, unit_mask:torch.Tensor, factory_mask: torch.Tensor):
-        unit_action_probs, factory_action_probs = self.model.forward_actor(features)
-        state_val = self.model.forward_critic(features)
+        factory_logits, light_unit_logits, heavy_unit_logits, state_val = self.model(features)
 
-        unit_mask = unit_mask.unsqueeze(-1).repeat_interleave(11, -1)
         factory_mask = factory_mask.unsqueeze(-1).repeat_interleave(4, -1)
+        unit_mask = unit_mask.unsqueeze(-1).repeat_interleave(UNIT_ACTION_IDXS, -1)
 
-        unit_dist = torch.nn.LogSoftmax(dim = 3)(unit_action_probs)*unit_mask
-        #unit_dist = unit_dist[unit_mask.to(torch.bool).flatten(1)]
+        factory_dist = torch.nn.LogSoftmax(dim = 3)(factory_logits)*factory_mask
+        light_unit_dist = torch.nn.LogSoftmax(dim = 3)(light_unit_logits)*unit_mask
+        heavy_unit_dist = torch.nn.LogSoftmax(dim = 3)(heavy_unit_logits)*unit_mask
 
-        factory_dist = torch.nn.LogSoftmax(dim = 3)(factory_action_probs)*factory_mask
-        #factory_dist = factory_dist[factory_mask.to(torch.bool).flatten(1)]
 
-        return unit_dist, factory_dist, state_val
+        return factory_dist, light_unit_dist, heavy_unit_dist, state_val

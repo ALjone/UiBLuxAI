@@ -40,20 +40,20 @@ class StateSpaceVol2(gym.ObservationWrapper):
         #NOTE: could not broadcast errors often stem from here
 
         self.observation_space = spaces.Dict({
-                                                "player_0" : spaces.Dict({
-                                                                "features": spaces.Box(0, 1, shape = (33, self.map_size, self.map_size)),
-                                                                "unit_mask" : spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
-                                                                "factory_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
-                                                                "invalid_unit_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, UNIT_ACTION_IDXS)),
-                                                                "invalid_factory_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, 4)),
-                                                            }),
-                                                "player_1" : spaces.Dict({
-                                                                "features": spaces.Box(0, 1, shape = (33, self.map_size, self.map_size)),
-                                                                "unit_mask" : spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
-                                                                "factory_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
-                                                                "invalid_unit_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, UNIT_ACTION_IDXS)),
-                                                                "invalid_factory_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, 4)),
-                                                            })})
+                                            "player_0" : spaces.Dict({
+                                                            "features": spaces.Box(0, 1, shape = (33, self.map_size, self.map_size)),
+                                                            "unit_mask" : spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
+                                                            "factory_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
+                                                            "invalid_unit_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, UNIT_ACTION_IDXS)),
+                                                            "invalid_factory_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, 4)),
+                                                        }),
+                                            "player_1" : spaces.Dict({
+                                                            "features": spaces.Box(0, 1, shape = (33, self.map_size, self.map_size)),
+                                                            "unit_mask" : spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
+                                                            "factory_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size)),
+                                                            "invalid_unit_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, UNIT_ACTION_IDXS)),
+                                                            "invalid_factory_action_mask": spaces.Box(0, 1, shape=(self.map_size, self.map_size, 4)),
+                                                        })})
     def _image_features(self, state):
             player_0_id = "player_0"
             player_1_id = "player_1"
@@ -209,7 +209,7 @@ class StateSpaceVol2(gym.ObservationWrapper):
 
         #All these must be flipped
         friendly_factories = np.tile(len(state[player_0_id]["factories"][player_0_id].values()) / 5, (self.map_size, self.map_size))
-        enemy_factories = np.tile(len(state[player_0_id]["factories"][player_1_id].values()) / 5, (self.map_size, self.map_size))
+        enemy_factories = np.tile(len(state[player_1_id]["factories"][player_1_id].values()) / 5, (self.map_size, self.map_size))
 
         p0_water = 0
         p0_ice = 0

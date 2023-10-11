@@ -9,9 +9,6 @@ def load_config(change_dict = {}, path = "config.yml"):
     config["batch_size"] = config["parallel_envs"]*config["num_steps_per_env"]
     config["mini_batch_size"] = int(config["batch_size"] // config["num_minibatches"])
 
-    if not (config["mini_batch_size"] & (config["mini_batch_size"]-1) == 0):
-        print("Running with a non-power-of-two batch size!")
-
     
     if not config["device"].lower() in ["cpu", "cuda", "mps"]:
         raise ValueError("Expected device in Config to be either 'CPU' or 'CUDA', but found:", config["device"])
@@ -21,12 +18,14 @@ def load_config(change_dict = {}, path = "config.yml"):
     elif config["device"] == "mps":
         config["device"] = torch.device("mps")#torch.device("mps")
     else:
+        if config["device"] == "cuda":
+            raise ValueError("CUDA not available...")
         config["device"] = torch.device("cpu")
 
     for key, val in change_dict.items():
         config[key] = val
 
-    if config["path"] == "None":
+    if config["path"].lower() == "none":
         config["path"] = None
 
     return config
@@ -35,11 +34,11 @@ def save_with_retry(agent, path, retries=3, delay=2):
     for _ in range(retries):
         try:
             agent.save(path)
-            return
+            return True
         except RuntimeError as e:
             #print(f"Save failed: {e}, retrying...")
             time.sleep(delay)
-
+    return False
 
 def formate_time(seconds):
     seconds = int(seconds)
@@ -67,3 +66,18 @@ def find_closest_tile(tile_map, unit_pos):
     )   
 
     return closest_tile 
+
+
+def rotate_tensor(tensor, k):
+    """
+    Rotates a 2D tensor by 90 degrees k times.
+    """
+    return tensor
+    k = k % 4
+    idxs = []
+    for idx, shape in enumerate(tensor.shape):
+        if shape == 48:
+            idxs.append(idx)
+    assert idxs != [], "Is map size not 48???"
+
+    return torch.rot90(tensor, k, idxs)

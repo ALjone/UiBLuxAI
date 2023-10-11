@@ -4,7 +4,6 @@ import gym
 import numpy as np
 from scipy.spatial.distance import cdist
 from actions.actions import UNIT_ACTION_IDXS
-import scipy
 
 class SinglePlayerEnv(gym.Wrapper):
     def __init__(self, env: gym.Env, config) -> None:
@@ -14,6 +13,10 @@ class SinglePlayerEnv(gym.Wrapper):
         super().__init__(env)
 
         self.config = config
+        self.games_played = 0
+
+    def update_config(self, new_config):
+        self.config = new_config
 
     #NOTE: Thanks to ChatGPT
     def get_closest(self, ice, ore, valid_spawns):
@@ -52,8 +55,6 @@ class SinglePlayerEnv(gym.Wrapper):
 
                 best_coord = self.get_closest(ice, ore, potential_spawns)
 
-
-
                 return dict(spawn=best_coord, metal=150, water=150)
             return dict()
 
@@ -63,11 +64,6 @@ class SinglePlayerEnv(gym.Wrapper):
 
         opp_factories = self.env.state.factories[opp_agent]
 
-        if self.config["keep_opponent_alive"]:
-            for k in opp_factories:
-                factory = opp_factories[k]
-                factory.cargo.water = 1000 # set enemy factories to have 1000 water to keep them alive the whole around and treat the game as single-agent 
-        
         obs, reward, done, info = self.env.step(action)
         self.prev_actions = action
 
@@ -76,17 +72,17 @@ class SinglePlayerEnv(gym.Wrapper):
         
         info = {}
         if done[agent]:
-            info["stats"] = self.env.state.stats[agent]
+            stats = {}
+            for category, dict_ in self.env.state.stats[agent].items():
+                stats[category] = {k: v/self.env.state.board.factories_per_team for k, v in dict_.items()}
+
+            info["stats"] = stats
             info["episode_length"] = self.env.state.real_env_steps
+            self.games_played += 1
 
         return obs, reward, done[agent], info
 
     def reset(self, **kwargs):
-        #TODO: Add exploring starts
-        #Using queues for each 100th timestep (100, 200, 300 etc.) #But maybe also skew it towards later stages
-        #Saving obs in these and loading from it 
-        #Decide in config how often to load from these
-
         obs = self.env.reset(**kwargs)
         step = 0
         while self.env.state.real_env_steps < 0:
@@ -95,10 +91,5 @@ class SinglePlayerEnv(gym.Wrapper):
             step += 1
         
         self.env.state.stats["player_0"]["max_value_observation"] = 0
-
-        self.env.state.stats["player_0"]["actions"] = {
-                                                        "factories": [0]*(3), #Minus one because the do nothing action is never registered here
-                                                        "units" : [0]*UNIT_ACTION_IDXS,
-                                                        "average_power_when_recharge": []
-                                                    }
+        
         return obs

@@ -1,15 +1,16 @@
 import torch
 from actions.actions import UNIT_ACTION_IDXS
 from agents.RL_agent import CategoricalMasked
-from network.ActorCritic import ActorCritic
+from network.doubleconv_agent import double_conv_agent
 
 
 class Opponent():
     def __init__(self, config) -> None:
         self.device = config["device"]
 
-        self.sample_method = "mode"
-        self.model = ActorCritic(UNIT_ACTION_IDXS, config)
+        self.model = double_conv_agent(config)
+        self.sample_method = config["mode_or_sample"]
+        assert self.sample_method in ["mode", "sample"], f"Mode or sample must be either mode or sample, found: {self.sample_method}"
         #del self.model.critic
 
     def save(self, checkpoint_path):
@@ -30,10 +31,14 @@ class Opponent():
         for key, val in state.items():
             state[key] = torch.tensor(val).to(self.device)
 
-        unit_action_probs, factory_action_probs = self.model.forward_actor(state["features"])
+        factory_logits, light_unit_logits, heavy_unit_logits, state_val = self.model(state["features"])
 
 
-        unit_dist = CategoricalMasked(logits = unit_action_probs, masks = state["invalid_unit_action_mask"], device = self.device)
-        factory_dist = CategoricalMasked(logits = factory_action_probs, masks = state["invalid_factory_action_mask"], device = self.device)
+        factory_dist = CategoricalMasked(logits = factory_logits, masks = state["invalid_factory_action_mask"], device = self.device)
+        light_unit_dist = CategoricalMasked(logits = light_unit_logits, masks = state["invalid_unit_action_mask"], device = self.device)
+        heavy_unit_dist = CategoricalMasked(logits = heavy_unit_logits, masks = state["invalid_unit_action_mask"], device = self.device)
 
-        return unit_dist.mode.squeeze().cpu().numpy(), factory_dist.mode.squeeze().cpu().numpy()
+        if self.sample_method == "sample":
+            return factory_dist.sample().squeeze().cpu().numpy(), light_unit_dist.sample().squeeze().cpu().numpy(), heavy_unit_dist.sample().squeeze().cpu().numpy(), state_val
+        elif self.sample_method == "mode":
+            return factory_dist.mode.squeeze().cpu().numpy(), light_unit_dist.mode.squeeze().cpu().numpy(), heavy_unit_dist.mode.squeeze().cpu().numpy(), state_val

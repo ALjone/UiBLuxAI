@@ -18,6 +18,7 @@ def single_unit_action_mask(unit, obs, state):
     factory_occupancy_mask = state[2]
     enemy_factory_occupancy_mask = state[3]
     factory_power = state[7]*FACTORY_MAX_POWER
+    lichen = state[15] > 0 #Own lichen mask
 
     #TODO: Look reaaaaaaally close if there are any bugs here
 
@@ -30,8 +31,6 @@ def single_unit_action_mask(unit, obs, state):
     rubble = obs["board"]["rubble"]
     ice = obs["board"]["ice"]
     ore = obs["board"]["ore"]
-    #TODO: !!!!! Should be own lichen eventually, not every lichen
-    lichen = obs["board"]["lichen"]
     #How much digging costs for this unit
     dig_cost = 5 if unit["unit_type"] == "LIGHT" else 60 
     #The base cost of moving for this unit

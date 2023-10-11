@@ -4,11 +4,38 @@ import numpy as np
 import matplotlib.pyplot as plt
 from wrappers.observation_wrapper import DIM_NAMES
 from actions.actions import MOVES
-def animate(imgs, video_name = "agents.gif"):
-    for _ in range(10):
-        imgs.append(imgs[-1])
 
-    imageio.mimsave(video_name, imgs, fps=100)
+from PIL import Image, ImageDraw, ImageFont
+
+def annotate_image(image, frame_number):
+    # Convert the image to a PIL Image
+    image_pil = Image.fromarray(np.uint8(image))
+    draw = ImageDraw.Draw(image_pil)
+    
+    # Choose some parameters to use for the annotation
+    font_size = 20
+    font = ImageFont.load_default()
+    text = f"Frame {frame_number}"
+    text_position = (image.shape[1] - 80, 10)
+    
+    # Annotate the image
+    draw.text(text_position, text, font=font, fill=(255, 255, 255))
+    
+    # Convert the PIL Image back to a numpy array
+    annotated_image = np.array(image_pil)
+    
+    return annotated_image
+
+def animate(imgs, video_name="agents.gif"):
+    annotated_imgs = []
+    for i, img in enumerate(imgs):
+        annotated_img = annotate_image(img, i)
+        annotated_imgs.append(annotated_img)
+    
+    for _ in range(10):
+        annotated_imgs.append(annotated_imgs[-1])
+    
+    imageio.mimsave(video_name, annotated_imgs, fps=100, loop = 0)
 
 def visualize_obs(state, step, save_img = False):
     image = state["features"].squeeze()
@@ -86,6 +113,30 @@ def visualize_critic_and_returns(returns, critic_output, rewards, single_plot=Tr
 
         plt.show()
 
+    plt.title("Rewards")
+    plt.plot(rewards, label = "Rewards")
+    plt.legend()
+    plt.show()
 
-    plt.plot(rewards)
+
+def visualize_stats(lichen_player, lichen_opponent, water):
+    plt.title("Stats")
+    
+    #Lichen
+    lichen_player = np.array(lichen_player)
+    lichen_opponent = np.array(lichen_opponent)
+    lichen_player_max = np.max(lichen_player)
+    lichen_opponent_max = np.max(lichen_opponent)
+    lichen_max = max(lichen_player_max, lichen_opponent_max)
+    lichen_player /= lichen_max
+    lichen_opponent /= lichen_max
+
+    plt.plot(lichen_player, label = f"Lichen player (Max {round(lichen_player_max.item())})")
+    plt.plot(lichen_opponent, label = f"Lichen Opponent(Max {round(lichen_opponent_max.item())})")
+    water = np.array(water)
+    water_max = np.max(water)
+    water /= water_max
+    plt.plot(water, label = f"Water (Max {round(water_max.item())})")
+    plt.legend()
+
     plt.show()

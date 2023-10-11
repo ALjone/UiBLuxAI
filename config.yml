@@ -2,69 +2,81 @@
 total_timesteps: 10000000
 
 #PPO
-num_steps_per_env: 64
+num_steps_per_env: 64 #Lower when selfplay
 num_minibatches: 2
-lr: 1.0e-3 #0.00025
-gamma: 0.98
+lr: 5.0e-4 #0.00025
+gamma: 0.9995
 epochs_per_batch: 4
 eps_clip: 0.1
 lmbda: 0.95
-ent_coef: 0.001
-vf_coef: 1
+ent_coef: 5.0e-4 #flg
+vf_coef: 0.2
 max_grad_norm: 0.5
 use_target_kl: True
-target_kl_max: 0.3
+target_kl_max: 0.03
 target_kl_min : 0
 anneal_lr: True
 norm_adv: True
 clip_loss_value: False #According to 37 PPO implementation details, this should be false
 mode_or_sample: sample #sample
+mean_entropy: False #False means sum
+
+anneal_gamma_lambda: False
 
 #Parallelization
 parallel_envs: 16
-
-
-#Environment
-map_size: 32
+map_size: 48
 n_factories_min: 2
-n_factories_max: 2
+n_factories_max: 5
 max_game_length: 2000
 
-self_play: False
-keep_opponent_alive: True
+#Opponent
+num_opponents: 1 #How many previous agents to save
+opponent_update_rate: 50000
 
-#Architecture - Actor
-kernel_size: 5
-actor_n_blocks: 8
+#Architecture
+kernel_size: 3
+n_res_blocks: 2
+n_cone_blocks: 4
 actor_intermediate_channels: 64
-actor_use_batch_norm: False
-
-#Architecture - Critic
-critic_n_blocks: 12
-critic_intermediate_channels: 32
+critic_intermediate_channels: 64
 
 #Teacher stuff:
-KL_factor: 0
-KL_steps_to_anneal: 5000000
-teacher_path: smaller_model_checkpoint.t
+KL_factor: 0 #according to last years winners
+KL_steps_to_anneal: 10000000 #Disabled if zero
+teacher_path: None
+
+teacher_actor_n_blocks: 8
+teacher_actor_intermediate_channels: 32
+
 
 #Other 
 device: cuda #cuda, cpu, mps
-path: None #most_recent.t
-save_path: bigger_model.t #model.t
+path: None
+save_path: models/best_model.t #model.t
 log_to_wb: True
-log_rate: 20000 #Log every 100k steps ish
+log_rate: 50000 #Log every 100k steps ish
 
 
 #Reward
-light_reward: 0.1 #0.05
-heavy_reward: 1
-rubble_reward: 0.005
-scaling_ice: 0.01 #Value of ice
-scaling_ore: 0.01
-scaling_water: 0.02
-scaling_metal: 0.02
 
-factory_lost: 0 #0.5
-scaling_win: 0
-end_of_game_reward: 0 #50
+# 1 means use the ones below
+# 2 means lichen + factory lost
+# 3 means +1/-1 only
+phases: [1, 3]
+factory_lost: 0.3
+anneal_rewards: False #This is only in effect for phase 1 and 2
+
+reward_scale_start: 1 #Should be 1
+#Unit rewards are per timestep
+light_reward: 0.0015 
+heavy_reward: 0.015
+
+
+rubble_reward: 0 #0.0025
+scaling_ice: 0.005 #Value of ice
+scaling_ore: 0.0025
+scaling_water: 0.05
+scaling_metal: 0.025
+
+scaling_win: 1

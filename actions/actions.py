@@ -1,5 +1,4 @@
 from actions.single_move_actions import move, transfer_all_res_to_dir, dig, pickup
-from actions.action_utils import where_will_unit_end_up
 import numpy as np
 
 MOVES = [   "No move", 
@@ -54,56 +53,30 @@ def _unit_idx_to_action(idx, max_res_idx):
     raise ValueError("Should've returned by now???")
 
 
-def do_stuff_depending_on_action_idx(unit, unit_output, pos_to_units_there, actions):
-    x, y = unit["pos"][0], unit["pos"][1]
-    cargo = [unit["cargo"]["ice"], unit["cargo"]["ore"], unit["cargo"]["water"], unit["cargo"]["metal"]]
-    max_res_idx = np.argmax(cargo).item()
-    action_idx = unit_output[x, y].item()
-    if action_idx != 0: #Do nothing if == 0
-        action = _unit_idx_to_action(action_idx ,max_res_idx)
-        new_pos = where_will_unit_end_up(action, x, y)
-    else:
-        new_pos = (x, y)
 
-    if new_pos in pos_to_units_there.keys():
-        pos_to_units_there[(x, y)] = [unit["unit_id"]]#.append(unit["unit_id"])
-    else:
-        pos_to_units_there[new_pos] = [unit["unit_id"]]
-        #TODO: Can be solved better, we shouldn't have to check this idx twice
-        if action_idx != 0:
-            actions[unit["unit_id"]] = [action]
 
-def unit_output_to_actions(unit_output, units):
-    """Turns outputs from the model into action dicts for units"""
-    pos_to_units_there = {}
+def unit_output_to_actions(light_unit_output, heavy_unit_output, units):
     actions = {}
-    units_processed = set()
+    
     for unit in units:
+        unit_output = light_unit_output if unit["unit_type"] == "LIGHT" else heavy_unit_output
         x, y = unit["pos"][0], unit["pos"][1]
-        action_idx = unit_output[x, y].item()
         cargo = [unit["cargo"]["ice"], unit["cargo"]["ore"], unit["cargo"]["water"], unit["cargo"]["metal"]]
         max_res_idx = np.argmax(cargo).item()
-        if action_idx == 0 or where_will_unit_end_up(_unit_idx_to_action(action_idx ,max_res_idx), x, y) == (x, y):
-            do_stuff_depending_on_action_idx(unit, unit_output, pos_to_units_there, actions)
-            units_processed.add(unit["unit_id"])
+        action_idx = unit_output[x, y].item()
 
-    for unit in units:
-        if unit["unit_id"] in units_processed: continue
-
-        do_stuff_depending_on_action_idx(unit, unit_output, pos_to_units_there, actions)
-
-    #for new_pos, units in pos_to_units_there.items():
-
-        #print(f"Pos: {new_pos} Units: {units}")
-
+        if action_idx != 0:  # Do nothing if == 0
+            action = _unit_idx_to_action(action_idx, max_res_idx)
+            actions[unit["unit_id"]] = [action]
+    
     return actions
+
 
 def factory_output_to_actions(factory_output, factories):
     """Turns outputs from the model into action dicts for factories"""
     actions = {}
     for factory in factories:
         x, y = factory["pos"][0], factory["pos"][1]
-        #print("Factory x, y", x, y)
         action = factory_output[x, y].item()
         if action == 3:
             continue

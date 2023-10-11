@@ -11,4 +11,4 @@ class WAndB():
         wandb.run.name = run_name if run_name != '' else f'Untitled run at: {current_time}'
 
     def log(self, data: dict, step = None):
-        wandb.log(data, step = step)
+        wandb.log(data, step = step, commit=True)

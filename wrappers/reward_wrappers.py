@@ -8,6 +8,8 @@ class IceRewardWrapper(gym.RewardWrapper):
         self.config = config
 
         self.units = {}
+        self.player = "player_0"
+        self.opponent = "player_1"
 
     def reset(self):
         self.previous_ice = 0
@@ -21,34 +23,25 @@ class IceRewardWrapper(gym.RewardWrapper):
         self.previous_heavy_count = 0
 
         return_val = self.env.reset() #NOTE: We do this here because reset wipes the stats
-        self.env.state.stats["player_0"]['rewards'] = {'resource_reward' : 0, 'unit_reward' : 0, 'rubble_reward': 0, "factory_punishment" : 0, "end_of_game_reward": 0}
+        self.env.state.stats["player_0"]['rewards'] = {'resource_reward' : 0, 'unit_reward' : 0,
+                                                        'rubble_reward': 0, "factory_punishment" : 0,
+                                                          "win_reward": 0, "env_reward": 0}
         self.env.state.stats["player_0"]["total_episodic_reward"] = 0
         return return_val
     
+    def get_reward_scaling(self):
+        games_played = self.games_played
+        games_to_anneal_over = (self.config["total_timesteps"] / (1000*self.config["parallel_envs"]))
 
-    def reward(self, rewards):
-        # NOTE: Only handles player_0 atm
-
-        """if self.env.state.real_env_steps == 1000:  # Game is over
-            strain_ids = self.state.teams["player_0"].factory_strains
-            agent_lichen_mask = np.isin(
-                self.state.board.lichen_strains, strain_ids
-            )
-            lichen = self.state.board.lichen[agent_lichen_mask].sum()
-            # TODO: Check for correctness
-            reward = self.config['scaling_win'] if rewards["player_0"] > rewards["player_1"] else -self.config['scaling_win'] if rewards["player_0"] < rewards["player_1"] else 0
-            reward += np.tanh(lichen/self.config["lichen_divide_value"])*self.config['scaling_lichen']
-            #stats['rewards']['end_of_episode_reward'] += reward
-            return reward"""
-    
-        stats = self.env.state.stats["player_0"]
-
-        #Factories lost reward
-        factories_lost_reward = -(stats["destroyed"]["FACTORY"]-self.previous_destroyed_factories)*self.config["factory_lost"]
-        rubble_destroyed = (sum([val for val in stats["destroyed"]["rubble"].values()])-self.previous_rubble_destroyed)
-
+        # Calculate the reward scaling factor based on the number of games played
+        reward_scaling = 1 - (games_played / games_to_anneal_over)
         
+        return max(0, reward_scaling)
+    
+    def phase_1(self):
 
+        stats = self.env.state.stats[self.player]
+        rubble_destroyed = (sum([val for val in stats["destroyed"]["rubble"].values()])-self.previous_rubble_destroyed)
 
         #Resource reward
         #ice_deposited, ore_deposited, ice_mined, ore_mined = self.transfer_reward()
@@ -70,35 +63,34 @@ class IceRewardWrapper(gym.RewardWrapper):
         resource_reward /= num_factories
         rubble_reward = (rubble_destroyed*self.config["rubble_reward"])/num_factories
         
-        end_of_game_reward = 0
-
-        if self.env.state.real_env_steps == 1000:
-            player_0_lichen_mask = np.isin(
-                self.env.state.board.lichen_strains, self.state.teams["player_0"].factory_strains
-            )
-            player_1_lichen_mask = np.isin(
-                self.env.state.board.lichen_strains, self.state.teams["player_1"].factory_strains
-            )
-
-            friendly_lichen_amount =  np.sum(np.where(player_0_lichen_mask, self.env.state.board.lichen, 0))
-            enemy_lichen_amount =  np.sum(np.where(player_1_lichen_mask, self.env.state.board.lichen, 0))
-        
-
-            lichen_distribution = (friendly_lichen_amount-enemy_lichen_amount)/np.clip(friendly_lichen_amount+enemy_lichen_amount, a_min = 1, a_max = None)
-            end_of_game_reward += self.config["scaling_win"]*lichen_distribution + self.config["end_of_game_reward"]
         
         light_count = stats["generation"]["built"]["LIGHT"]-stats["destroyed"]["LIGHT"]
         heavy_count = stats["generation"]["built"]["HEAVY"]-stats["destroyed"]["HEAVY"]
-        light_units_reward = (light_count-self.previous_light_count)*self.config["light_reward"]
-        heavy_units_reward = (heavy_count-self.previous_heavy_count)*self.config["heavy_reward"]
+
+        #light_count = 0
+        #heavy_count = 0
+        #for unit in self.state.units[player].values():
+        #    light_count += 1 if unit.unit_type == "LIGHT" else 0
+        #    heavy_count += 1 if unit.unit_type == "HEAVY" else 0
+        #light_units_reward = (light_count-self.previous_light_count)*self.config["light_reward"]
+        #heavy_units_reward = (heavy_count-self.previous_heavy_count)*self.config["heavy_reward"]
+        light_units_reward = light_count*self.config["light_reward"]/num_factories
+        heavy_units_reward = heavy_count*self.config["heavy_reward"]/num_factories
+
+        scaling = self.config["reward_scale_start"]
+        if self.config["anneal_rewards"]:
+            scaling *= self.get_reward_scaling()
+        resource_reward *= scaling
+        light_units_reward*= scaling
+        heavy_units_reward*= scaling
+        rubble_reward*=scaling
+            
 
         reward = (
             resource_reward
             + light_units_reward
             + heavy_units_reward
             + rubble_reward
-            + factories_lost_reward
-            + end_of_game_reward
         )
 
 
@@ -108,15 +100,63 @@ class IceRewardWrapper(gym.RewardWrapper):
         self.previous_ore = sum([val for val in stats["generation"]["ore"].values()])
         self.previous_ice_deposited = stats["transfer"]["ice"]
         self.previous_ore_deposited = stats["transfer"]["ore"]
-        self.previous_destroyed_factories = stats["destroyed"]["FACTORY"]
         self.previous_rubble_destroyed = sum([val for val in stats["destroyed"]["rubble"].values()])
 
         stats["total_episodic_reward"] += reward
         stats['rewards']['resource_reward'] += resource_reward
         stats['rewards']['rubble_reward'] += rubble_reward
-        stats["rewards"]["factory_punishment"] += factories_lost_reward
-        stats["rewards"]["end_of_game_reward"] += end_of_game_reward
         stats["rewards"]["unit_reward"] += light_units_reward + heavy_units_reward
 
         return reward
     
+    def phase_3(self, rewards):
+        stats = self.env.state.stats[self.player]
+        win_reward = 0
+        if self.env.state.real_env_steps == 1000 or rewards[self.opponent] == -1000 or rewards[self.player] == -1000:
+            if rewards[self.opponent] > rewards[self.player]:
+                win_reward = -1
+            elif rewards[self.opponent] < rewards[self.player]:
+                win_reward = 1
+
+        stats["rewards"]["win_reward"] += win_reward
+
+        stats["total_episodic_reward"] += win_reward
+        return win_reward
+        
+    def phase_2(self, rewards):
+        stats = self.env.state.stats[self.player]
+
+        env_reward = 0
+        if self.env.state.real_env_steps == 1000: #Only reward lichen if end of game
+            env_reward += (rewards[self.player]-rewards[self.opponent])/np.clip(rewards[self.player]+rewards[self.opponent], a_min = 1, a_max = None)
+        
+        #Factories lost reward
+        factories_lost_reward = -(stats["destroyed"]["FACTORY"]-self.previous_destroyed_factories)*self.config["factory_lost"]
+        self.previous_destroyed_factories = stats["destroyed"]["FACTORY"]
+
+        if self.config["anneal_rewards"]:
+            scaling = self.get_reward_scaling()
+            factories_lost_reward *= scaling
+            env_reward *= scaling
+
+        stats["rewards"]["factory_punishment"] += factories_lost_reward
+        stats["rewards"]["env_reward"] += env_reward
+
+        stats["total_episodic_reward"] += factories_lost_reward + env_reward
+        return factories_lost_reward + env_reward
+
+    def reward(self, rewards):
+        # NOTE: Only handles player_0 atm
+
+        reward = 0
+        if 3 in self.config["phases"]:
+            reward += self.phase_3(rewards)
+        
+        if 2 in self.config["phases"]:
+            reward += self.phase_2(rewards)
+        
+        if 1 in self.config["phases"]:
+            reward += self.phase_1()
+
+
+        return reward
